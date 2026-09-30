@@ -82,6 +82,17 @@ export interface CaseStudyItem {
 
 export interface LearningContent {
   id: string;
+  /** Stable identity used to reuse the same approved asset instead of regenerating it. */
+  canonicalKey?: string;
+  curriculumVersion?: string;
+  language?: Language;
+  status?: 'DRAFT' | 'APPROVED' | 'PUBLISHED' | 'ARCHIVED';
+  sourceKnowledgeUnitId?: string;
+  replacementContentId?: string;
+  reuseCount?: number;
+  generatedAt?: string;
+  validatedAt?: string;
+  archivedAt?: string;
   contentType: ContentModuleType;
   board: BoardType;
   classGrade: ClassGrade;
