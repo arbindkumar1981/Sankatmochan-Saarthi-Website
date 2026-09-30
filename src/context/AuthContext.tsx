@@ -34,7 +34,6 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const ADMIN_EMAILS = ['principal.a.kumar@gmail.com'];
-const ADMIN_MASTER_PASSCODES = ['sankatmochan', 'saarthi2026', 'admin108'];
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -142,11 +141,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setAuthModalOpen(false);
   };
 
-  const signInWithGoogle = async (intendedRole: UserRole = 'student') => {
+  const signInWithGoogle = async (_intendedRole: UserRole = 'student') => {
     try {
       const result = await signInWithPopup(auth, googleProvider);
-      const isDesignatedAdmin =
-        ADMIN_EMAILS.includes(result.user.email?.toLowerCase() || '') || intendedRole === 'admin';
+      // Admin status must never be granted from a client-selected login tab.
+      // It is derived only from the designated authenticated account; Firestore rules
+      // remain the authoritative enforcement boundary for privileged writes.
+      const isDesignatedAdmin = ADMIN_EMAILS.includes(result.user.email?.toLowerCase() || '');
 
       const userDocRef = doc(db, 'users', result.user.uid);
       const snap = await getDoc(userDocRef);
@@ -187,27 +188,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const signInAsAdminWithPasscode = async (passcode: string, adminName: string = 'Principal A. Kumar'): Promise<boolean> => {
-    if (ADMIN_MASTER_PASSCODES.includes(passcode.trim().toLowerCase())) {
-      const adminProfile: UserProfile = {
-        uid: 'admin-principal-master',
-        email: 'principal.a.kumar@gmail.com',
-        displayName: adminName || 'Principal A. Kumar (Admin)',
-        role: 'admin',
-        board: 'CBSE',
-        classGrade: 'Class 10',
-        stream: 'General',
-        preferredLanguage: 'hi',
-        studyStreakDays: 108,
-        totalTestsTaken: 42,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-      setProfile(adminProfile);
-      localStorage.setItem('saarthi_guest_user', JSON.stringify(adminProfile));
-      setAuthModalOpen(false);
-      return true;
-    }
+  const signInAsAdminWithPasscode = async (_passcode: string, _adminName: string = 'Principal A. Kumar'): Promise<boolean> => {
+    // Deliberately disabled: a browser-bundled passcode is not authentication.
+    // Admins must sign in with the designated Google/Firebase identity.
     return false;
   };
 
