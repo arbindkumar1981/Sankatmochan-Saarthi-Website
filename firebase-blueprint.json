@@ -1,0 +1,256 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile with student/admin details, board, class, and progress metadata",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 256 },
+        "displayName": { "type": "string", "maxLength": 128 },
+        "photoURL": { "type": "string", "maxLength": 1024 },
+        "role": { "type": "string", "enum": ["student", "admin"] },
+        "board": { "type": "string", "maxLength": 32 },
+        "classGrade": { "type": "string", "maxLength": 16 },
+        "stream": { "type": "string", "maxLength": 32 },
+        "preferredLanguage": { "type": "string", "enum": ["en", "hi"] },
+        "studyStreakDays": { "type": "number" },
+        "totalTestsTaken": { "type": "number" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "AdminRecord": {
+      "title": "AdminRecord",
+      "description": "Lookup document for authorized administrative users",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 256 },
+        "name": { "type": "string", "maxLength": 128 },
+        "assignedAt": { "type": "string" }
+      },
+      "required": ["uid", "email"]
+    },
+    "CurriculumNode": {
+      "title": "CurriculumNode",
+      "description": "Board, class, stream, subject, chapter, or topic definition in hierarchy",
+      "type": "object",
+      "properties": {
+        "nodeId": { "type": "string", "maxLength": 128 },
+        "board": { "type": "string", "maxLength": 32 },
+        "classGrade": { "type": "string", "maxLength": 16 },
+        "stream": { "type": "string", "maxLength": 32 },
+        "subjectId": { "type": "string", "maxLength": 64 },
+        "subjectName": { "type": "string", "maxLength": 128 },
+        "subjectHindi": { "type": "string", "maxLength": 128 },
+        "chapterId": { "type": "string", "maxLength": 64 },
+        "chapterTitle": { "type": "string", "maxLength": 256 },
+        "chapterHindi": { "type": "string", "maxLength": 256 },
+        "topicId": { "type": "string", "maxLength": 64 },
+        "topicTitle": { "type": "string", "maxLength": 256 },
+        "topicHindi": { "type": "string", "maxLength": 256 },
+        "order": { "type": "number" },
+        "published": { "type": "boolean" },
+        "approved": { "type": "boolean" }
+      },
+      "required": ["nodeId", "board", "classGrade", "subjectId"]
+    },
+    "LearningContent": {
+      "title": "LearningContent",
+      "description": "Educational material including detailed notes, formulas, mindmaps, flashcards, PYQs, CBQs, and case studies",
+      "type": "object",
+      "properties": {
+        "contentId": { "type": "string", "maxLength": 128 },
+        "contentType": {
+          "type": "string",
+          "enum": ["detailed_notes", "revision_notes", "formulae", "mindmaps", "flashcards", "pyqs", "cbqs", "case_studies"]
+        },
+        "board": { "type": "string", "maxLength": 32 },
+        "classGrade": { "type": "string", "maxLength": 16 },
+        "stream": { "type": "string", "maxLength": 32 },
+        "subjectId": { "type": "string", "maxLength": 64 },
+        "chapterId": { "type": "string", "maxLength": 64 },
+        "topicId": { "type": "string", "maxLength": 64 },
+        "title": { "type": "string", "maxLength": 256 },
+        "hindiTitle": { "type": "string", "maxLength": 256 },
+        "bodyText": { "type": "string", "maxLength": 50000 },
+        "bodyHindi": { "type": "string", "maxLength": 50000 },
+        "version": { "type": "number" },
+        "approved": { "type": "boolean" },
+        "published": { "type": "boolean" },
+        "authorUid": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["contentId", "contentType", "board", "classGrade", "subjectId", "title"]
+    },
+    "YouTubeVideo": {
+      "title": "YouTubeVideo",
+      "description": "Curated educational YouTube video tagged by curriculum node",
+      "type": "object",
+      "properties": {
+        "videoId": { "type": "string", "maxLength": 128 },
+        "youtubeId": { "type": "string", "maxLength": 64 },
+        "title": { "type": "string", "maxLength": 256 },
+        "channelTitle": { "type": "string", "maxLength": 128 },
+        "board": { "type": "string", "maxLength": 32 },
+        "classGrade": { "type": "string", "maxLength": 16 },
+        "subjectId": { "type": "string", "maxLength": 64 },
+        "chapterId": { "type": "string", "maxLength": 64 },
+        "topicId": { "type": "string", "maxLength": 64 },
+        "duration": { "type": "string", "maxLength": 32 },
+        "thumbnail": { "type": "string", "maxLength": 1024 },
+        "approved": { "type": "boolean" },
+        "published": { "type": "boolean" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["videoId", "youtubeId", "title", "subjectId"]
+    },
+    "EvaluationTest": {
+      "title": "EvaluationTest",
+      "description": "Interactive topic, chapter, or full-syllabus assessment test with questions",
+      "type": "object",
+      "properties": {
+        "testId": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 256 },
+        "hindiTitle": { "type": "string", "maxLength": 256 },
+        "testType": { "type": "string", "enum": ["topic", "chapter", "full_syllabus"] },
+        "board": { "type": "string", "maxLength": 32 },
+        "classGrade": { "type": "string", "maxLength": 16 },
+        "subjectId": { "type": "string", "maxLength": 64 },
+        "chapterId": { "type": "string", "maxLength": 64 },
+        "topicId": { "type": "string", "maxLength": 64 },
+        "durationMinutes": { "type": "number" },
+        "totalMarks": { "type": "number" },
+        "passingMarks": { "type": "number" },
+        "published": { "type": "boolean" },
+        "approved": { "type": "boolean" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["testId", "title", "testType", "subjectId"]
+    },
+    "TestResult": {
+      "title": "TestResult",
+      "description": "Student evaluation record with scores, percentage, remarks, and analysis",
+      "type": "object",
+      "properties": {
+        "resultId": { "type": "string", "maxLength": 128 },
+        "studentUid": { "type": "string", "maxLength": 128 },
+        "studentName": { "type": "string", "maxLength": 128 },
+        "testId": { "type": "string", "maxLength": 128 },
+        "testTitle": { "type": "string", "maxLength": 256 },
+        "subjectId": { "type": "string", "maxLength": 64 },
+        "score": { "type": "number" },
+        "totalMarks": { "type": "number" },
+        "percentage": { "type": "number" },
+        "accuracy": { "type": "number" },
+        "timeTakenSeconds": { "type": "number" },
+        "remarks": { "type": "string", "maxLength": 2048 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["resultId", "studentUid", "testId", "score", "totalMarks"]
+    },
+    "MistakeRecord": {
+      "title": "MistakeRecord",
+      "description": "Mistake book entry for student test errors with explanations and mastery status",
+      "type": "object",
+      "properties": {
+        "mistakeId": { "type": "string", "maxLength": 128 },
+        "studentUid": { "type": "string", "maxLength": 128 },
+        "testId": { "type": "string", "maxLength": 128 },
+        "subjectId": { "type": "string", "maxLength": 64 },
+        "questionText": { "type": "string", "maxLength": 4096 },
+        "questionHindi": { "type": "string", "maxLength": 4096 },
+        "selectedOption": { "type": "string", "maxLength": 1024 },
+        "correctOption": { "type": "string", "maxLength": 1024 },
+        "explanation": { "type": "string", "maxLength": 4096 },
+        "masteryStatus": { "type": "string", "enum": ["pending", "reviewed", "mastered"] },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["mistakeId", "studentUid", "questionText", "correctOption"]
+    },
+    "NoticeItem": {
+      "title": "NoticeItem",
+      "description": "Motivational notice, strength/improvement alert, circular or daily quote",
+      "type": "object",
+      "properties": {
+        "noticeId": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 256 },
+        "hindiTitle": { "type": "string", "maxLength": 256 },
+        "message": { "type": "string", "maxLength": 4096 },
+        "hindiMessage": { "type": "string", "maxLength": 4096 },
+        "category": { "type": "string", "enum": ["motivational", "academic", "urgent", "highlight"] },
+        "targetClass": { "type": "string", "maxLength": 32 },
+        "targetStudentUid": { "type": "string", "maxLength": 128 },
+        "strengthsNote": { "type": "string", "maxLength": 1024 },
+        "improvementNote": { "type": "string", "maxLength": 1024 },
+        "blessingQuote": { "type": "string", "maxLength": 1024 },
+        "active": { "type": "boolean" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["noticeId", "title", "message", "category"]
+    },
+    "ContactEnquiry": {
+      "title": "ContactEnquiry",
+      "description": "Student/parent contact message and help inquiry",
+      "type": "object",
+      "properties": {
+        "enquiryId": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 256 },
+        "phone": { "type": "string", "maxLength": 32 },
+        "classGrade": { "type": "string", "maxLength": 32 },
+        "subjectQuery": { "type": "string", "maxLength": 256 },
+        "message": { "type": "string", "maxLength": 4096 },
+        "status": { "type": "string", "enum": ["pending", "in_progress", "resolved"] },
+        "reply": { "type": "string", "maxLength": 2048 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["enquiryId", "name", "email", "message"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "User profile with student or admin metadata"
+    },
+    "/admins/{adminUid}": {
+      "schema": { "$ref": "#/entities/AdminRecord" },
+      "description": "Lookup document verifying administrative privilege"
+    },
+    "/curriculum_nodes/{nodeId}": {
+      "schema": { "$ref": "#/entities/CurriculumNode" },
+      "description": "Curriculum hierarchy nodes for classes IX-XII"
+    },
+    "/learning_contents/{contentId}": {
+      "schema": { "$ref": "#/entities/LearningContent" },
+      "description": "Educational modules and revision materials"
+    },
+    "/youtube_videos/{videoId}": {
+      "schema": { "$ref": "#/entities/YouTubeVideo" },
+      "description": "Curated YouTube learning videos"
+    },
+    "/tests/{testId}": {
+      "schema": { "$ref": "#/entities/EvaluationTest" },
+      "description": "Assessment tests and question banks"
+    },
+    "/test_results/{resultId}": {
+      "schema": { "$ref": "#/entities/TestResult" },
+      "description": "Evaluation report cards and test results"
+    },
+    "/mistakes/{mistakeId}": {
+      "schema": { "$ref": "#/entities/MistakeRecord" },
+      "description": "Mistake book entries for targeted mastery"
+    },
+    "/notices/{noticeId}": {
+      "schema": { "$ref": "#/entities/NoticeItem" },
+      "description": "Motivational notice board items and announcements"
+    },
+    "/enquiries/{enquiryId}": {
+      "schema": { "$ref": "#/entities/ContactEnquiry" },
+      "description": "Contact form submissions and replies"
+    }
+  }
+}

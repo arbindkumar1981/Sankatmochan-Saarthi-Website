@@ -1,0 +1,294 @@
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import {
+  User,
+  onAuthStateChanged,
+  signInWithPopup,
+  signOut as fbSignOut
+} from 'firebase/auth';
+import {
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc
+} from 'firebase/firestore';
+import { auth, googleProvider, db, handleFirestoreError, OperationType } from '../services/firebase';
+import { UserProfile, UserRole, BoardType, ClassGrade, StreamType } from '../types';
+
+interface AuthContextType {
+  user: User | null;
+  profile: UserProfile | null;
+  role: UserRole;
+  isAdmin: boolean;
+  loading: boolean;
+  authModalOpen: boolean;
+  authModalInitialTab: 'student' | 'admin';
+  openAuthModal: (tab?: 'student' | 'admin') => void;
+  closeAuthModal: () => void;
+  signInWithGoogle: (intendedRole?: UserRole) => Promise<void>;
+  signInAsAdminWithPasscode: (passcode: string, adminName?: string) => Promise<boolean>;
+  signInAsGuestStudent: (name: string, grade: ClassGrade, board: BoardType) => void;
+  updateStudentPreferences: (prefs: Partial<UserProfile>) => Promise<void>;
+  signOut: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+const ADMIN_EMAILS = ['principal.a.kumar@gmail.com'];
+const ADMIN_MASTER_PASSCODES = ['sankatmochan', 'saarthi2026', 'admin108'];
+
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authModalInitialTab, setAuthModalInitialTab] = useState<'student' | 'admin'>('student');
+
+  // Load guest profile from local storage if exists
+  useEffect(() => {
+    const savedGuest = localStorage.getItem('saarthi_guest_user');
+    if (savedGuest && !user) {
+      try {
+        const parsed = JSON.parse(savedGuest);
+        setProfile(parsed);
+      } catch (e) {
+        console.error('Error parsing guest user', e);
+      }
+    }
+  }, [user]);
+
+  // Sync Firebase Auth
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      setUser(currentUser);
+      if (currentUser) {
+        try {
+          const userDocRef = doc(db, 'users', currentUser.uid);
+          const snap = await getDoc(userDocRef);
+
+          const isDesignatedAdmin =
+            ADMIN_EMAILS.includes(currentUser.email?.toLowerCase() || '');
+
+          if (snap.exists()) {
+            const data = snap.data() as UserProfile;
+            const updatedRole: UserRole = isDesignatedAdmin ? 'admin' : data.role || 'student';
+            const userProfile: UserProfile = {
+              ...data,
+              role: updatedRole
+            };
+            setProfile(userProfile);
+
+            // update admin role if newly promoted
+            if (isDesignatedAdmin && data.role !== 'admin') {
+              await updateDoc(userDocRef, { role: 'admin' });
+            }
+          } else {
+            // New user registration
+            const newProfile: UserProfile = {
+              uid: currentUser.uid,
+              email: currentUser.email || '',
+              displayName: currentUser.displayName || 'Student',
+              photoURL: currentUser.photoURL || undefined,
+              role: isDesignatedAdmin ? 'admin' : 'student',
+              board: 'CBSE',
+              classGrade: 'Class 10',
+              stream: 'General',
+              preferredLanguage: 'en',
+              studyStreakDays: 1,
+              totalTestsTaken: 0,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            };
+
+            await setDoc(userDocRef, newProfile);
+            setProfile(newProfile);
+
+            if (isDesignatedAdmin) {
+              await setDoc(doc(db, 'admins', currentUser.uid), {
+                uid: currentUser.uid,
+                email: currentUser.email,
+                name: currentUser.displayName || 'Principal',
+                assignedAt: new Date().toISOString()
+              });
+            }
+          }
+        } catch (err) {
+          console.error('Error fetching/saving user profile:', err);
+        }
+      } else {
+        // Not logged in to firebase; check if guest profile exists
+        const savedGuest = localStorage.getItem('saarthi_guest_user');
+        if (savedGuest) {
+          try {
+            setProfile(JSON.parse(savedGuest));
+          } catch {
+            setProfile(null);
+          }
+        } else {
+          setProfile(null);
+        }
+      }
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const openAuthModal = (tab: 'student' | 'admin' = 'student') => {
+    setAuthModalInitialTab(tab);
+    setAuthModalOpen(true);
+  };
+
+  const closeAuthModal = () => {
+    setAuthModalOpen(false);
+  };
+
+  const signInWithGoogle = async (intendedRole: UserRole = 'student') => {
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const isDesignatedAdmin =
+        ADMIN_EMAILS.includes(result.user.email?.toLowerCase() || '') || intendedRole === 'admin';
+
+      const userDocRef = doc(db, 'users', result.user.uid);
+      const snap = await getDoc(userDocRef);
+
+      const resolvedRole: UserRole = isDesignatedAdmin ? 'admin' : 'student';
+
+      if (!snap.exists()) {
+        const newProfile: UserProfile = {
+          uid: result.user.uid,
+          email: result.user.email || '',
+          displayName: result.user.displayName || 'Student',
+          photoURL: result.user.photoURL || undefined,
+          role: resolvedRole,
+          board: 'CBSE',
+          classGrade: 'Class 10',
+          stream: 'General',
+          preferredLanguage: 'en',
+          studyStreakDays: 1,
+          totalTestsTaken: 0,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        await setDoc(userDocRef, newProfile);
+        setProfile(newProfile);
+      } else {
+        const existingData = snap.data() as UserProfile;
+        setProfile({
+          ...existingData,
+          role: isDesignatedAdmin ? 'admin' : existingData.role
+        });
+      }
+
+      localStorage.removeItem('saarthi_guest_user');
+      setAuthModalOpen(false);
+    } catch (error) {
+      console.error('Google Sign In Error:', error);
+      throw error;
+    }
+  };
+
+  const signInAsAdminWithPasscode = async (passcode: string, adminName: string = 'Principal A. Kumar'): Promise<boolean> => {
+    if (ADMIN_MASTER_PASSCODES.includes(passcode.trim().toLowerCase())) {
+      const adminProfile: UserProfile = {
+        uid: 'admin-principal-master',
+        email: 'principal.a.kumar@gmail.com',
+        displayName: adminName || 'Principal A. Kumar (Admin)',
+        role: 'admin',
+        board: 'CBSE',
+        classGrade: 'Class 10',
+        stream: 'General',
+        preferredLanguage: 'hi',
+        studyStreakDays: 108,
+        totalTestsTaken: 42,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      setProfile(adminProfile);
+      localStorage.setItem('saarthi_guest_user', JSON.stringify(adminProfile));
+      setAuthModalOpen(false);
+      return true;
+    }
+    return false;
+  };
+
+  const signInAsGuestStudent = (name: string, grade: ClassGrade, board: BoardType) => {
+    const guestStudent: UserProfile = {
+      uid: 'guest-' + Math.random().toString(36).substring(2, 9),
+      email: `${name.toLowerCase().replace(/\\s+/g, '')}@student.saarthi.in`,
+      displayName: name,
+      role: 'student',
+      board: board,
+      classGrade: grade,
+      stream: grade === 'Class 12' || grade === 'Class 11' ? 'Science' : 'General',
+      preferredLanguage: 'en',
+      studyStreakDays: 3,
+      totalTestsTaken: 1,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    setProfile(guestStudent);
+    localStorage.setItem('saarthi_guest_user', JSON.stringify(guestStudent));
+    setAuthModalOpen(false);
+  };
+
+  const updateStudentPreferences = async (prefs: Partial<UserProfile>) => {
+    if (!profile) return;
+    const updated = { ...profile, ...prefs, updatedAt: new Date().toISOString() };
+    setProfile(updated);
+
+    if (user && !user.isAnonymous) {
+      try {
+        await updateDoc(doc(db, 'users', user.uid), prefs);
+      } catch (err) {
+        handleFirestoreError(err, OperationType.UPDATE, `users/${user.uid}`);
+      }
+    } else {
+      localStorage.setItem('saarthi_guest_user', JSON.stringify(updated));
+    }
+  };
+
+  const signOut = async () => {
+    try {
+      if (user) {
+        await fbSignOut(auth);
+      }
+      localStorage.removeItem('saarthi_guest_user');
+      setProfile(null);
+      setUser(null);
+    } catch (err) {
+      console.error('Sign out error:', err);
+    }
+  };
+
+  const role: UserRole = profile?.role || 'student';
+  const isAdmin = role === 'admin';
+
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        profile,
+        role,
+        isAdmin,
+        loading,
+        authModalOpen,
+        authModalInitialTab,
+        openAuthModal,
+        closeAuthModal,
+        signInWithGoogle,
+        signInAsAdminWithPasscode,
+        signInAsGuestStudent,
+        updateStudentPreferences,
+        signOut
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+export const useAuth = () => {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth must be used within an AuthProvider');
+  return ctx;
+};

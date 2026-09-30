@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-heading: 'Cinzel', 'Noto Sans Devanagari', serif;
+    --font-body: 'Outfit', 'Noto Sans Devanagari', sans-serif;
+  }
+  body {
+    font-family: var(--font-body);
+  }
+  h1, h2, h3, .font-cinzel {
+    font-family: var(--font-heading);
+  }
+}
+
+/* Custom scrollbar for learning sidebars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #fffbeb;
+}
+::-webkit-scrollbar-thumb {
+  background: #f97316;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #ea580c;
+}
+
+.saffron-gradient {
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 50%, #c2410c 100%);
+}
+
+.divine-sindoor {
+  background: linear-gradient(135deg, #ea580c 0%, #dc2626 50%, #991b1b 100%);
+}
+
+.golden-border {
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+

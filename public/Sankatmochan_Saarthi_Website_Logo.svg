@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%">
+  <defs>
+    <!-- Sun Radial Gradient -->
+    <radialGradient id="sunGlow" cx="50%" cy="75%" r="70%">
+      <stop offset="0%" stop-color="#FFF099" />
+      <stop offset="40%" stop-color="#FBBF24" />
+      <stop offset="100%" stop-color="#E58A13" />
+    </radialGradient>
+
+    <!-- Path / Horizon Gradient -->
+    <linearGradient id="pathGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FBBF24" />
+      <stop offset="100%" stop-color="#D97706" />
+    </linearGradient>
+
+    <!-- Figure Blue Gradient -->
+    <linearGradient id="blueFigure" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0E5A99" />
+      <stop offset="100%" stop-color="#093E6C" />
+    </linearGradient>
+
+    <!-- Leaves / Hands Green Gradient -->
+    <linearGradient id="greenHands" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#2D7240" />
+      <stop offset="100%" stop-color="#1B4D2B" />
+    </linearGradient>
+
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700;800;900&amp;family=Merriweather:wght@700;900&amp;display=swap');
+      .brand-title {
+        font-family: 'Merriweather', 'Cinzel', Georgia, serif;
+        font-weight: 900;
+        font-size: 43px;
+        fill: #0A345E;
+        letter-spacing: 0.2px;
+        text-anchor: middle;
+      }
+      .brand-subtitle {
+        font-family: 'Merriweather', 'Cinzel', Georgia, serif;
+        font-weight: 900;
+        font-size: 52px;
+        fill: #256338;
+        letter-spacing: 1px;
+        text-anchor: middle;
+      }
+    </style>
+  </defs>
+
+  <!-- 1. Golden Outer Circular Rim (Top ~300 degrees arc) -->
+  <path d="M 88 325 A 185 185 0 1 1 412 325" 
+        fill="none" 
+        stroke="#E58A13" 
+        stroke-width="11" 
+        stroke-linecap="round" />
+
+  <!-- 2. Radiant Rising Sun & Rays -->
+  <g>
+    <!-- Sun Disc -->
+    <path d="M 195 180 A 55 55 0 0 1 305 180 Z" fill="url(#sunGlow)" />
+
+    <!-- Sharp Sun Rays -->
+    <polygon points="250,58 244,115 256,115" fill="#E58A13" />
+    <polygon points="215,66 216,122 227,118" fill="#E58A13" />
+    <polygon points="285,66 273,118 284,122" fill="#E58A13" />
+    <polygon points="182,85 192,133 201,126" fill="#E58A13" />
+    <polygon points="318,85 299,126 308,133" fill="#E58A13" />
+    <polygon points="156,112 172,150 180,141" fill="#E58A13" />
+    <polygon points="344,112 320,141 328,150" fill="#E58A13" />
+    <polygon points="138,146 159,171 165,161" fill="#E58A13" />
+    <polygon points="362,146 335,161 341,171" fill="#E58A13" />
+  </g>
+
+  <!-- 3. Golden Mountain Slope & Winding Horizon River/Path -->
+  <path d="M 160 252 Q 200 215 250 210 Q 275 208 335 240 Z" fill="url(#pathGrad)" />
+  <path d="M 235 256 C 245 220 255 210 260 185 C 275 185 285 190 290 200 C 270 215 250 235 255 256 Z" fill="#FBBF24" />
+
+  <!-- 4. Two Blue Mentorship Figures (Mentor pulling Student) -->
+  <g fill="url(#blueFigure)">
+    <!-- Mentor Head -->
+    <circle cx="236" cy="148" r="16" />
+    <!-- Mentor Body (Standing on higher ground, leaning down with supportive arm) -->
+    <path d="M 224 163 C 215 165 195 178 180 193 C 165 208 148 238 145 246 C 152 246 165 233 175 218 C 182 208 188 200 205 193 L 180 253 L 198 253 L 218 206 L 222 253 L 240 253 L 235 186 C 248 193 262 206 275 218 C 279 218 282 214 278 210 C 265 196 248 180 238 170 Z" />
+
+    <!-- Student Head -->
+    <circle cx="304" cy="206" r="14" />
+    <!-- Student Body (Climbing upwards, clasping mentor's hand) -->
+    <path d="M 295 220 C 285 218 270 206 250 200 C 246 203 248 208 255 212 C 270 220 285 233 290 246 L 275 268 L 292 270 L 305 248 C 315 258 325 260 332 258 L 322 230 C 318 223 310 221 295 220 Z" />
+  </g>
+
+  <!-- 5. Two Deep Emerald Green Cupped Hands / Leaves -->
+  <g fill="url(#greenHands)">
+    <!-- Left Hand -->
+    <path d="M 248 320 C 210 320 170 308 135 283 C 115 268 102 243 98 213 C 102 233 118 258 140 273 C 122 253 115 233 116 218 C 125 240 145 263 172 276 C 155 253 152 233 156 220 C 168 243 192 273 225 290 L 248 320 Z" />
+
+    <!-- Right Hand (Symmetrical) -->
+    <path d="M 252 320 C 290 320 330 308 365 283 C 385 268 398 243 402 213 C 398 233 382 258 360 273 C 378 253 385 233 384 218 C 375 240 355 263 328 276 C 345 253 348 233 344 220 C 332 243 308 273 275 290 L 252 320 Z" />
+  </g>
+
+  <!-- 6. Brand Typography Line 1: "Sannkatmochan" (Rich Deep Navy Blue) -->
+  <text x="250" y="367" class="brand-title">Sannkatmochan</text>
+
+  <!-- 7. Brand Typography Line 2: "Saarthi" (Forest Green) with Golden Accent Wings -->
+  <!-- Left Wing -->
+  <path d="M 60 398 L 135 398" stroke="#E58A13" stroke-width="4.5" stroke-linecap="round" />
+  <!-- Center Word -->
+  <text x="250" y="420" class="brand-subtitle">Saarthi</text>
+  <!-- Right Wing -->
+  <path d="M 365 398 L 440 398" stroke="#E58A13" stroke-width="4.5" stroke-linecap="round" />
+
+  <!-- 8. Bottom Golden Circular Cradling Arc -->
+  <path d="M 125 412 C 152 464 348 464 375 412" 
+        fill="none" 
+        stroke="#E58A13" 
+        stroke-width="8" 
+        stroke-linecap="round" />
+</svg>

@@ -1,0 +1,6 @@
+{
+  "name": "Saarthi by Sankatmochan",
+  "description": "Premier digital learning sanctuary for Classes IX–XII with curriculum mastery, YouTube learning, test evaluation, mistake book, and spiritual grace of Baba Neem Karoli Ji.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

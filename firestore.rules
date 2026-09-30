@@ -1,0 +1,113 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net: Default-deny all paths
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+    function incoming() {
+      return request.resource.data;
+    }
+    function existing() {
+      return resource.data;
+    }
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+    function isAdmin() {
+      return isSignedIn() && (
+        (request.auth.token.email == 'principal.a.kumar@gmail.com') ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    // Users Collection
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
+      allow create: if isOwner(userId) && isValidId(userId) &&
+        incoming().uid == userId &&
+        (incoming().role == 'student' || isAdmin()) &&
+        incoming().email is string && incoming().email.size() <= 256;
+      allow update: if (isOwner(userId) || isAdmin()) && isValidId(userId) &&
+        (isAdmin() || (incoming().role == existing().role && incoming().uid == existing().uid));
+      allow delete: if isAdmin();
+    }
+
+    // Admins Collection
+    match /admins/{adminUid} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // Curriculum Nodes Collection
+    match /curriculum_nodes/{nodeId} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidId(nodeId);
+    }
+
+    // Learning Contents Collection
+    match /learning_contents/{contentId} {
+      allow read: if (resource.data.published == true && resource.data.approved == true) || isAdmin();
+      allow write: if isAdmin() && isValidId(contentId);
+    }
+
+    // YouTube Videos Collection
+    match /youtube_videos/{videoId} {
+      allow read: if (resource.data.published == true && resource.data.approved == true) || isAdmin();
+      allow write: if isAdmin() && isValidId(videoId);
+    }
+
+    // Evaluation Tests Collection
+    match /tests/{testId} {
+      allow read: if (resource.data.published == true && resource.data.approved == true) || isAdmin();
+      allow write: if isAdmin() && isValidId(testId);
+    }
+
+    // Test Results Collection
+    match /test_results/{resultId} {
+      allow get: if isSignedIn() && (resource.data.studentUid == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.studentUid == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isValidId(resultId) &&
+        incoming().studentUid == request.auth.uid &&
+        incoming().score is number && incoming().totalMarks is number;
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Mistakes Book Collection
+    match /mistakes/{mistakeId} {
+      allow get: if isSignedIn() && (resource.data.studentUid == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.studentUid == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isValidId(mistakeId) &&
+        incoming().studentUid == request.auth.uid;
+      allow update: if isSignedIn() && (resource.data.studentUid == request.auth.uid || isAdmin());
+      allow delete: if isSignedIn() && (resource.data.studentUid == request.auth.uid || isAdmin());
+    }
+
+    // Motivational Notices & Circulars
+    match /notices/{noticeId} {
+      allow read: if resource.data.active == true || isAdmin();
+      allow write: if isAdmin() && isValidId(noticeId);
+    }
+
+    // Contact Enquiries Collection
+    match /enquiries/{enquiryId} {
+      allow get, list: if isAdmin();
+      allow create: if isValidId(enquiryId) &&
+        incoming().name is string && incoming().name.size() <= 128 &&
+        incoming().email is string && incoming().email.size() <= 256 &&
+        incoming().message is string && incoming().message.size() <= 4096;
+      allow update, delete: if isAdmin();
+    }
+  }
+}
