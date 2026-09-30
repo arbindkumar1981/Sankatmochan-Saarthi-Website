@@ -58,7 +58,22 @@ service cloud.firestore {
     // Learning Contents Collection
     match /learning_contents/{contentId} {
       allow read: if (resource.data.published == true && resource.data.approved == true) || isAdmin();
-      allow write: if isAdmin() && isValidId(contentId);
+      allow create: if isAdmin() && isValidId(contentId) &&
+        incoming().board is string &&
+        incoming().classGrade is string &&
+        incoming().subjectId is string &&
+        incoming().chapterId is string &&
+        incoming().contentType is string &&
+        incoming().version is number &&
+        incoming().approved is bool &&
+        incoming().published is bool;
+      allow update: if isAdmin() && isValidId(contentId) &&
+        incoming().board == existing().board &&
+        incoming().classGrade == existing().classGrade &&
+        incoming().subjectId == existing().subjectId &&
+        incoming().chapterId == existing().chapterId &&
+        incoming().contentType == existing().contentType;
+      allow delete: if isAdmin() && isValidId(contentId);
     }
 
     // YouTube Videos Collection

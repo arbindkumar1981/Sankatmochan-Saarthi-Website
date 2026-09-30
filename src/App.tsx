@@ -12,7 +12,6 @@ import { EvaluationHub } from './components/EvaluationHub';
 import { AboutUsView } from './components/AboutUsView';
 import { ContactUsView } from './components/ContactUsView';
 import { AdminPanel } from './components/AdminPanel';
-import { DailySpiritualAffirmation } from './components/DailySpiritualAffirmation';
 import { AuthModal } from './components/AuthModal';
 import { Sparkles, Heart, Shield, Flame } from 'lucide-react';
 
@@ -30,9 +29,6 @@ const MainAppContent: React.FC = () => {
 
       {/* 3. Main Workspace Container with Vertical Navigation */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-5 flex flex-col gap-4">
-        {/* Daily Spiritual Affirmation: Inspirational quote from Baba Neem Karoli Ji & Hanuman Ji */}
-        <DailySpiritualAffirmation />
-
         <div className="flex flex-col lg:flex-row gap-5 items-start">
           {/* Vertical Navigation Bar */}
           <VerticalNav />
