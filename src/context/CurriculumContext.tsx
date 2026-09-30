@@ -24,6 +24,7 @@ import {
   BABA_IMAGE_URL
 } from '../data/defaultCurriculum';
 import { db, handleFirestoreError, OperationType } from '../services/firebase';
+import { saveCanonicalContent } from '../services/contentLibrary';
 import {
   collection,
   setDoc,
@@ -352,14 +353,30 @@ export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const addNewLearningContent = async (content: Omit<LearningContent, 'id'>) => {
     requireAdmin();
-    const id = 'content-' + Math.random().toString(36).substring(2, 9) + '-' + Date.now();
-    const item: LearningContent = { ...content, id };
-    setLearningContents(prev => [item, ...prev]);
-
     try {
-      await setDoc(doc(db, 'learning_contents', id), item);
+      const item = await saveCanonicalContent(
+        {
+          board: content.board,
+          curriculumVersion: content.curriculumVersion || 'unversioned',
+          classGrade: content.classGrade,
+          stream: content.stream,
+          subjectId: content.subjectId,
+          chapterId: content.chapterId,
+          topicId: content.topicId,
+          concept: content.topicTitle || content.chapterTitle,
+          contentType: content.contentType,
+          language: content.language || 'en',
+          version: content.version
+        },
+        content
+      );
+      setLearningContents(prev => {
+        const existingIndex = prev.findIndex(c => c.id === item.id);
+        if (existingIndex < 0) return [item, ...prev];
+        return prev.map(c => (c.id === item.id ? item : c));
+      });
     } catch (err) {
-      handleFirestoreError(err, OperationType.CREATE, `learning_contents/${id}`);
+      handleFirestoreError(err, OperationType.CREATE, 'learning_contents/canonical');
     }
   };
 
