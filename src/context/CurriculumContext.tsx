@@ -26,13 +26,11 @@ import {
 import { db, handleFirestoreError, OperationType } from '../services/firebase';
 import {
   collection,
-  getDocs,
   setDoc,
+  deleteDoc,
   doc,
-  addDoc,
   query,
   where,
-  orderBy,
   onSnapshot
 } from 'firebase/firestore';
 import { useAuth } from './AuthContext';
@@ -98,7 +96,7 @@ interface CurriculumContextType {
 const CurriculumContext = createContext<CurriculumContextType | undefined>(undefined);
 
 export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, profile } = useAuth();
+  const { user, profile, isAdmin } = useAuth();
 
   const [activeTab, setActiveTab] = useState<MainTabType>('learning');
   const [activeModule, setActiveModule] = useState<ContentModuleType>('detailed_notes');
@@ -346,21 +344,27 @@ export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
   };
 
+  const requireAdmin = () => {
+    if (!user || user.isAnonymous || !isAdmin) {
+      throw new Error('Authenticated administrator access is required for content management.');
+    }
+  };
+
   const addNewLearningContent = async (content: Omit<LearningContent, 'id'>) => {
+    requireAdmin();
     const id = 'content-' + Math.random().toString(36).substring(2, 9) + '-' + Date.now();
     const item: LearningContent = { ...content, id };
     setLearningContents(prev => [item, ...prev]);
 
-    if (user && !user.isAnonymous) {
-      try {
-        await setDoc(doc(db, 'learning_contents', id), item);
-      } catch (err) {
-        handleFirestoreError(err, OperationType.CREATE, `learning_contents/${id}`);
-      }
+    try {
+      await setDoc(doc(db, 'learning_contents', id), item);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.CREATE, `learning_contents/${id}`);
     }
   };
 
   const updateContentApproval = async (contentId: string, approved: boolean, published: boolean) => {
+    requireAdmin();
     setLearningContents(prev =>
       prev.map(c => (c.id === contentId ? { ...c, approved, published } : c))
     );
@@ -374,17 +378,17 @@ export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   };
 
   const deleteLearningContent = async (contentId: string) => {
-    setLearningContents(prev => prev.filter(c => c.id !== contentId));
-    if (user && !user.isAnonymous) {
-      try {
-        // we can remove or mark deleted
-      } catch (err) {
-        console.error(err);
-      }
+    requireAdmin();
+    try {
+      await deleteDoc(doc(db, 'learning_contents', contentId));
+      setLearningContents(prev => prev.filter(c => c.id !== contentId));
+    } catch (err) {
+      handleFirestoreError(err, OperationType.DELETE, `learning_contents/${contentId}`);
     }
   };
 
   const addNewTest = async (test: Omit<EvaluationTest, 'id'>) => {
+    requireAdmin();
     const id = 'test-' + Math.random().toString(36).substring(2, 9);
     const item: EvaluationTest = { ...test, id };
     setEvaluationTests(prev => [item, ...prev]);
@@ -398,6 +402,7 @@ export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   };
 
   const addNewVideo = async (video: Omit<YouTubeVideoItem, 'id'>) => {
+    requireAdmin();
     const id = 'vid-' + Math.random().toString(36).substring(2, 9);
     const item: YouTubeVideoItem = { ...video, id };
     setYoutubeVideos(prev => [item, ...prev]);
@@ -411,6 +416,7 @@ export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   };
 
   const addNewNotice = async (notice: Omit<NoticeItem, 'id'>) => {
+    requireAdmin();
     const id = 'notice-' + Math.random().toString(36).substring(2, 9);
     const item: NoticeItem = { ...notice, id };
     setNotices(prev => [item, ...prev]);
