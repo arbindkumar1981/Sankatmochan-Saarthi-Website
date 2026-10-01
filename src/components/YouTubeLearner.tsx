@@ -107,10 +107,18 @@ export const YouTubeLearner: React.FC = () => {
     });
   }, [youtubeVideos, searchTerm, selectedCategory]);
 
+  // Show live backend results when available; otherwise show approved/local matches.
+  const displayedVideos = remoteVideos.length > 0 ? remoteVideos : filteredVideos;
+
+
   const handleSearchSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const query = searchTerm.trim();
     if (!query) return;
+
+    // A new query must not keep stale live results from the previous search.
+    setRemoteVideos([]);
+    setSearchError('');
 
     // Check if the user pasted a direct YouTube link or ID into the main search engine
     const detectedId = extractVideoId(query);
@@ -251,7 +259,7 @@ export const YouTubeLearner: React.FC = () => {
 
           <div className="flex items-center gap-2 self-start sm:self-auto">
             <span className="text-[11px] font-bold bg-white/20 backdrop-blur-xs px-2.5 py-1 rounded-full border border-white/30 text-white">
-              {(remoteVideos.length || filteredVideos.length)} {language === 'hi' ? 'व्याख्यान उपलब्ध' : 'Lectures Available'}
+              {displayedVideos.length} {language === 'hi' ? 'व्याख्यान उपलब्ध' : 'Lectures Available'}
             </span>
           </div>
         </div>
@@ -434,7 +442,7 @@ export const YouTubeLearner: React.FC = () => {
                       <span>{activeVideo.channelTitle}</span>
                       <CheckCircle className="w-3.5 h-3.5 text-blue-500 fill-blue-500 text-white" />
                     </div>
-                    <span className="text-[11px] text-stone-400">Verified Board Educator</span>
+                    <span className="text-[11px] text-stone-400">{activeVideo.approved && activeVideo.published ? 'Approved Board Educator' : 'YouTube Source'}</span>
                   </div>
                 </div>
 
@@ -514,13 +522,13 @@ export const YouTubeLearner: React.FC = () => {
         <div className="space-y-3">
           <div className="flex items-center justify-between text-xs font-bold text-stone-800 border-b border-stone-100 pb-2">
             <span>
-              {language === 'hi' ? 'सर्च परिणाम' : 'Search Results'} ({filteredVideos.length})
+              {language === 'hi' ? 'सर्च परिणाम' : 'Search Results'} ({displayedVideos.length})
             </span>
             <span className="text-[10px] text-orange-600 font-semibold">{selectedClass}</span>
           </div>
 
           {/* If No Match in Local Library, Provide 1-Click Search YouTube Online */}
-          {filteredVideos.length === 0 ? (
+          {displayedVideos.length === 0 ? (
             <div className="bg-amber-50 border border-orange-200 rounded-2xl p-4 text-center space-y-3">
               <Compass className="w-8 h-8 text-orange-600 mx-auto" />
               <div>
@@ -549,7 +557,7 @@ export const YouTubeLearner: React.FC = () => {
             </div>
           ) : (
             <div className="space-y-2.5 max-h-[640px] overflow-y-auto pr-1">
-              {filteredVideos.map((vid) => {
+              {displayedVideos.map((vid) => {
                 const isPlaying = activeVideo?.youtubeId === vid.youtubeId;
 
                 return (
