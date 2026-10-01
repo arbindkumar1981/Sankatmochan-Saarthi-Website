@@ -50,4 +50,4 @@ jobs:
       - name: Deploy hosting and Firestore rules
         run: |
           npm install --global firebase-tools
-          firebase deploy --project "$FIREBASE_PROJECT_ID" --only hosting,firestore:rules --non-interactive --token "$CLOUDSDK_AUTH_ACCESS_TOKEN"
+          firebase deploy --project "$FIREBASE_PROJECT_ID" --only hosting,firestore:rules --non-interactive --token "${{ steps.auth.outputs.access_token }}"
