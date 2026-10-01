@@ -11,7 +11,6 @@ import {
   User,
   X,
   Flame,
-  KeyRound,
   CheckCircle2,
   LogIn
 } from 'lucide-react';
@@ -22,7 +21,6 @@ export const AuthModal: React.FC = () => {
     authModalInitialTab,
     closeAuthModal,
     signInWithGoogle,
-    signInAsAdminWithPasscode,
     signInAsGuestStudent
   } = useAuth();
 
@@ -33,8 +31,6 @@ export const AuthModal: React.FC = () => {
   const [selectedClass, setSelectedClass] = useState<ClassGrade>('Class 10');
   const [selectedBoard, setSelectedBoard] = useState<BoardType>('CBSE');
 
-  const [adminPasscode, setAdminPasscode] = useState('');
-  const [adminName, setAdminName] = useState('Principal A. Kumar');
   const [adminError, setAdminError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -63,6 +59,9 @@ export const AuthModal: React.FC = () => {
       await signInWithGoogle('admin');
     } catch (err) {
       console.error(err);
+      const code = typeof err === 'object' && err && 'code' in err ? String((err as { code?: unknown }).code || '') : '';
+      const message = err instanceof Error ? err.message : String(err);
+      setAdminError(code ? `${code}: ${message}` : message);
     } finally {
       setLoading(false);
     }
@@ -74,22 +73,6 @@ export const AuthModal: React.FC = () => {
     signInAsGuestStudent(studentName.trim(), selectedClass, selectedBoard);
   };
 
-  const handleAdminPasscodeSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setAdminError('');
-    if (!adminPasscode.trim()) {
-      setAdminError(language === 'hi' ? 'कृपया एडमिन पासवर्ड दर्ज करें' : 'Please enter admin passcode');
-      return;
-    }
-    const success = await signInAsAdminWithPasscode(adminPasscode.trim(), adminName);
-    if (!success) {
-      setAdminError(
-        language === 'hi'
-          ? 'अमान्य एडमिन पासकोड। कृपया "sankatmochan" या "saarthi2026" का उपयोग करें।'
-          : 'Invalid admin passcode. You can use "sankatmochan" or "saarthi2026".'
-      );
-    }
-  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-950/70 backdrop-blur-sm animate-fade-in">
@@ -293,66 +276,7 @@ export const AuthModal: React.FC = () => {
                 <span>Sign In as Admin via Google (principal.a.kumar@gmail.com)</span>
               </button>
 
-              <div className="relative flex items-center justify-center my-2">
-                <div className="border-t border-stone-200 w-full" />
-                <span className="bg-white px-3 text-xs text-stone-400 uppercase font-semibold">
-                  {language === 'hi' ? 'या मास्टर एडमिन पासकोड' : 'Or Master Admin Passcode'}
-                </span>
-                <div className="border-t border-stone-200 w-full" />
-              </div>
-
-              {/* Admin Passcode Form */}
-              <form onSubmit={handleAdminPasscodeSubmit} className="space-y-3">
-                <div>
-                  <label className="block text-xs font-semibold text-stone-700 mb-1">
-                    {language === 'hi' ? 'प्रशासक नाम / पद' : 'Administrator Name / Designation'}
-                  </label>
-                  <input
-                    type="text"
-                    value={adminName}
-                    onChange={(e) => setAdminName(e.target.value)}
-                    placeholder="Principal A. Kumar"
-                    className="w-full px-3 py-2 text-sm border border-stone-300 rounded-xl focus:ring-2 focus:ring-red-500 outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-stone-700 mb-1">
-                    {language === 'hi' ? 'सुरक्षित एडमिन पासकोड' : 'Secure Admin Master Passcode'} *
-                  </label>
-                  <div className="relative">
-                    <KeyRound className="w-4 h-4 absolute left-3 top-3 text-stone-400" />
-                    <input
-                      type="password"
-                      required
-                      placeholder="Passcode (e.g. sankatmochan)"
-                      value={adminPasscode}
-                      onChange={(e) => setAdminPasscode(e.target.value)}
-                      className="w-full pl-9 pr-3 py-2 text-sm border border-stone-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none font-mono"
-                    />
-                  </div>
-                  <span className="text-[11px] text-stone-500 mt-1 block">
-                    Default passcodes: <code className="bg-stone-100 px-1 py-0.5 rounded text-red-600 font-semibold">sankatmochan</code> or <code className="bg-stone-100 px-1 py-0.5 rounded text-red-600 font-semibold">saarthi2026</code>
-                  </span>
-                </div>
-
-                {adminError && (
-                  <div className="text-xs text-red-600 bg-red-50 border border-red-200 p-2 rounded-lg">
-                    {adminError}
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  className="w-full py-2.5 bg-gradient-to-r from-red-600 via-orange-600 to-red-700 hover:from-red-700 hover:to-orange-700 text-white font-bold rounded-xl shadow-md transition-all text-sm flex items-center justify-center gap-2"
-                >
-                  <ShieldCheck className="w-4 h-4" />
-                  <span>
-                    {language === 'hi' ? 'एडमिन पैनल में प्रवेश करें' : 'Unlock Admin Control Panel'}
-                  </span>
-                </button>
-              </form>
-            </div>
+                          </div>
           )}
         </div>
       </div>
