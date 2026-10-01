@@ -1,0 +1,22 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isAdmin() {
+      return isSignedIn() &&
+        firestore.exists(/databases/(default)/documents/admins/$(request.auth.uid));
+    }
+    function allowedStudyFile() {
+      return request.resource.size <= 25 * 1024 * 1024 &&
+        request.resource.contentType.matches('application/pdf|application/msword|application/vnd\\.openxmlformats-officedocument\\.wordprocessingml\\.document|application/vnd\\.ms-powerpoint|application/vnd\\.openxmlformats-officedocument\\.presentationml\\.presentation|image/(png|jpeg|webp)|text/plain|application/octet-stream');
+    }
+
+    match /learning-materials/{adminUid}/{fileName} {
+      allow read: if isAdmin();
+      allow create, update: if isAdmin() && request.auth.uid == adminUid && allowedStudyFile();
+      allow delete: if isAdmin() && request.auth.uid == adminUid;
+    }
+  }
+}
