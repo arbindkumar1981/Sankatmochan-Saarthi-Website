@@ -4,7 +4,10 @@
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "rewrites": [{ "source": "**", "destination": "/index.html" }]
   },
-  "firestore": {
-    "rules": "firestore.rules"
-  }
+  "firestore": [
+    {
+      "database": "ai-studio-22c801c8-a0d6-4c35-850f-640ed7d27d2a",
+      "rules": "firestore.rules"
+    }
+  ]
 }
