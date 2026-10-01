@@ -115,7 +115,7 @@ export const YouTubeLearner: React.FC = () => {
         id: 'direct-' + Date.now(),
         youtubeId: detectedId,
         title: `Direct YouTube Stream (${detectedId})`,
-        channelTitle: 'Verified Stream',
+        channelTitle: 'Direct YouTube Stream',
         duration: 'Online',
         views: 'Direct Play',
         thumbnail: `https://img.youtube.com/vi/${detectedId}/hqdefault.jpg`,
@@ -124,8 +124,8 @@ export const YouTubeLearner: React.FC = () => {
         subjectId: 'custom',
         chapterId: 'custom-ch',
         description: 'Direct YouTube video loaded via Saarthi Search Engine.',
-        approved: true,
-        published: true,
+        approved: false,
+        published: false,
         createdAt: new Date().toISOString()
       };
       setActiveVideo(customVid);
@@ -163,8 +163,8 @@ export const YouTubeLearner: React.FC = () => {
       subjectId: selectedSubject?.id || 'general',
       chapterId: 'ch-custom',
       description: 'Custom video loaded by student/teacher for concurrent study.',
-      approved: true,
-      published: true,
+      approved: false,
+      published: false,
       createdAt: new Date().toISOString()
     };
 
