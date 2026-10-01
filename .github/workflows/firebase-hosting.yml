@@ -46,9 +46,6 @@ jobs:
 
       - uses: google-github-actions/setup-gcloud@v3
 
-      - name: Deploy Firestore rules
-        run: gcloud firestore databases update --database=ai-studio-22c801c8-a0d6-4c35-850f-640ed7d27d2a --project="$FIREBASE_PROJECT_ID" --quiet || true
-
       - name: Deploy hosting and Firestore rules
         run: |
           npm install --global firebase-tools
