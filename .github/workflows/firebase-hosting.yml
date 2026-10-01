@@ -54,7 +54,7 @@ jobs:
 
       - uses: google-github-actions/setup-gcloud@v3
 
-      - name: Deploy hosting and Firestore rules
+      - name: Deploy hosting, Firestore and Storage rules
         run: |
           npm install --global firebase-tools
-          firebase deploy --project "$FIREBASE_PROJECT_ID" --only hosting,firestore --non-interactive --token "${{ steps.auth.outputs.access_token }}"
+          firebase deploy --project "$FIREBASE_PROJECT_ID" --only hosting,firestore,storage --non-interactive --token "${{ steps.auth.outputs.access_token }}"
