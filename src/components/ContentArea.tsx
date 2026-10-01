@@ -284,12 +284,12 @@ export const ContentArea: React.FC = () => {
               <Sparkles className="w-4 h-4 text-orange-600 shrink-0" />
               <span>
                 {language === 'hi'
-                  ? matchedContent?.approved && matchedContent?.published
-                    ? 'संकटमोचन सत्यापित सामग्री: अनुमोदित शैक्षणिक सामग्री प्रकाशित है।'
-                    : 'इस चयन के लिए सत्यापित सामग्री अभी प्रकाशित नहीं हुई है।'
-                  : matchedContent?.approved && matchedContent?.published
-                    ? 'Sankatmochan Verified: Published academic content.'
-                    : 'No verified content has been published for this selection yet.'}
+                  ? (matchedContent?.approved && matchedContent?.published
+                      ? 'संकटमोचन सत्यापित सामग्री: अनुमोदित शैक्षणिक सामग्री प्रकाशित है।'
+                      : 'इस चयन के लिए सत्यापित सामग्री अभी प्रकाशित नहीं हुई है।')
+                  : (matchedContent?.approved && matchedContent?.published
+                      ? 'Sankatmochan Verified: Published academic content.'
+                      : 'No verified content has been published for this selection yet.')}
               </span>
             </span>
           </div>
