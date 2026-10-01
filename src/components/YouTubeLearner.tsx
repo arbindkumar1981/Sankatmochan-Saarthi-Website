@@ -110,6 +110,7 @@ export const YouTubeLearner: React.FC = () => {
   // Show live backend results when available; otherwise show approved/local matches.
   const displayedVideos = remoteVideos.length > 0 ? remoteVideos : filteredVideos;
 
+
   const handleSearchSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const query = searchTerm.trim();
