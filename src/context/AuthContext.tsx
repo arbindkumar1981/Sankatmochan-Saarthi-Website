@@ -73,7 +73,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
           if (snap.exists()) {
             const data = snap.data() as UserProfile;
-            const updatedRole: UserRole = isDesignatedAdmin ? 'admin' : data.role || 'student';
+            const updatedRole: UserRole = isDesignatedAdmin ? 'admin' : 'student';
             const userProfile: UserProfile = {
               ...data,
               role: updatedRole
@@ -166,7 +166,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const existingData = snap.data() as UserProfile;
         setProfile({
           ...existingData,
-          role: isDesignatedAdmin ? 'admin' : existingData.role
+          role: resolvedRole
         });
       }
 
