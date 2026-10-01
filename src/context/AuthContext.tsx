@@ -33,7 +33,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const ADMIN_EMAILS = ['principal.a.kumar@gmail.com'];
+// Admin authorization is determined by the protected Firestore admins collection/rules.\n// Never hard-code privileged email addresses in browser source.\nconst hasAdminRecord = async (uid: string): Promise<boolean> => {\n  const adminSnap = await getDoc(doc(db, 'admins', uid));\n  return adminSnap.exists();\n};
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -64,8 +64,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const userDocRef = doc(db, 'users', currentUser.uid);
           const snap = await getDoc(userDocRef);
 
-          const isDesignatedAdmin =
-            ADMIN_EMAILS.includes(currentUser.email?.toLowerCase() || '');
+          const isDesignatedAdmin = await hasAdminRecord(currentUser.uid);
 
           if (snap.exists()) {
             const data = snap.data() as UserProfile;
@@ -75,11 +74,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               role: updatedRole
             };
             setProfile(userProfile);
-
-            // update admin role if newly promoted
-            if (isDesignatedAdmin && data.role !== 'admin') {
-              await updateDoc(userDocRef, { role: 'admin' });
-            }
           } else {
             // New user registration
             const newProfile: UserProfile = {
@@ -100,15 +94,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
             await setDoc(userDocRef, newProfile);
             setProfile(newProfile);
-
-            if (isDesignatedAdmin) {
-              await setDoc(doc(db, 'admins', currentUser.uid), {
-                uid: currentUser.uid,
-                email: currentUser.email,
-                name: currentUser.displayName || 'Principal',
-                assignedAt: new Date().toISOString()
-              });
-            }
           }
         } catch (err) {
           console.error('Error fetching/saving user profile:', err);
@@ -147,7 +132,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Admin status must never be granted from a client-selected login tab.
       // It is derived only from the designated authenticated account; Firestore rules
       // remain the authoritative enforcement boundary for privileged writes.
-      const isDesignatedAdmin = ADMIN_EMAILS.includes(result.user.email?.toLowerCase() || '');
+      const isDesignatedAdmin = await hasAdminRecord(result.user.uid);
 
       const userDocRef = doc(db, 'users', result.user.uid);
       const snap = await getDoc(userDocRef);
