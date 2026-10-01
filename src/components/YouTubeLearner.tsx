@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { auth } from '../services/firebase';
 import { useCurriculum } from '../context/CurriculumContext';
 import { YouTubeVideoItem } from '../types';
 import {
@@ -33,6 +34,9 @@ export const YouTubeLearner: React.FC = () => {
   const [notesText, setNotesText] = useState('');
   const [savedNotes, setSavedNotes] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [remoteVideos, setRemoteVideos] = useState<YouTubeVideoItem[]>([]);
+  const [searchingRemote, setSearchingRemote] = useState(false);
+  const [searchError, setSearchError] = useState('');
 
   const categories = [
     { id: 'all', label: language === 'hi' ? 'सभी व्याख्यान' : 'All Lectures' },
@@ -103,7 +107,7 @@ export const YouTubeLearner: React.FC = () => {
     });
   }, [youtubeVideos, searchTerm, selectedCategory]);
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
+  const handleSearchSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const query = searchTerm.trim();
     if (!query) return;
@@ -132,9 +136,55 @@ export const YouTubeLearner: React.FC = () => {
       return;
     }
 
-    // If local results exist, automatically load the top match into the player!
+    // Prefer approved local content. If none matches, use the authenticated Saarthi backend.
     if (filteredVideos.length > 0) {
+      setRemoteVideos([]);
+      setSearchError('');
       setActiveVideo(filteredVideos[0]);
+      return;
+    }
+
+    const currentUser = auth.currentUser;
+    const apiBase = import.meta.env.VITE_SAARTHI_API_URL;
+    if (!currentUser || !apiBase) {
+      setSearchError('Sign in to search live YouTube results.');
+      return;
+    }
+
+    setSearchingRemote(true);
+    setSearchError('');
+    try {
+      const idToken = await currentUser.getIdToken();
+      const response = await fetch(
+        `${apiBase.replace(/\/$/, '')}/v1/website/youtube/search?q=${encodeURIComponent(query)}&max_results=10`,
+        { headers: { Authorization: `Bearer ${idToken}` } }
+      );
+      if (!response.ok) throw new Error(`Search failed (${response.status})`);
+      const data = await response.json();
+      const mapped: YouTubeVideoItem[] = (data.items || []).map((item: any, index: number) => ({
+        id: `remote-${item.video_id || item.youtube_id || index}`,
+        youtubeId: item.video_id || item.youtube_id,
+        title: item.title || 'YouTube lecture',
+        channelTitle: item.channel_title || item.channelTitle || 'YouTube',
+        duration: item.duration || 'Online',
+        views: item.views || '',
+        thumbnail: item.thumbnail || item.thumbnail_url || `https://img.youtube.com/vi/${item.video_id || item.youtube_id}/hqdefault.jpg`,
+        board: 'CBSE',
+        classGrade: selectedClass,
+        subjectId: selectedSubject?.id || 'search',
+        chapterId: 'youtube-search',
+        description: item.description || 'Live YouTube search result via Sankatmochan Saarthi backend.',
+        approved: false,
+        published: false,
+        createdAt: new Date().toISOString()
+      })).filter((item: YouTubeVideoItem) => Boolean(item.youtubeId));
+      setRemoteVideos(mapped);
+      if (mapped[0]) setActiveVideo(mapped[0]);
+      else setSearchError('No live results found.');
+    } catch (error) {
+      setSearchError(error instanceof Error ? error.message : 'Live search unavailable.');
+    } finally {
+      setSearchingRemote(false);
     }
   };
 
@@ -201,7 +251,7 @@ export const YouTubeLearner: React.FC = () => {
 
           <div className="flex items-center gap-2 self-start sm:self-auto">
             <span className="text-[11px] font-bold bg-white/20 backdrop-blur-xs px-2.5 py-1 rounded-full border border-white/30 text-white">
-              {filteredVideos.length} {language === 'hi' ? 'व्याख्यान उपलब्ध' : 'Lectures Available'}
+              {(remoteVideos.length || filteredVideos.length)} {language === 'hi' ? 'व्याख्यान उपलब्ध' : 'Lectures Available'}
             </span>
           </div>
         </div>
@@ -267,6 +317,12 @@ export const YouTubeLearner: React.FC = () => {
           ))}
         </div>
       </div>
+
+      {(searchingRemote || searchError) && (
+        <div className="text-xs font-semibold px-3 py-2 rounded-xl border border-orange-200 bg-orange-50 text-orange-900">
+          {searchingRemote ? 'Searching live Saarthi YouTube results…' : searchError}
+        </div>
+      )}
 
       {/* Category Pills & Active Filter Bar */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-orange-100 pb-3">
