@@ -103,6 +103,13 @@ export interface LearningContent {
   chapterTitle: string;
   topicId?: string;
   topicTitle?: string;
+  subtopicId?: string;
+  subtopicTitle?: string;
+  attachmentUrl?: string;
+  attachmentName?: string;
+  attachmentType?: string;
+  attachmentSize?: number;
+  storagePath?: string;
   title: string;
   hindiTitle?: string;
   bodyText: string;
