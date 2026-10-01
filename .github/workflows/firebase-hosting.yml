@@ -43,10 +43,11 @@ jobs:
           project_id: ${{ env.FIREBASE_PROJECT_ID }}
           workload_identity_provider: projects/247863708315/locations/global/workloadIdentityPools/github-saarthi/providers/github-saarthi-provider
           service_account: saarthi-github-deployer@sankatmochan-509100.iam.gserviceaccount.com
+          token_format: access_token
 
       - uses: google-github-actions/setup-gcloud@v3
 
       - name: Deploy hosting and Firestore rules
         run: |
           npm install --global firebase-tools
-          firebase deploy --project "$FIREBASE_PROJECT_ID" --only hosting,firestore:rules --non-interactive
+          firebase deploy --project "$FIREBASE_PROJECT_ID" --only hosting,firestore:rules --non-interactive --token "$CLOUDSDK_AUTH_ACCESS_TOKEN"
