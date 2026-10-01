@@ -276,6 +276,14 @@ export const AuthModal: React.FC = () => {
                 <span>Sign In as Admin via Google (principal.a.kumar@gmail.com)</span>
               </button>
 
+              {adminError && (
+                <div role="alert" className="text-xs text-red-700 bg-red-50 border border-red-200 p-3 rounded-lg break-words">
+                  <strong>Google sign-in failed:</strong> {adminError}
+                </div>
+              )}
+
+
+
                           </div>
           )}
         </div>
