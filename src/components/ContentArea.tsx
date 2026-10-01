@@ -72,8 +72,8 @@ export const ContentArea: React.FC = () => {
     chapterTitle: selectedChapter?.title || '',
     title: `${selectedSubject?.name || 'Subject'}: ${selectedChapter?.title || 'Chapter'} - ${activeModule.replace('_', ' ').toUpperCase()}`,
     hindiTitle: `${selectedSubject?.hindiName || ''} - ${selectedChapter?.hindiTitle || ''}`,
-    bodyText: `### Comprehensive Curriculum Mastery\nDetailed pedagogical study notes, verified NCERT solutions, and board examination patterns for **${selectedChapter?.title || 'Chapter'}**.\n\n- Key Concepts Breakdown\n- Board Marking Scheme Guidelines\n- Illustrated Examples & Visual Flow\n\n*(Content is approved and verified by Saarthi Academic Council)*`,
-    bodyHindi: `### पाठ्यक्रम एवं संपूर्ण अध्याय सार\n**${selectedChapter?.hindiTitle || 'अध्याय'}** के लिए प्रामाणिक व बोर्ड-परीक्षित अध्ययन सामग्री।\n\n- मुख्य अवधारणाएँ एवं सूत्र\n- बोर्ड परीक्षा में पूछे जाने वाले बिंदु\n- संकटमोचन सारथी अध्ययन संकल्प`,
+    bodyText: `### Content not yet published\nVerified learning material for **${selectedChapter?.title || 'this chapter'}** is not available yet. Please choose another published topic or check again after the academic content is approved.`,
+    bodyHindi: `### सामग्री अभी प्रकाशित नहीं है\n**${selectedChapter?.hindiTitle || 'इस अध्याय'}** के लिए सत्यापित अध्ययन सामग्री अभी उपलब्ध नहीं है। कृपया कोई अन्य प्रकाशित विषय चुनें या सामग्री अनुमोदित होने के बाद पुनः देखें।`,
     version: 1,
     approved: true,
     published: true,
@@ -284,8 +284,12 @@ export const ContentArea: React.FC = () => {
               <Sparkles className="w-4 h-4 text-orange-600 shrink-0" />
               <span>
                 {language === 'hi'
-                  ? 'संकटमोचन प्रामाणिक सामग्री: यह नोट्स एनसीईआरटी (NCERT) और नवीनतम बोर्ड दिशानिर्देशों पर आधारित हैं।'
-                  : 'Sankatmochan Verified: Strictly mapped to latest official NCERT board curriculum standards.'}
+                  ? matchedContent?.approved && matchedContent?.published
+                    ? 'संकटमोचन सत्यापित सामग्री: अनुमोदित शैक्षणिक सामग्री प्रकाशित है।'
+                    : 'इस चयन के लिए सत्यापित सामग्री अभी प्रकाशित नहीं हुई है।'
+                  : matchedContent?.approved && matchedContent?.published
+                    ? 'Sankatmochan Verified: Published academic content.'
+                    : 'No verified content has been published for this selection yet.'}
               </span>
             </span>
           </div>
