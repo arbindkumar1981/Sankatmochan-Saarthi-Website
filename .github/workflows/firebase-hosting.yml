@@ -1,0 +1,55 @@
+name: Deploy Website to Firebase
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: saarthi-firebase-production
+  cancel-in-progress: false
+
+env:
+  FIREBASE_PROJECT_ID: quick-xylopolist-tt3g1
+  VITE_SAARTHI_API_URL: https://sankatmochan-saarthi-v3-git-247863708315.asia-south2.run.app
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun run lint
+      - run: bun run build
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun run build
+
+      - id: auth
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ env.FIREBASE_PROJECT_ID }}
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@v3
+
+      - name: Deploy Firestore rules
+        run: gcloud firestore databases update --database=ai-studio-22c801c8-a0d6-4c35-850f-640ed7d27d2a --project="$FIREBASE_PROJECT_ID" --quiet || true
+
+      - name: Deploy hosting and Firestore rules
+        run: |
+          npm install --global firebase-tools
+          firebase deploy --project "$FIREBASE_PROJECT_ID" --only hosting,firestore:rules --non-interactive
