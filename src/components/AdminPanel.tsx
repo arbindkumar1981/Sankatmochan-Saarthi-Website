@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { storage } from '../services/firebase';
 import { useCurriculum } from '../context/CurriculumContext';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -31,7 +33,9 @@ import {
   Image as ImageIcon,
   Save,
   Sparkles,
-  Search
+  Search,
+  Upload,
+  Paperclip
 } from 'lucide-react';
 
 export const AdminPanel: React.FC = () => {
@@ -53,6 +57,7 @@ export const AdminPanel: React.FC = () => {
     selectedClass,
     selectedStream,
     selectedSubject,
+    availableSubjects,
     language
   } = useCurriculum();
 
@@ -69,6 +74,20 @@ export const AdminPanel: React.FC = () => {
   const [contentType, setContentType] = useState<ContentModuleType>('detailed_notes');
   const [contentBody, setContentBody] = useState('');
   const [contentHindiBody, setContentHindiBody] = useState('');
+  const [contentBoard, setContentBoard] = useState<BoardType>(selectedBoard);
+  const [contentClass, setContentClass] = useState<ClassGrade>(selectedClass);
+  const [contentStream, setContentStream] = useState<StreamType>(selectedStream);
+  const [contentSubjectId, setContentSubjectId] = useState(selectedSubject?.id || '');
+  const [contentChapterId, setContentChapterId] = useState(selectedSubject?.chapters[0]?.id || '');
+  const [contentTopicId, setContentTopicId] = useState('');
+  const [contentSubtopic, setContentSubtopic] = useState('');
+  const [contentFile, setContentFile] = useState<File | null>(null);
+  const [contentSaving, setContentSaving] = useState(false);
+  const [contentError, setContentError] = useState('');
+
+  const formSubjects = useMemo(() => availableSubjects.filter(s => s.classes.includes(contentClass)), [availableSubjects, contentClass]);
+  const formSubject = formSubjects.find(s => s.id === contentSubjectId) || formSubjects[0] || null;
+  const formChapter = formSubject?.chapters.find(ch => ch.id === contentChapterId) || formSubject?.chapters[0] || null;
 
   // New Video Form State
   const [showVideoForm, setShowVideoForm] = useState(false);
@@ -97,34 +116,80 @@ export const AdminPanel: React.FC = () => {
 
   const handleCreateContent = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!contentTitle.trim()) return;
+    setContentError('');
+    if (!contentTitle.trim() || !formSubject || !formChapter) return;
+    if (!contentBody.trim() && !contentFile) {
+      setContentError('Type/paste learning content or upload a study file.');
+      return;
+    }
 
-    await addNewLearningContent({
-      contentType,
-      board: selectedBoard,
-      classGrade: selectedClass,
-      stream: selectedStream,
-      subjectId: selectedSubject?.id || 'c10-science',
-      subjectName: selectedSubject?.name || 'Science',
-      chapterId: selectedSubject?.chapters[0]?.id || 'ch-1',
-      chapterTitle: selectedSubject?.chapters[0]?.title || 'Chapter 1',
-      title: contentTitle.trim(),
-      hindiTitle: contentHindiTitle.trim() || undefined,
-      bodyText: contentBody.trim(),
-      bodyHindi: contentHindiBody.trim() || undefined,
-      version: 1,
-      approved: true,
-      published: true,
-      authorUid: profile?.uid || 'admin',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    });
+    const allowedExtensions = ['pdf','doc','docx','ppt','pptx','png','jpg','jpeg','webp','txt'];
+    if (contentFile) {
+      const ext = contentFile.name.split('.').pop()?.toLowerCase() || '';
+      if (!allowedExtensions.includes(ext)) {
+        setContentError('Unsupported file. Use PDF, DOC/DOCX, PPT/PPTX, PNG/JPG/WEBP or TXT.');
+        return;
+      }
+      if (contentFile.size > 25 * 1024 * 1024) {
+        setContentError('File is too large. Maximum upload size is 25 MB.');
+        return;
+      }
+    }
 
-    setContentTitle('');
-    setContentHindiTitle('');
-    setContentBody('');
-    setContentHindiBody('');
-    setShowContentForm(false);
+    setContentSaving(true);
+    try {
+      let attachmentUrl: string | undefined;
+      let storagePath: string | undefined;
+      if (contentFile) {
+        const safeName = contentFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+        storagePath = `learning-materials/${profile?.uid || 'admin'}/${Date.now()}-${safeName}`;
+        const storageRef = ref(storage, storagePath);
+        await uploadBytes(storageRef, contentFile, { contentType: contentFile.type || 'application/octet-stream' });
+        attachmentUrl = await getDownloadURL(storageRef);
+      }
+
+      const topic = formChapter.topics.find(t => t.id === contentTopicId);
+      await addNewLearningContent({
+        contentType,
+        board: contentBoard,
+        classGrade: contentClass,
+        stream: contentStream,
+        subjectId: formSubject.id,
+        subjectName: formSubject.name,
+        chapterId: formChapter.id,
+        chapterTitle: formChapter.title,
+        topicId: topic?.id,
+        topicTitle: topic?.title,
+        subtopicTitle: contentSubtopic.trim() || undefined,
+        title: contentTitle.trim(),
+        hindiTitle: contentHindiTitle.trim() || undefined,
+        bodyText: contentBody.trim(),
+        bodyHindi: contentHindiBody.trim() || undefined,
+        attachmentUrl,
+        attachmentName: contentFile?.name,
+        attachmentType: contentFile?.type,
+        attachmentSize: contentFile?.size,
+        storagePath,
+        version: 1,
+        approved: true,
+        published: true,
+        authorUid: profile?.uid || 'admin',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
+
+      setContentTitle('');
+      setContentHindiTitle('');
+      setContentBody('');
+      setContentHindiBody('');
+      setContentSubtopic('');
+      setContentFile(null);
+      setShowContentForm(false);
+    } catch (error) {
+      setContentError(error instanceof Error ? error.message : 'Unable to save learning material.');
+    } finally {
+      setContentSaving(false);
+    }
   };
 
   const handleCreateVideo = async (e: React.FormEvent) => {
@@ -361,6 +426,16 @@ export const AdminPanel: React.FC = () => {
                 </div>
               </div>
 
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                <div><label className="block text-[11px] font-semibold mb-1">Board *</label><select value={contentBoard} onChange={e => setContentBoard(e.target.value as BoardType)} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white"><option value="CBSE">CBSE</option><option value="ICSE_ISC">ICSE / ISC</option><option value="UP_BOARD">UP Board</option><option value="BIHAR_BOARD">Bihar Board</option><option value="STATE_BOARD">State Board</option></select></div>
+                <div><label className="block text-[11px] font-semibold mb-1">Class *</label><select value={contentClass} onChange={e => { setContentClass(e.target.value as ClassGrade); setContentSubjectId(''); setContentChapterId(''); setContentTopicId(''); }} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white"><option>Class 9</option><option>Class 10</option><option>Class 11</option><option>Class 12</option></select></div>
+                <div><label className="block text-[11px] font-semibold mb-1">Stream</label><select value={contentStream} onChange={e => setContentStream(e.target.value as StreamType)} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white"><option>General</option><option>Science</option><option>Commerce</option><option>Humanities</option></select></div>
+                <div><label className="block text-[11px] font-semibold mb-1">Subject *</label><select value={formSubject?.id || ''} onChange={e => { setContentSubjectId(e.target.value); setContentChapterId(''); setContentTopicId(''); }} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white">{formSubjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></div>
+                <div><label className="block text-[11px] font-semibold mb-1">Chapter *</label><select value={formChapter?.id || ''} onChange={e => { setContentChapterId(e.target.value); setContentTopicId(''); }} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white">{formSubject?.chapters.map(ch => <option key={ch.id} value={ch.id}>{ch.chapterNumber}. {ch.title}</option>)}</select></div>
+                <div><label className="block text-[11px] font-semibold mb-1">Topic</label><select value={contentTopicId} onChange={e => setContentTopicId(e.target.value)} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white"><option value="">Full chapter / No specific topic</option>{formChapter?.topics.map(t => <option key={t.id} value={t.id}>{t.title}</option>)}</select></div>
+              </div>
+              <div><label className="block text-[11px] font-semibold mb-1">Sub-topic</label><input value={contentSubtopic} onChange={e => setContentSubtopic(e.target.value)} placeholder="Enter sub-topic name (optional)" className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white outline-none" /></div>
+
               <div>
                 <label className="block text-[11px] font-semibold text-stone-700 mb-1">
                   Module Type
@@ -394,11 +469,23 @@ export const AdminPanel: React.FC = () => {
                 />
               </div>
 
+              <div className="rounded-xl border border-dashed border-orange-300 bg-white p-3">
+                <label className="block text-[11px] font-semibold text-stone-700 mb-2">Upload Study Document (optional when text is entered)</label>
+                <label className="cursor-pointer flex items-center gap-2 text-xs font-bold text-orange-700">
+                  <Upload className="w-4 h-4" />
+                  <span>{contentFile ? contentFile.name : 'Choose PDF, DOC/DOCX, PPT/PPTX, PNG/JPG/WEBP or TXT'}</span>
+                  <input type="file" className="hidden" accept=".pdf,.doc,.docx,.ppt,.pptx,.png,.jpg,.jpeg,.webp,.txt" onChange={e => setContentFile(e.target.files?.[0] || null)} />
+                </label>
+                <p className="text-[10px] text-stone-500 mt-1">Maximum file size: 25 MB. Files are stored securely in Firebase Storage.</p>
+              </div>
+              {contentError && <p className="text-xs font-semibold text-red-700 bg-red-50 border border-red-200 rounded-lg p-2">{contentError}</p>}
+
               <button
                 type="submit"
-                className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-xl text-xs shadow-sm"
+                disabled={contentSaving}
+                className="px-4 py-2 bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white font-bold rounded-xl text-xs shadow-sm"
               >
-                Save & Publish to Curriculum
+                {contentSaving ? 'Uploading & Saving...' : 'Save & Publish to Curriculum'}
               </button>
             </form>
           )}
@@ -420,6 +507,8 @@ export const AdminPanel: React.FC = () => {
                     </span>
                   </div>
                   <h4 className="font-bold text-stone-900 text-sm">{c.title}</h4>
+                  <p className="text-[11px] text-stone-500">{c.chapterTitle}{c.topicTitle ? ` • ${c.topicTitle}` : ''}{c.subtopicTitle ? ` • ${c.subtopicTitle}` : ''}</p>
+                  {c.attachmentUrl && <a href={c.attachmentUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[11px] text-orange-700 font-bold hover:underline mt-1"><Paperclip className="w-3 h-3" />{c.attachmentName || 'Open uploaded file'}</a>}
                   <p className="text-[11px] text-stone-500 font-mono mt-0.5">
                     Version: v{c.version} • Status: {c.published ? 'Published' : 'Draft'}
                   </p>
