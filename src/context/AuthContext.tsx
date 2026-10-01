@@ -33,7 +33,12 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Admin authorization is determined by the protected Firestore admins collection/rules.\n// Never hard-code privileged email addresses in browser source.\nconst hasAdminRecord = async (uid: string): Promise<boolean> => {\n  const adminSnap = await getDoc(doc(db, 'admins', uid));\n  return adminSnap.exists();\n};
+// Admin authorization is determined by the protected Firestore admins collection/rules.
+// Never hard-code privileged email addresses in browser source.
+const hasAdminRecord = async (uid: string): Promise<boolean> => {
+  const adminSnap = await getDoc(doc(db, 'admins', uid));
+  return adminSnap.exists();
+};
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
