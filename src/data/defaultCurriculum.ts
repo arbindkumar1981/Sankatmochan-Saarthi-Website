@@ -5,6 +5,7 @@ import {
   EvaluationTest,
   NoticeItem
 } from '../types';
+import { CURRENT_CBSE_NCERT_SUBJECTS } from './currentCurriculum2026';
 
 // Authentic original photograph of Revered Shri Neem Karoli Baba Maharaj-ji (Local & Wikimedia Commons CC0)
 export const BABA_IMAGE_URL = '/baba.jpg';
@@ -41,7 +42,7 @@ export const SUPPORTED_BOARDS = [
   { id: 'STATE_BOARD', name: 'Other State Education Boards', hindiName: 'अन्य राज्य शिक्षा बोर्ड' }
 ];
 
-export const ALL_SUBJECTS: SubjectMeta[] = [
+const LEGACY_SUBJECTS: SubjectMeta[] = [
   // Class 10 Subjects (Strictly conforming to user prompt)
   {
     id: 'c10-hindi-a',
@@ -636,6 +637,12 @@ export const ALL_SUBJECTS: SubjectMeta[] = [
       }
     ]
   }
+];
+
+const CURRENT_KEYS = new Set(CURRENT_CBSE_NCERT_SUBJECTS.flatMap(s => s.classes.map(c => `${c}|${s.name}`)));
+export const ALL_SUBJECTS: SubjectMeta[] = [
+  ...CURRENT_CBSE_NCERT_SUBJECTS,
+  ...LEGACY_SUBJECTS.filter(s => !s.classes.some(c => CURRENT_KEYS.has(`${c}|${s.name}`)))
 ];
 
 export const INITIAL_LEARNING_CONTENTS: LearningContent[] = [
