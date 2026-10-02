@@ -31,7 +31,10 @@ import {
   HelpCircle,
   TrendingUp,
   BrainCircuit,
-  Share2
+  Share2,
+  Youtube,
+  Play,
+  ExternalLink
 } from 'lucide-react';
 
 export const ContentArea: React.FC = () => {
@@ -46,6 +49,7 @@ export const ContentArea: React.FC = () => {
     language,
     learningContents,
     evaluationTests,
+    youtubeVideos,
     saveTestResult
   } = useCurriculum();
 
@@ -275,6 +279,35 @@ export const ContentArea: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Recommended Videos: curated separately from normal YouTube Search */}
+      {activeModule === 'recommended_videos' && (
+        <div className="space-y-4">
+          {(() => {
+            const videos = youtubeVideos.filter((v) => {
+              if (!v.approved || !v.published) return false;
+              if (v.board && v.board !== selectedBoard) return false;
+              if (v.classGrade !== selectedClass) return false;
+              if (selectedSubject && v.subjectId !== selectedSubject.id) return false;
+              if (selectedChapter && v.chapterId !== selectedChapter.id) return false;
+              if (selectedTopic && v.topicId && v.topicId !== selectedTopic.id && (v.topicTitle || '').toLowerCase() !== selectedTopic.title.toLowerCase()) return false;
+              return true;
+            });
+            if (!videos.length) return <div className="p-6 text-center border border-dashed border-orange-300 rounded-2xl text-sm text-stone-600">No Saarthi Recommended Video has been published for this selection yet.</div>;
+            return <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">{videos.map(v => (
+              <div key={v.id} className="border border-red-200 rounded-2xl overflow-hidden bg-white shadow-sm">
+                <div className="aspect-video bg-black">
+                  <iframe src={`https://www.youtube.com/embed/${v.youtubeId}?rel=0&modestbranding=1&playsinline=1`} title={v.title} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen className="w-full h-full border-0" />
+                </div>
+                <div className="p-3">
+                  <div className="flex items-start gap-2"><Youtube className="w-5 h-5 text-red-600 shrink-0"/><div><h3 className="font-bold text-sm text-stone-900">{v.title}</h3><p className="text-[11px] text-stone-500 mt-0.5">{v.channelTitle}{v.topicTitle ? ` • ${v.topicTitle}` : ''}{v.subtopicTitle ? ` → ${v.subtopicTitle}` : ''}</p></div></div>
+                  <a href={`https://www.youtube.com/watch?v=${v.youtubeId}`} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-red-700 hover:underline"><Play className="w-3.5 h-3.5"/>Watch on YouTube<ExternalLink className="w-3 h-3"/></a>
+                </div>
+              </div>
+            ))}</div>;
+          })()}
+        </div>
+      )}
 
       {/* Module 1 & 2: Detailed Notes & Revision Notes */}
       {(activeModule === 'detailed_notes' || activeModule === 'revision_notes') && (
