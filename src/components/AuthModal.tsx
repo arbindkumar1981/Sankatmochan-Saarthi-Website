@@ -88,7 +88,7 @@ export const AuthModal: React.FC = () => {
     const subject = loginSubjects.find(s => s.id === selectedSubjectId) || loginSubjects[0];
     setLearningStream(selectedStream);
     if (subject) setLearningSubject(subject);
-    signInAsGuestStudent(studentName.trim(), selectedClass, selectedBoard);
+    signInAsGuestStudent(studentName.trim(), selectedClass, selectedBoard, selectedStream);
   };
 
 
