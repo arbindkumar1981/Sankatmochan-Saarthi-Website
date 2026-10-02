@@ -96,7 +96,7 @@ export const ContentArea: React.FC = () => {
   // Student on-demand Teacher Agent generation (Detailed/Revision Notes first).
   const [studentGeneratedText, setStudentGeneratedText] = useState('');
   const [studentGenerating, setStudentGenerating] = useState(false);
-  const [studentGenerationError, setStudentGenerationError] = useState('');
+  const [studentGenerationError, setStudentGenerationError] = useState('');\n  const [studentDiagramPlans, setStudentDiagramPlans] = useState<Array<{title:string; labels:string[]; instructions:string}>>([]);
 
   const teacherSubjectName = (name: string) => {
     const n = name.toLowerCase();
@@ -156,7 +156,7 @@ export const ContentArea: React.FC = () => {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(typeof data.detail === 'string' ? data.detail : 'Sankatmochansaarthi could not generate this material.');
-      setStudentGeneratedText(data.content || '');
+      setStudentGeneratedText(data.content || '');\n      setStudentDiagramPlans(Array.isArray(data.diagram_plans) ? data.diagram_plans : []);
     } catch (e:any) { setStudentGenerationError(e.message || 'Generation failed. Please try again.'); }
     finally { setStudentGenerating(false); }
   };
@@ -441,6 +441,7 @@ export const ContentArea: React.FC = () => {
               ? displayContent.bodyHindi
               : displayContent.bodyText)}
           </div>
+          {studentDiagramPlans.length > 0 && <div className="grid grid-cols-1 md:grid-cols-2 gap-4">{studentDiagramPlans.map((plan,idx)=><div key={idx} className="rounded-2xl border-2 border-sky-200 bg-sky-50/50 p-4"><div className="text-xs font-black uppercase tracking-wide text-sky-800 mb-3">Sankatmochansaarthi Diagram</div><div className="bg-white rounded-xl border border-sky-200 min-h-48 p-4 flex flex-col items-center justify-center text-center"><div className="w-24 h-24 rounded-full border-4 border-sky-400 bg-gradient-to-br from-emerald-100 to-sky-100 flex items-center justify-center font-bold text-sm text-stone-800 px-2">{plan.title}</div>{plan.labels?.length>0&&<div className="mt-4 flex flex-wrap justify-center gap-2">{plan.labels.map((label,i)=><span key={i} className="px-2 py-1 rounded-full bg-white border border-orange-300 text-[11px] font-semibold">{label}</span>)}</div>}<p className="mt-3 text-[11px] text-stone-600 leading-relaxed">{plan.instructions}</p></div></div>)}</div>}
         </div>
       )}
 
