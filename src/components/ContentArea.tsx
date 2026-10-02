@@ -84,8 +84,10 @@ export const ContentArea: React.FC = () => {
     chapterTitle: selectedChapter?.title || '',
     title: `${selectedSubject?.name || 'Subject'}: ${selectedChapter?.title || 'Chapter'} - ${activeModule.replace('_', ' ').toUpperCase()}`,
     hindiTitle: `${selectedSubject?.hindiName || ''} - ${selectedChapter?.hindiTitle || ''}`,
-    bodyText: `### Content not yet published\nVerified learning material for **${selectedChapter?.title || 'this chapter'}** is not available yet. Please choose another published topic or check again after the academic content is approved.`,
-    bodyHindi: `### सामग्री अभी प्रकाशित नहीं है\n**${selectedChapter?.hindiTitle || 'इस अध्याय'}** के लिए सत्यापित अध्ययन सामग्री अभी उपलब्ध नहीं है। कृपया कोई अन्य प्रकाशित विषय चुनें या सामग्री अनुमोदित होने के बाद पुनः देखें।`,
+    bodyText: `### Content not yet published
+Verified learning material for **${selectedChapter?.title || 'this chapter'}** is not available yet. Please choose another published topic or check again after the academic content is approved.`,
+    bodyHindi: `### सामग्री अभी प्रकाशित नहीं है
+**${selectedChapter?.hindiTitle || 'इस अध्याय'}** के लिए सत्यापित अध्ययन सामग्री अभी उपलब्ध नहीं है। कृपया कोई अन्य प्रकाशित विषय चुनें या सामग्री अनुमोदित होने के बाद पुनः देखें।`,
     version: 1,
     approved: true,
     published: true,
@@ -96,7 +98,8 @@ export const ContentArea: React.FC = () => {
   // Student on-demand Teacher Agent generation (Detailed/Revision Notes first).
   const [studentGeneratedText, setStudentGeneratedText] = useState('');
   const [studentGenerating, setStudentGenerating] = useState(false);
-  const [studentGenerationError, setStudentGenerationError] = useState('');\n  const [studentDiagramPlans, setStudentDiagramPlans] = useState<Array<{title:string; labels:string[]; instructions:string}>>([]);
+  const [studentGenerationError, setStudentGenerationError] = useState('');
+  const [studentDiagramPlans, setStudentDiagramPlans] = useState<Array<{title:string; labels:string[]; instructions:string}>>([]);
 
   const teacherSubjectName = (name: string) => {
     const n = name.toLowerCase();
@@ -156,7 +159,8 @@ export const ContentArea: React.FC = () => {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(typeof data.detail === 'string' ? data.detail : 'Sankatmochansaarthi could not generate this material.');
-      setStudentGeneratedText(data.content || '');\n      setStudentDiagramPlans(Array.isArray(data.diagram_plans) ? data.diagram_plans : []);
+      setStudentGeneratedText(data.content || '');
+      setStudentDiagramPlans(Array.isArray(data.diagram_plans) ? data.diagram_plans : []);
     } catch (e:any) { setStudentGenerationError(e.message || 'Generation failed. Please try again.'); }
     finally { setStudentGenerating(false); }
   };
