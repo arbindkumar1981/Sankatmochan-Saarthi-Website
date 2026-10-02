@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { auth } from '../services/firebase';
 import { useCurriculum } from '../context/CurriculumContext';
 import { YouTubeVideoItem } from '../types';
@@ -79,33 +79,6 @@ export const YouTubeLearner: React.FC = () => {
     }
     return null;
   };
-
-  // Comprehensive multi-keyword search engine logic
-  const filteredVideos = useMemo(() => {
-    const term = searchTerm.trim().toLowerCase();
-
-    return youtubeVideos.filter((v) => {
-      // If a category is selected AND no specific search query is typed, apply category filter
-      if (selectedCategory !== 'all' && !term && v.subjectId !== selectedCategory) {
-        return false;
-      }
-
-      // If search query is typed, match across ALL fields
-      if (term) {
-        const titleMatch = v.title.toLowerCase().includes(term);
-        const hindiMatch = (v.hindiTitle || '').toLowerCase().includes(term);
-        const channelMatch = v.channelTitle.toLowerCase().includes(term);
-        const descMatch = v.description.toLowerCase().includes(term);
-        const tagMatch = v.tags?.some((t) => t.toLowerCase().includes(term));
-        const subMatch = (v.subjectId || '').toLowerCase().includes(term);
-        const classMatch = (v.classGrade || '').toLowerCase().includes(term);
-
-        return titleMatch || hindiMatch || channelMatch || descMatch || tagMatch || subMatch || classMatch;
-      }
-
-      return true;
-    });
-  }, [youtubeVideos, searchTerm, selectedCategory]);
 
   // Normal YouTube Search must never mix in Saarthi Recommended videos.
   // Curated videos live exclusively in the Recommended Videos learning module.
