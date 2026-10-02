@@ -391,7 +391,7 @@ export const ContentArea: React.FC = () => {
           <div className="flex flex-wrap items-center gap-2 justify-between bg-orange-50 border border-orange-200 rounded-2xl p-3">
             <div><div className="font-bold text-sm text-orange-950">Saarthi Teacher Agent</div><div className="text-[11px] text-stone-600">Generate this material for your selected chapter/topic and language.</div></div>
             <div className="flex gap-2">
-              <button onClick={generateWithTeacher} disabled={studentGenerating} className="px-3 py-2 rounded-xl bg-orange-600 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5"><WandSparkles className="w-4 h-4"/>{studentGenerating ? 'Generating…' : 'Generate with Teacher'}</button>
+              <button onClick={generateWithTeacher} disabled={studentGenerating} className="px-3 py-2 rounded-xl bg-orange-600 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5"><WandSparkles className="w-4 h-4"/>{studentGenerating ? 'Generating…' : 'Generate with Sankatmochansaarthi'}</button>
               {studentGeneratedText && <button onClick={downloadGeneratedNotes} className="px-3 py-2 rounded-xl bg-stone-900 text-white text-xs font-bold flex items-center gap-1.5"><Download className="w-4 h-4"/>Download</button>}
             </div>
           </div>
