@@ -59,6 +59,9 @@ export const AdminPanel: React.FC = () => {
     selectedStream,
     selectedSubject,
     availableSubjects,
+    curriculumSubjects,
+    saveCurriculumSubject,
+    deleteCurriculumSubject,
     language
   } = useCurriculum();
 
@@ -86,14 +89,19 @@ export const AdminPanel: React.FC = () => {
   const [contentFile, setContentFile] = useState<File | null>(null);
   const [contentSaving, setContentSaving] = useState(false);
   const [contentError, setContentError] = useState('');
+  const [showCurriculumManager, setShowCurriculumManager] = useState(false);
+  const [curriculumClass, setCurriculumClass] = useState<ClassGrade>('Class 9');
+  const [curriculumStream, setCurriculumStream] = useState<StreamType>('General');
+  const [newSubjectName, setNewSubjectName] = useState('');
+  const [newChapterName, setNewChapterName] = useState('');
 
-  const formSubjects = useMemo(() => ALL_SUBJECTS.filter(s => {
+  const formSubjects = useMemo(() => curriculumSubjects.filter(s => {
     if (!s.classes.includes(contentClass)) return false;
     if (contentClass === 'Class 11' || contentClass === 'Class 12') {
       return s.stream === 'General' || s.stream === contentStream;
     }
     return true;
-  }), [contentClass, contentStream]);
+  }), [curriculumSubjects, contentClass, contentStream]);
   const formSubject = formSubjects.find(s => s.id === contentSubjectId) || formSubjects[0] || null;
   const formChapter = formSubject?.chapters.find(ch => ch.id === contentChapterId) || formSubject?.chapters[0] || null;
 
@@ -121,6 +129,32 @@ export const AdminPanel: React.FC = () => {
   const [enquiriesList, setEnquiriesList] = useState<ContactEnquiry[]>(() => {
     return JSON.parse(localStorage.getItem('saarthi_enquiries') || '[]');
   });
+
+  const managerSubjects = curriculumSubjects.filter(s => s.classes.includes(curriculumClass) && (curriculumClass === 'Class 9' || curriculumClass === 'Class 10' || s.stream === 'General' || s.stream === curriculumStream));
+  const addCurriculumSubject = async () => {
+    const name = newSubjectName.trim(); if (!name) return;
+    const id = ('admin-' + curriculumClass + '-' + name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 120);
+    await saveCurriculumSubject({ id, name, hindiName: name, stream: curriculumClass === 'Class 11' || curriculumClass === 'Class 12' ? curriculumStream : 'General', classes: [curriculumClass], icon: 'BookOpen', chapters: [] });
+    setNewSubjectName('');
+  };
+  const addCurriculumChapter = async (subject: any) => {
+    const title = newChapterName.trim(); if (!title) return;
+    const n = subject.chapters.length + 1;
+    await saveCurriculumSubject({ ...subject, chapters: [...subject.chapters, { id: (subject.id + '-ch-' + Date.now()).slice(0,128), title, hindiTitle: title, chapterNumber: n, topics: [] }] });
+    setNewChapterName('');
+  };
+  const renameCurriculumSubject = async (subject: any) => {
+    const name = window.prompt('New subject name', subject.name); if (!name?.trim()) return;
+    await saveCurriculumSubject({ ...subject, name: name.trim(), hindiName: name.trim() });
+  };
+  const renameCurriculumChapter = async (subject: any, chapter: any) => {
+    const title = window.prompt('New chapter name', chapter.title); if (!title?.trim()) return;
+    await saveCurriculumSubject({ ...subject, chapters: subject.chapters.map((ch: any) => ch.id === chapter.id ? { ...ch, title: title.trim(), hindiTitle: title.trim() } : ch) });
+  };
+  const removeCurriculumChapter = async (subject: any, chapterId: string) => {
+    if (!window.confirm('Delete this chapter?')) return;
+    await saveCurriculumSubject({ ...subject, chapters: subject.chapters.filter((ch: any) => ch.id !== chapterId).map((ch: any, i: number) => ({...ch, chapterNumber:i+1})) });
+  };
 
   const handleCreateContent = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -403,6 +437,23 @@ export const AdminPanel: React.FC = () => {
               <span>{showContentForm ? 'Cancel' : 'Add New Content'}</span>
             </button>
           </div>
+
+          <div className="flex justify-end"><button type="button" onClick={() => setShowCurriculumManager(!showCurriculumManager)} className="px-3 py-2 bg-stone-800 text-white rounded-xl text-xs font-bold">{showCurriculumManager ? 'Close Curriculum Manager' : 'Manage Subjects & Chapters'}</button></div>
+          {showCurriculumManager && (
+            <div className="bg-stone-50 border rounded-2xl p-4 space-y-3">
+              <h4 className="font-bold text-sm">Curriculum Manager — Add / Rename / Delete Subjects & Chapters</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <select value={curriculumClass} onChange={e=>setCurriculumClass(e.target.value as ClassGrade)} className="border rounded-lg p-2 text-xs"><option>Class 9</option><option>Class 10</option><option>Class 11</option><option>Class 12</option></select>
+                <select value={curriculumStream} onChange={e=>setCurriculumStream(e.target.value as StreamType)} className="border rounded-lg p-2 text-xs"><option>General</option><option>Science</option><option>Commerce</option><option>Humanities</option></select>
+                <div className="flex gap-1"><input value={newSubjectName} onChange={e=>setNewSubjectName(e.target.value)} placeholder="New subject name" className="border rounded-lg p-2 text-xs flex-1"/><button type="button" onClick={addCurriculumSubject} className="bg-orange-600 text-white px-3 rounded-lg text-xs">Add</button></div>
+              </div>
+              {managerSubjects.map(subject => <div key={subject.id} className="bg-white border rounded-xl p-3">
+                <div className="flex flex-wrap justify-between gap-2"><b className="text-xs">{subject.name}</b><div className="flex gap-2"><button type="button" onClick={()=>renameCurriculumSubject(subject)} className="text-xs text-blue-700">Rename</button><button type="button" onClick={()=>{if(window.confirm('Delete this subject and its chapter list?')) deleteCurriculumSubject(subject.id)}} className="text-xs text-red-700">Delete</button></div></div>
+                <div className="mt-2 space-y-1">{subject.chapters.map(ch=><div key={ch.id} className="flex justify-between text-xs border-t pt-1"><span>{ch.chapterNumber}. {ch.title}</span><span className="flex gap-2"><button type="button" onClick={()=>renameCurriculumChapter(subject,ch)} className="text-blue-700">Edit</button><button type="button" onClick={()=>removeCurriculumChapter(subject,ch.id)} className="text-red-700">Delete</button></span></div>)}</div>
+                <div className="flex gap-1 mt-2"><input value={newChapterName} onChange={e=>setNewChapterName(e.target.value)} placeholder="Type chapter name, then Add to this subject" className="border rounded-lg p-2 text-xs flex-1"/><button type="button" onClick={()=>addCurriculumChapter(subject)} className="bg-emerald-700 text-white px-3 rounded-lg text-xs">Add Chapter</button></div>
+              </div>)}
+            </div>
+          )}
 
           {showContentForm && (
             <form onSubmit={handleCreateContent} className="bg-amber-50/60 border border-orange-200 p-4 rounded-2xl space-y-3">
