@@ -3,7 +3,6 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../services/firebase';
 import { useCurriculum } from '../context/CurriculumContext';
 import { useAuth } from '../context/AuthContext';
-import { ALL_SUBJECTS } from '../data/defaultCurriculum';
 import {
   LearningContent,
   YouTubeVideoItem,
