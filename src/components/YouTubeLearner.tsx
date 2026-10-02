@@ -107,8 +107,9 @@ export const YouTubeLearner: React.FC = () => {
     });
   }, [youtubeVideos, searchTerm, selectedCategory]);
 
-  // Live search results are independent from Saarthi Recommended videos.
-  const displayedVideos = remoteVideos.length > 0 ? remoteVideos : filteredVideos;
+  // Normal YouTube Search must never mix in Saarthi Recommended videos.
+  // Curated videos live exclusively in the Recommended Videos learning module.
+  const displayedVideos = remoteVideos;
 
   const handleSearchSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -185,7 +186,7 @@ export const YouTubeLearner: React.FC = () => {
       })).filter((item: YouTubeVideoItem) => Boolean(item.youtubeId));
       setRemoteVideos(mapped);
       if (mapped[0]) setActiveVideo(mapped[0]);
-      else setSearchError('No live YouTube results found. Saarthi Recommended videos are still shown below.');
+      else setSearchError('No live YouTube results found. Try a broader search or use full YouTube search.');
     } catch (error) {
       // Never trap a student inside the saved Saarthi library: fall back to the full YouTube search.
       openFullYouTubeSearch(query);
