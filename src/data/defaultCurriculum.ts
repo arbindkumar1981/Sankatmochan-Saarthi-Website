@@ -643,6 +643,7 @@ const LEGACY_SUBJECTS: SubjectMeta[] = [
 // to preserve IDs referenced by historical seeded learning content; they must never leak
 // into current subject/chapter selectors as duplicate partial subjects.
 export const ALL_SUBJECTS: SubjectMeta[] = CURRENT_CBSE_NCERT_SUBJECTS;
+void LEGACY_SUBJECTS; // retained for historical seed references; excluded from selectors
 
 export const INITIAL_LEARNING_CONTENTS: LearningContent[] = [
   // Class 10 Science Detailed Notes
