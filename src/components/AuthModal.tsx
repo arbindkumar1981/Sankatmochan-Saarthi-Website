@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useCurriculum } from '../context/CurriculumContext';
 import { SUPPORTED_BOARDS } from '../data/defaultCurriculum';
-import { BoardType, ClassGrade } from '../types';
+import { BoardType, ClassGrade, StreamType } from '../types';
 import {
   GraduationCap,
   ShieldCheck,
@@ -24,12 +24,12 @@ export const AuthModal: React.FC = () => {
     signInAsGuestStudent
   } = useAuth();
 
-  const { language } = useCurriculum();
+  const { language, curriculumSubjects, setSelectedSubject: setLearningSubject, setSelectedStream: setLearningStream } = useCurriculum();
 
   const [activeTab, setActiveTab] = useState<'student' | 'admin'>(authModalInitialTab);
   const [studentName, setStudentName] = useState('');
   const [selectedClass, setSelectedClass] = useState<ClassGrade>('Class 10');
-  const [selectedBoard, setSelectedBoard] = useState<BoardType>('CBSE');
+  const [selectedBoard, setSelectedBoard] = useState<BoardType>('CBSE');\n  const [selectedStream, setSelectedStream] = useState<StreamType>('General');\n  const [selectedSubjectId, setSelectedSubjectId] = useState('');\n\n  const loginSubjects = curriculumSubjects.filter((sub) => sub.classes.includes(selectedClass) && ((selectedClass === 'Class 11' || selectedClass === 'Class 12') ? sub.stream === selectedStream : sub.stream === 'General'));\n\n  React.useEffect(() => {\n    if (!loginSubjects.some(s => s.id === selectedSubjectId)) setSelectedSubjectId(loginSubjects[0]?.id || '');\n  }, [selectedClass, selectedStream, curriculumSubjects]);
 
   const [adminError, setAdminError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -70,7 +70,7 @@ export const AuthModal: React.FC = () => {
   const handleGuestStudentSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!studentName.trim()) return;
-    signInAsGuestStudent(studentName.trim(), selectedClass, selectedBoard);
+    const subject = loginSubjects.find(s => s.id === selectedSubjectId) || loginSubjects[0];\n    setLearningStream(selectedStream);\n    if (subject) setLearningSubject(subject);\n    signInAsGuestStudent(studentName.trim(), selectedClass, selectedBoard);
   };
 
 
@@ -232,6 +232,22 @@ export const AuthModal: React.FC = () => {
                       ))}
                     </select>
                   </div>
+                </div>
+
+                {(selectedClass === 'Class 11' || selectedClass === 'Class 12') && (
+                  <div>
+                    <label className="block text-xs font-semibold text-stone-700 mb-1">{language === 'hi' ? 'स्ट्रीम (Stream)' : 'Stream'}</label>
+                    <select value={selectedStream} onChange={(e) => setSelectedStream(e.target.value as StreamType)} className="w-full px-3 py-2 text-sm border border-stone-300 rounded-xl bg-white focus:ring-2 focus:ring-orange-500 outline-none">
+                      <option value="Science">Science</option><option value="Commerce">Commerce</option><option value="Humanities">Humanities</option>
+                    </select>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-xs font-semibold text-stone-700 mb-1">{language === 'hi' ? 'विषय चुनें (Subject)' : 'Select Subject'}</label>
+                  <select required value={selectedSubjectId} onChange={(e) => setSelectedSubjectId(e.target.value)} className="w-full px-3 py-2 text-sm border border-stone-300 rounded-xl bg-white focus:ring-2 focus:ring-orange-500 outline-none">
+                    {loginSubjects.length ? loginSubjects.map(sub => <option key={sub.id} value={sub.id}>{language === 'hi' ? sub.hindiName : sub.name}{sub.officialCode ? ` (${sub.officialCode})` : ''}</option>) : <option value="">No subject available</option>}
+                  </select>
                 </div>
 
                 <button
