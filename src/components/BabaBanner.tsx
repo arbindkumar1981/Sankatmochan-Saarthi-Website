@@ -30,7 +30,7 @@ const BABA_QUOTES = [
 ];
 
 export const BabaBanner: React.FC = () => {
-  const { language } = useCurriculum();
+  const { language, babaImageUrl } = useCurriculum();
   const [quoteIndex, setQuoteIndex] = useState(0);
   const [isRotating, setIsRotating] = useState(false);
 
@@ -61,6 +61,11 @@ export const BabaBanner: React.FC = () => {
           {/* Sacred ॐ Badge */}
           <div className="flex items-center gap-1.5 shrink-0 bg-black/30 border border-amber-300/40 px-2.5 py-1 rounded-lg text-amber-200 shadow-xs">
             <span className="text-amber-300 font-black text-sm">ॐ</span>
+            <img
+              src={babaImageUrl}
+              alt="Baba Neem Karoli Ji"
+              className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover object-top ring-2 ring-amber-300/90 shadow-md bg-amber-50"
+            />
             <span className="text-xs sm:text-sm font-extrabold tracking-wide text-amber-100 font-cinzel whitespace-nowrap">
               {language === 'hi' ? 'नीम करौली बाबा जी विचार :' : 'Baba Neem Karoli Ji Quotes :'}
             </span>
