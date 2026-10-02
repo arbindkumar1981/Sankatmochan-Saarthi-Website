@@ -81,6 +81,7 @@ export const AdminPanel: React.FC = () => {
   const [contentSubjectId, setContentSubjectId] = useState(selectedSubject?.id || '');
   const [contentChapterId, setContentChapterId] = useState(selectedSubject?.chapters[0]?.id || '');
   const [contentTopicId, setContentTopicId] = useState('');
+  const [contentTopicTitle, setContentTopicTitle] = useState('');
   const [contentSubtopic, setContentSubtopic] = useState('');
   const [contentFile, setContentFile] = useState<File | null>(null);
   const [contentSaving, setContentSaving] = useState(false);
@@ -155,7 +156,7 @@ export const AdminPanel: React.FC = () => {
         attachmentUrl = await getDownloadURL(storageRef);
       }
 
-      const topic = formChapter.topics.find(t => t.id === contentTopicId);
+      const topic = contentTopicTitle.trim();
       await addNewLearningContent({
         contentType,
         board: contentBoard,
@@ -165,8 +166,8 @@ export const AdminPanel: React.FC = () => {
         subjectName: formSubject.name,
         chapterId: formChapter.id,
         chapterTitle: formChapter.title,
-        topicId: topic?.id,
-        topicTitle: topic?.title,
+        topicId: topic ? `topic-${topic.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 70) || 'custom'}` : undefined,
+        topicTitle: topic || undefined,
         subtopicTitle: contentSubtopic.trim() || undefined,
         title: contentTitle.trim(),
         hindiTitle: contentHindiTitle.trim() || undefined,
@@ -190,6 +191,7 @@ export const AdminPanel: React.FC = () => {
       setContentBody('');
       setContentHindiBody('');
       setContentSubtopic('');
+      setContentTopicTitle('');
       setContentFile(null);
       setShowContentForm(false);
     } catch (error) {
@@ -435,11 +437,11 @@ export const AdminPanel: React.FC = () => {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 <div><label className="block text-[11px] font-semibold mb-1">Board *</label><select value={contentBoard} onChange={e => setContentBoard(e.target.value as BoardType)} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white"><option value="CBSE">CBSE</option><option value="ICSE_ISC">ICSE / ISC</option><option value="UP_BOARD">UP Board</option><option value="BIHAR_BOARD">Bihar Board</option><option value="STATE_BOARD">State Board</option></select></div>
-                <div><label className="block text-[11px] font-semibold mb-1">Class *</label><select value={contentClass} onChange={e => { setContentClass(e.target.value as ClassGrade); setContentSubjectId(''); setContentChapterId(''); setContentTopicId(''); }} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white"><option>Class 9</option><option>Class 10</option><option>Class 11</option><option>Class 12</option></select></div>
+                <div><label className="block text-[11px] font-semibold mb-1">Class *</label><select value={contentClass} onChange={e => { setContentClass(e.target.value as ClassGrade); setContentSubjectId(''); setContentChapterId(''); setContentTopicId(''); setContentTopicTitle(''); }} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white"><option>Class 9</option><option>Class 10</option><option>Class 11</option><option>Class 12</option></select></div>
                 <div><label className="block text-[11px] font-semibold mb-1">Stream</label><select value={contentStream} onChange={e => setContentStream(e.target.value as StreamType)} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white"><option>General</option><option>Science</option><option>Commerce</option><option>Humanities</option></select></div>
                 <div><label className="block text-[11px] font-semibold mb-1">Subject *</label><select value={formSubject?.id || ''} onChange={e => { setContentSubjectId(e.target.value); setContentChapterId(''); setContentTopicId(''); }} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white">{formSubjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></div>
                 <div><label className="block text-[11px] font-semibold mb-1">Chapter *</label><select value={formChapter?.id || ''} onChange={e => { setContentChapterId(e.target.value); setContentTopicId(''); }} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white">{formSubject?.chapters.map(ch => <option key={ch.id} value={ch.id}>{ch.chapterNumber}. {ch.title}</option>)}</select></div>
-                <div><label className="block text-[11px] font-semibold mb-1">Topic</label><select value={contentTopicId} onChange={e => setContentTopicId(e.target.value)} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white"><option value="">Full chapter / No specific topic</option>{formChapter?.topics.map(t => <option key={t.id} value={t.id}>{t.title}</option>)}</select></div>
+                <div><label className="block text-[11px] font-semibold mb-1">Topic (write yourself)</label><input value={contentTopicTitle} onChange={e => setContentTopicTitle(e.target.value)} placeholder="Type topic name" className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white outline-none" /></div>
               </div>
               <div><label className="block text-[11px] font-semibold mb-1">Sub-topic</label><input value={contentSubtopic} onChange={e => setContentSubtopic(e.target.value)} placeholder="Enter sub-topic name (optional)" className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white outline-none" /></div>
 
