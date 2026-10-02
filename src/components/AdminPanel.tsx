@@ -124,6 +124,34 @@ export const AdminPanel: React.FC = () => {
   const videoSubject = videoSubjects.find(s => s.id === videoSubjectId) || videoSubjects[0] || null;
   const videoChapter = videoSubject?.chapters.find(ch => ch.id === videoChapterId) || videoSubject?.chapters[0] || null;
 
+  // New Assessment Test Form State
+  const [showTestForm, setShowTestForm] = useState(false);
+  const [testTitle, setTestTitle] = useState('');
+  const [testClass, setTestClass] = useState<ClassGrade>(selectedClass);
+  const [testStream, setTestStream] = useState<StreamType>(selectedStream);
+  const [testSubjectId, setTestSubjectId] = useState('');
+  const [testChapterId, setTestChapterId] = useState('');
+  const [testQuestionText, setTestQuestionText] = useState('');
+  const [testOptionsText, setTestOptionsText] = useState('');
+  const [testCorrectIndex, setTestCorrectIndex] = useState(0);
+  const [testExplanation, setTestExplanation] = useState('');
+  const testSubjects = curriculumSubjects.filter(s => s.classes.includes(testClass) && (testClass === 'Class 9' || testClass === 'Class 10' || s.stream === 'General' || s.stream === testStream));
+  const testSubject = testSubjects.find(s => s.id === testSubjectId) || testSubjects[0] || null;
+  const testChapter = testSubject?.chapters.find(ch => ch.id === testChapterId) || testSubject?.chapters[0] || null;
+
+  const handleCreateTest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const options = testOptionsText.split('\n').map(x => x.trim()).filter(Boolean);
+    if (!testTitle.trim() || !testSubject || !testChapter || !testQuestionText.trim() || options.length < 2 || testCorrectIndex >= options.length) return;
+    await addNewTest({
+      title: testTitle.trim(), testType: 'chapter', board: 'CBSE', classGrade: testClass, stream: testStream,
+      subjectId: testSubject.id, chapterId: testChapter.id, durationMinutes: 15, totalMarks: 1, passingMarks: 1,
+      questions: [{ id: 'q-' + Date.now(), questionText: testQuestionText.trim(), options, correctIndex: testCorrectIndex, explanation: testExplanation.trim() || 'Review the correct option.', marks: 1 }],
+      approved: true, published: true, createdAt: new Date().toISOString()
+    });
+    setTestTitle(''); setTestQuestionText(''); setTestOptionsText(''); setTestCorrectIndex(0); setTestExplanation(''); setShowTestForm(false);
+  };
+
   // New Notice Form State
   const [showNoticeForm, setShowNoticeForm] = useState(false);
   const [noticeTitle, setNoticeTitle] = useState('');
@@ -834,6 +862,29 @@ export const AdminPanel: React.FC = () => {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {adminTab === 'tests' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-bold text-stone-900 uppercase tracking-wider font-cinzel">Assessment Test Bank ({evaluationTests.length})</h3>
+            <button onClick={() => setShowTestForm(!showTestForm)} className="px-3.5 py-1.5 bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center gap-1"><Plus className="w-3.5 h-3.5"/>{showTestForm ? 'Cancel' : 'Create Test'}</button>
+          </div>
+          {showTestForm && <form onSubmit={handleCreateTest} className="bg-emerald-50 border border-emerald-200 p-4 rounded-2xl space-y-3">
+            <input required value={testTitle} onChange={e=>setTestTitle(e.target.value)} placeholder="Test title" className="w-full px-3 py-2 text-xs border rounded-xl bg-white"/>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <select value={testClass} onChange={e=>{setTestClass(e.target.value as ClassGrade);setTestSubjectId('');setTestChapterId('')}} className="px-2 py-2 text-xs border rounded-xl bg-white">{(['Class 9','Class 10','Class 11','Class 12'] as ClassGrade[]).map(x=><option key={x}>{x}</option>)}</select>
+              <select value={testStream} onChange={e=>{setTestStream(e.target.value as StreamType);setTestSubjectId('');setTestChapterId('')}} className="px-2 py-2 text-xs border rounded-xl bg-white">{(['General','Science','Commerce','Humanities'] as StreamType[]).map(x=><option key={x}>{x}</option>)}</select>
+              <select value={testSubject?.id || ''} onChange={e=>{setTestSubjectId(e.target.value);setTestChapterId('')}} className="px-2 py-2 text-xs border rounded-xl bg-white">{testSubjects.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select>
+              <select value={testChapter?.id || ''} onChange={e=>setTestChapterId(e.target.value)} className="px-2 py-2 text-xs border rounded-xl bg-white">{testSubject?.chapters.map(ch=><option key={ch.id} value={ch.id}>{ch.chapterNumber}. {ch.title}</option>)}</select>
+            </div>
+            <textarea required value={testQuestionText} onChange={e=>setTestQuestionText(e.target.value)} placeholder="Question" className="w-full px-3 py-2 text-xs border rounded-xl bg-white"/>
+            <textarea required value={testOptionsText} onChange={e=>setTestOptionsText(e.target.value)} placeholder={"Options — one per line\nOption A\nOption B\nOption C\nOption D"} rows={5} className="w-full px-3 py-2 text-xs border rounded-xl bg-white"/>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2"><input type="number" min={0} value={testCorrectIndex} onChange={e=>setTestCorrectIndex(Number(e.target.value))} placeholder="Correct option index (0=A)" className="px-3 py-2 text-xs border rounded-xl bg-white"/><input value={testExplanation} onChange={e=>setTestExplanation(e.target.value)} placeholder="Explanation" className="px-3 py-2 text-xs border rounded-xl bg-white"/></div>
+            <button type="submit" className="px-4 py-2 bg-emerald-700 text-white font-bold rounded-xl text-xs">Publish Test</button>
+          </form>}
+          <div className="space-y-2">{evaluationTests.map(t=><div key={t.id} className="p-3 border rounded-xl text-xs flex justify-between gap-3"><div><b>{t.title}</b><div className="text-stone-500">{t.classGrade} • {t.subjectId} • {t.questions.length} question(s)</div></div><span className="text-emerald-700 font-bold">{t.published ? 'Published' : 'Draft'}</span></div>)}</div>
         </div>
       )}
 
