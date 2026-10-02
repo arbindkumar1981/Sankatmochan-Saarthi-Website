@@ -26,7 +26,7 @@ interface AuthContextType {
   closeAuthModal: () => void;
   signInWithGoogle: (intendedRole?: UserRole) => Promise<void>;
   signInAsAdminWithPasscode: (passcode: string, adminName?: string) => Promise<boolean>;
-  signInAsGuestStudent: (name: string, grade: ClassGrade, board: BoardType) => void;
+  signInAsGuestStudent: (name: string, grade: ClassGrade, board: BoardType, stream?: StreamType) => void;
   updateStudentPreferences: (prefs: Partial<UserProfile>) => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -184,7 +184,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return false;
   };
 
-  const signInAsGuestStudent = (name: string, grade: ClassGrade, board: BoardType) => {
+  const signInAsGuestStudent = (name: string, grade: ClassGrade, board: BoardType, stream?: StreamType) => {
     const guestStudent: UserProfile = {
       uid: 'guest-' + Math.random().toString(36).substring(2, 9),
       email: `${name.toLowerCase().replace(/\\s+/g, '')}@student.saarthi.in`,
@@ -192,7 +192,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       role: 'student',
       board: board,
       classGrade: grade,
-      stream: grade === 'Class 12' || grade === 'Class 11' ? 'Science' : 'General',
+      stream: grade === 'Class 12' || grade === 'Class 11' ? (stream || 'Science') : 'General',
       preferredLanguage: 'en',
       studyStreakDays: 3,
       totalTestsTaken: 1,
