@@ -216,7 +216,9 @@ export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   useEffect(() => {
     // Try to load additional approved learning contents from Firestore
     try {
-      const q = query(collection(db, 'learning_contents'));
+      const q = isAdmin
+        ? query(collection(db, 'learning_contents'))
+        : query(collection(db, 'learning_contents'), where('approved', '==', true), where('published', '==', true));
       const unsub = onSnapshot(
         q,
         (snapshot) => {
@@ -244,25 +246,29 @@ export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     } catch (e) {
       console.warn('Error connecting to learning_contents:', e);
     }
-  }, []);
+  }, [isAdmin]);
 
   // Sync admin-published videos, tests and notices for every client.
   useEffect(() => {
-    const unsubVideos = onSnapshot(collection(db, 'youtube_videos'), snap => {
+    const videosQuery = isAdmin ? query(collection(db, 'youtube_videos')) : query(collection(db, 'youtube_videos'), where('approved', '==', true), where('published', '==', true));
+    const testsQuery = isAdmin ? query(collection(db, 'tests')) : query(collection(db, 'tests'), where('approved', '==', true), where('published', '==', true));
+    const noticesQuery = isAdmin ? query(collection(db, 'notices')) : query(collection(db, 'notices'), where('active', '==', true));
+
+    const unsubVideos = onSnapshot(videosQuery, snap => {
       const remote = snap.docs.map(d => ({ id: d.id, ...d.data() } as YouTubeVideoItem));
       const merged = [...INITIAL_YOUTUBE_VIDEOS];
       remote.forEach(item => { const i = merged.findIndex(x => x.id === item.id); if (i >= 0) merged[i] = item; else merged.push(item); });
       setYoutubeVideos(merged);
     }, err => console.warn('youtube_videos sync fallback:', err.message));
 
-    const unsubTests = onSnapshot(collection(db, 'tests'), snap => {
+    const unsubTests = onSnapshot(testsQuery, snap => {
       const remote = snap.docs.map(d => ({ id: d.id, ...d.data() } as EvaluationTest));
       const merged = [...INITIAL_TESTS];
       remote.forEach(item => { const i = merged.findIndex(x => x.id === item.id); if (i >= 0) merged[i] = item; else merged.push(item); });
       setEvaluationTests(merged);
     }, err => console.warn('tests sync fallback:', err.message));
 
-    const unsubNotices = onSnapshot(collection(db, 'notices'), snap => {
+    const unsubNotices = onSnapshot(noticesQuery, snap => {
       const remote = snap.docs.map(d => ({ id: d.id, ...d.data() } as NoticeItem));
       const merged = [...INITIAL_NOTICES];
       remote.forEach(item => { const i = merged.findIndex(x => x.id === item.id); if (i >= 0) merged[i] = item; else merged.push(item); });
@@ -270,7 +276,7 @@ export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }, err => console.warn('notices sync fallback:', err.message));
 
     return () => { unsubVideos(); unsubTests(); unsubNotices(); };
-  }, []);
+  }, [isAdmin]);
 
   // Sync test results for current authenticated user
   useEffect(() => {
