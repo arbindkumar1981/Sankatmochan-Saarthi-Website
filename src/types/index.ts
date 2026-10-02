@@ -33,6 +33,7 @@ export type ContentModuleType =
   | 'pyqs'
   | 'cbqs'
   | 'case_studies'
+  | 'recommended_videos'
   | 'test_yourself';
 
 export interface FlashcardItem {
