@@ -143,8 +143,10 @@ Verified learning material for **${selectedChapter?.title || 'this chapter'}** i
       const topic = selectedTopic?.title || selectedChapter.title;
       const topicId = `${selectedSubject.id}:${selectedChapter.id}:${selectedTopic?.id || 'chapter'}`;
       const sample = learningContents.find(x => x.subjectId === selectedSubject.id && x.contentType === 'detailed_notes' && x.approved && x.published && x.bodyText)?.bodyText?.slice(0, 4000) || '';
+      const controller = new AbortController();
+      const timeout = window.setTimeout(() => controller.abort(), 90000);
       const res = await fetch(`${api}/v1/website/teacher/generate`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, signal: controller.signal,
         body: JSON.stringify({
           board: selectedBoard, class_level: selectedClass === 'Class 9' ? 'IX' : selectedClass === 'Class 10' ? 'X' : selectedClass === 'Class 11' ? 'XI' : 'XII',
           subject: teacherSubjectName(selectedSubject.name), language: language === 'hi' ? 'HINDI' : 'ENGLISH', asset_type: assetType, topic_id: topicId,
@@ -157,11 +159,15 @@ Verified learning material for **${selectedChapter?.title || 'this chapter'}** i
           }
         })
       });
+      window.clearTimeout(timeout);
       const data = await res.json();
       if (!res.ok) throw new Error(typeof data.detail === 'string' ? data.detail : 'Sankatmochansaarthi could not generate this material.');
       setStudentGeneratedText(data.content || '');
       setStudentDiagramPlans(Array.isArray(data.diagram_plans) ? data.diagram_plans : []);
-    } catch (e:any) { setStudentGenerationError(e.message || 'Generation failed. Please try again.'); }
+    } catch (e:any) {
+      const msg = e?.name === 'AbortError' ? 'Teacher Agent timed out. Please try again.' : (e?.message === 'Failed to fetch' ? 'Teacher Agent service is unreachable. Backend/model configuration is being checked.' : e?.message);
+      setStudentGenerationError(msg || 'Generation failed. Please try again.');
+    }
     finally { setStudentGenerating(false); }
   };
 
