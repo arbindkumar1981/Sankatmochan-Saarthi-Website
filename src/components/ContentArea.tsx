@@ -67,6 +67,8 @@ export const ContentArea: React.FC = () => {
     return true;
   });
 
+  const hasPublishedModuleContent = Boolean(matchedContent?.approved && matchedContent?.published);
+
   // Fallback default content if none matches
   const displayContent = matchedContent || {
     id: 'placeholder',
@@ -106,6 +108,17 @@ export const ContentArea: React.FC = () => {
 
   // Never serve an unrelated fallback test from another subject/chapter.
   const activeTest: EvaluationTest | undefined = matchedTests[0];
+
+  // Reset interactive module state whenever curriculum/module selection changes.
+  useEffect(() => {
+    setCurrentFlashcardIndex(0);
+    setIsFlipped(false);
+    setTestStarted(false);
+    setTestSubmitted(false);
+    setCurrentQuestionIndex(0);
+    setSelectedAnswers({});
+    setSubmittedScorecard(null);
+  }, [activeModule, selectedSubject?.id, selectedChapter?.id, selectedTopic?.id]);
 
   const [testStarted, setTestStarted] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -343,7 +356,9 @@ export const ContentArea: React.FC = () => {
       {/* Module 3: Definitions & Formulae */}
       {activeModule === 'formulae' && (
         <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {!hasPublishedModuleContent || !(displayContent.formulaItems?.length) ? (
+            <div className="p-8 text-center text-stone-500 bg-stone-50 rounded-2xl border border-stone-200">No verified definitions or formulae have been published for this selection yet.</div>
+          ) : <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {(displayContent.formulaItems || []).map((item) => (
               <div
                 key={item.id}
@@ -384,7 +399,7 @@ export const ContentArea: React.FC = () => {
                 )}
               </div>
             ))}
-          </div>
+          </div>}
         </div>
       )}
 
@@ -536,7 +551,7 @@ export const ContentArea: React.FC = () => {
             </div>
           ) : (
             <div className="p-8 text-center text-stone-500 bg-stone-50 rounded-2xl border border-stone-200">
-              No flashcards available for this specific topic yet. Select Chapter Scope.
+              No verified flashcards have been published for this selection yet.
             </div>
           )}
         </div>
@@ -545,6 +560,7 @@ export const ContentArea: React.FC = () => {
       {/* Module 6: Previous Year Questions (PYQs) */}
       {activeModule === 'pyqs' && (
         <div className="space-y-4">
+          {!(displayContent.pyqItems?.length) && <div className="p-8 text-center text-stone-500 bg-stone-50 rounded-2xl border border-stone-200">No verified previous-year questions have been published for this selection yet.</div>}
           {(displayContent.pyqItems || []).map((item, idx) => (
             <div
               key={item.id}
@@ -629,8 +645,8 @@ export const ContentArea: React.FC = () => {
             </div>
           ) : (
             <div className="bg-amber-50 border border-orange-200 p-5 rounded-2xl text-xs sm:text-sm text-stone-700">
-              <h4 className="font-bold text-orange-900 mb-1">Competency-Based Question Blueprint</h4>
-              <p>50% of the board evaluation assesses conceptual application, assertion-reasoning, and analytical inquiry. Please select the specific Chapter Test in the Test Yourself tab to test these live.</p>
+              <h4 className="font-bold text-orange-900 mb-1">{activeModule === 'cbqs' ? 'Competency-Based Questions' : 'Case-Based Study'}</h4>
+              <p>No verified {activeModule === 'cbqs' ? 'competency-based questions' : 'case-based study'} have been published for this selection yet.</p>
             </div>
           )}
         </div>
@@ -639,7 +655,10 @@ export const ContentArea: React.FC = () => {
       {/* Module 9: Test Yourself (Interactive Objective Testing Engine) */}
       {activeModule === 'test_yourself' && (
         <div className="space-y-5">
-          {!testStarted && !testSubmitted && (
+          {!activeTest && (
+            <div className="p-8 text-center text-stone-500 bg-stone-50 rounded-2xl border border-stone-200">No published test is available for this subject/chapter selection yet.</div>
+          )}
+          {activeTest && !testStarted && !testSubmitted && (
             <div className="bg-gradient-to-br from-amber-50 via-orange-50 to-white border-2 border-orange-300 rounded-3xl p-6 sm:p-8 text-center max-w-2xl mx-auto shadow-md">
               <CheckSquare className="w-12 h-12 text-orange-600 mx-auto mb-3" />
               <h3 className="text-xl sm:text-2xl font-black text-stone-900 font-cinzel">
