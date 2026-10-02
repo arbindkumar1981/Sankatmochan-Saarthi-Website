@@ -142,8 +142,17 @@ export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       });
       const deletedIds = new Set<string>();
       snap.forEach(d => { const data = d.data(); if (data.kind === 'subject' && data.deleted) deletedIds.add(d.id); });
-      setCurriculumSubjects(ALL_SUBJECTS.filter(s => !deletedIds.has(s.id)).map(s => overrides.get(s.id) || s)
-        .concat([...overrides.values()].filter(s => !ALL_SUBJECTS.some(seed => seed.id === s.id) && !deletedIds.has(s.id))));
+      setCurriculumSubjects(ALL_SUBJECTS.filter(s => !deletedIds.has(s.id)).map(seed => {
+        const override = overrides.get(seed.id);
+        if (!override) return seed;
+        // Preserve current bundled chapters when an older Firestore override only changed subject metadata.
+        // An explicit non-empty chapter list remains authoritative for admin curriculum edits.
+        return {
+          ...seed,
+          ...override,
+          chapters: override.chapters?.length ? override.chapters : seed.chapters
+        };
+      }).concat([...overrides.values()].filter(s => !ALL_SUBJECTS.some(seed => seed.id === s.id) && !deletedIds.has(s.id))));
     }, err => console.warn('Curriculum sync fallback:', err.message));
     return () => unsub();
   }, []);
@@ -191,7 +200,7 @@ export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         setSelectedTopic(null);
       }
     }
-  }, [selectedClass, selectedStream]);
+  }, [selectedClass, selectedStream, curriculumSubjects, selectedSubject?.id]);
 
   // When selectedSubject changes, reset selected chapter to its first chapter
   useEffect(() => {
@@ -202,7 +211,7 @@ export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         setSelectedTopic(null);
       }
     }
-  }, [selectedSubject]);
+  }, [selectedSubject, selectedChapter?.id]);
 
   // Content States
   const [learningContents, setLearningContents] = useState<LearningContent[]>(INITIAL_LEARNING_CONTENTS);
