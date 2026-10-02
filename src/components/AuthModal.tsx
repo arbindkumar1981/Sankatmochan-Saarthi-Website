@@ -29,7 +29,22 @@ export const AuthModal: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'student' | 'admin'>(authModalInitialTab);
   const [studentName, setStudentName] = useState('');
   const [selectedClass, setSelectedClass] = useState<ClassGrade>('Class 10');
-  const [selectedBoard, setSelectedBoard] = useState<BoardType>('CBSE');\n  const [selectedStream, setSelectedStream] = useState<StreamType>('General');\n  const [selectedSubjectId, setSelectedSubjectId] = useState('');\n\n  const loginSubjects = curriculumSubjects.filter((sub) => {\n    if (!sub.classes.includes(selectedClass)) return false;\n    if (selectedClass === 'Class 11' || selectedClass === 'Class 12') {\n      // Core/common subjects (for example English Core / Physical Education) must remain available alongside stream subjects.\n      return sub.stream === selectedStream || sub.stream === 'General';\n    }\n    return sub.stream === 'General';\n  });\n\n  React.useEffect(() => {\n    if (!loginSubjects.some(s => s.id === selectedSubjectId)) setSelectedSubjectId(loginSubjects[0]?.id || '');\n  }, [selectedClass, selectedStream, curriculumSubjects]);
+  const [selectedBoard, setSelectedBoard] = useState<BoardType>('CBSE');
+  const [selectedStream, setSelectedStream] = useState<StreamType>('General');
+  const [selectedSubjectId, setSelectedSubjectId] = useState('');
+  const [showAllSeniorSubjects, setShowAllSeniorSubjects] = useState(false);
+
+  const isSeniorClass = selectedClass === 'Class 11' || selectedClass === 'Class 12';
+  const seniorClassSubjects = curriculumSubjects.filter((sub) => sub.classes.includes(selectedClass));
+  const loginSubjects = curriculumSubjects.filter((sub) => {
+    if (!sub.classes.includes(selectedClass)) return false;
+    if (isSeniorClass) return showAllSeniorSubjects || sub.stream === selectedStream || sub.stream === 'General';
+    return sub.stream === 'General';
+  });
+
+  React.useEffect(() => {
+    if (!loginSubjects.some(s => s.id === selectedSubjectId)) setSelectedSubjectId(loginSubjects[0]?.id || '');
+  }, [selectedClass, selectedStream, showAllSeniorSubjects, curriculumSubjects]);
 
   const [adminError, setAdminError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -70,7 +85,10 @@ export const AuthModal: React.FC = () => {
   const handleGuestStudentSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!studentName.trim()) return;
-    const subject = loginSubjects.find(s => s.id === selectedSubjectId) || loginSubjects[0];\n    setLearningStream(selectedStream);\n    if (subject) setLearningSubject(subject);\n    signInAsGuestStudent(studentName.trim(), selectedClass, selectedBoard);
+    const subject = loginSubjects.find(s => s.id === selectedSubjectId) || loginSubjects[0];
+    setLearningStream(selectedStream);
+    if (subject) setLearningSubject(subject);
+    signInAsGuestStudent(studentName.trim(), selectedClass, selectedBoard);
   };
 
 
@@ -241,6 +259,14 @@ export const AuthModal: React.FC = () => {
                       <option value="Science">Science</option><option value="Commerce">Commerce</option><option value="Humanities">Humanities</option>
                     </select>
                   </div>
+                )}
+
+                {isSeniorClass && (
+                  <label className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50/70 px-3 py-2 text-xs text-stone-700">
+                    <input type="checkbox" checked={showAllSeniorSubjects} onChange={(e) => setShowAllSeniorSubjects(e.target.checked)} className="accent-orange-600" />
+                    <span>{language === 'hi' ? 'अन्य / वैकल्पिक विषय भी दिखाएँ' : 'Show other / optional subjects too'}</span>
+                    <span className="ml-auto text-[10px] text-stone-500">{seniorClassSubjects.length} available</span>
+                  </label>
                 )}
 
                 <div>
