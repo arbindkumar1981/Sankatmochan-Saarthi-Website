@@ -73,6 +73,9 @@ interface CurriculumContextType {
   setSearchQuery: (query: string) => void;
 
   availableSubjects: SubjectMeta[];
+  curriculumSubjects: SubjectMeta[];
+  saveCurriculumSubject: (subject: SubjectMeta) => Promise<void>;
+  deleteCurriculumSubject: (subjectId: string) => Promise<void>;
   learningContents: LearningContent[];
   youtubeVideos: YouTubeVideoItem[];
   evaluationTests: EvaluationTest[];
@@ -128,8 +131,34 @@ export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setLanguage(prev => (prev === 'en' ? 'hi' : 'en'));
   };
 
+  // Admin-editable curriculum: Firestore overrides the bundled NCERT/CBSE seed.
+  const [curriculumSubjects, setCurriculumSubjects] = useState<SubjectMeta[]>(ALL_SUBJECTS);
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'curriculum_nodes'), snap => {
+      const overrides = new Map<string, SubjectMeta>();
+      snap.forEach(d => {
+        const data = d.data();
+        if (data.kind === 'subject' && data.subject) overrides.set(data.subject.id, data.subject as SubjectMeta);
+      });
+      setCurriculumSubjects(ALL_SUBJECTS.map(s => overrides.get(s.id) || s)
+        .concat([...overrides.values()].filter(s => !ALL_SUBJECTS.some(seed => seed.id === s.id))));
+    }, err => console.warn('Curriculum sync fallback:', err.message));
+    return () => unsub();
+  }, []);
+
+  const saveCurriculumSubject = async (subject: SubjectMeta) => {
+    requireAdmin();
+    await setDoc(doc(db, 'curriculum_nodes', subject.id), { kind: 'subject', subject, updatedAt: new Date().toISOString() });
+    setCurriculumSubjects(prev => prev.some(s => s.id === subject.id) ? prev.map(s => s.id === subject.id ? subject : s) : [...prev, subject]);
+  };
+  const deleteCurriculumSubject = async (subjectId: string) => {
+    requireAdmin();
+    await deleteDoc(doc(db, 'curriculum_nodes', subjectId));
+    setCurriculumSubjects(prev => prev.filter(s => s.id !== subjectId));
+  };
+
   // Filter subjects for the chosen class and stream
-  const availableSubjects = ALL_SUBJECTS.filter((sub) => {
+  const availableSubjects = curriculumSubjects.filter((sub) => {
     const classMatch = sub.classes.includes(selectedClass);
     if (!classMatch) return false;
     if (selectedClass === 'Class 11' || selectedClass === 'Class 12') {
@@ -471,6 +500,9 @@ export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         searchQuery,
         setSearchQuery,
         availableSubjects,
+        curriculumSubjects,
+        saveCurriculumSubject,
+        deleteCurriculumSubject,
         learningContents,
         youtubeVideos,
         evaluationTests,
