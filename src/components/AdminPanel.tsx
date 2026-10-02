@@ -3,6 +3,7 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../services/firebase';
 import { useCurriculum } from '../context/CurriculumContext';
 import { useAuth } from '../context/AuthContext';
+import { ALL_SUBJECTS } from '../data/defaultCurriculum';
 import {
   LearningContent,
   YouTubeVideoItem,
@@ -85,7 +86,13 @@ export const AdminPanel: React.FC = () => {
   const [contentSaving, setContentSaving] = useState(false);
   const [contentError, setContentError] = useState('');
 
-  const formSubjects = useMemo(() => availableSubjects.filter(s => s.classes.includes(contentClass)), [availableSubjects, contentClass]);
+  const formSubjects = useMemo(() => ALL_SUBJECTS.filter(s => {
+    if (!s.classes.includes(contentClass)) return false;
+    if (contentClass === 'Class 11' || contentClass === 'Class 12') {
+      return s.stream === 'General' || s.stream === contentStream;
+    }
+    return true;
+  }), [contentClass, contentStream]);
   const formSubject = formSubjects.find(s => s.id === contentSubjectId) || formSubjects[0] || null;
   const formChapter = formSubject?.chapters.find(ch => ch.id === contentChapterId) || formSubject?.chapters[0] || null;
 
@@ -130,8 +137,8 @@ export const AdminPanel: React.FC = () => {
         setContentError('Unsupported file. Use PDF, DOC/DOCX, PPT/PPTX, PNG/JPG/WEBP or TXT.');
         return;
       }
-      if (contentFile.size > 25 * 1024 * 1024) {
-        setContentError('File is too large. Maximum upload size is 25 MB.');
+      if (contentFile.size > 50 * 1024 * 1024) {
+        setContentError('File is too large. Maximum upload size is 50 MB.');
         return;
       }
     }
@@ -476,7 +483,7 @@ export const AdminPanel: React.FC = () => {
                   <span>{contentFile ? contentFile.name : 'Choose PDF, DOC/DOCX, PPT/PPTX, PNG/JPG/WEBP or TXT'}</span>
                   <input type="file" className="hidden" accept=".pdf,.doc,.docx,.ppt,.pptx,.png,.jpg,.jpeg,.webp,.txt" onChange={e => setContentFile(e.target.files?.[0] || null)} />
                 </label>
-                <p className="text-[10px] text-stone-500 mt-1">Maximum file size: 25 MB. Files are stored securely in Firebase Storage.</p>
+                <p className="text-[10px] text-stone-500 mt-1">Maximum file size: 50 MB. Files are stored securely in Firebase Storage.</p>
               </div>
               {contentError && <p className="text-xs font-semibold text-red-700 bg-red-50 border border-red-200 rounded-lg p-2">{contentError}</p>}
 
