@@ -26,12 +26,15 @@ export const ContactUsView: React.FC = () => {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !email.trim() || !message.trim()) return;
 
     setLoading(true);
+    setSubmitError('');
+    setSubmitted(false);
     const enquiryId = 'enq-' + Math.random().toString(36).substring(2, 9) + '-' + Date.now();
 
     const enquiryData = {
@@ -52,12 +55,10 @@ export const ContactUsView: React.FC = () => {
       setMessage('');
       setSubjectQuery('');
     } catch (err) {
-      console.warn('Enquiry fallback:', err);
-      // Fallback in localStorage so admin can still read it
-      const savedEnquiries = JSON.parse(localStorage.getItem('saarthi_enquiries') || '[]');
-      savedEnquiries.unshift(enquiryData);
-      localStorage.setItem('saarthi_enquiries', JSON.stringify(savedEnquiries));
-      setSubmitted(true);
+      console.warn('Enquiry submission failed:', err);
+      setSubmitError(language === 'hi'
+        ? 'संदेश सर्वर पर जमा नहीं हुआ। कृपया इंटरनेट जाँचकर दोबारा भेजें।'
+        : 'Your message was not saved to the server. Please check your connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -133,6 +134,7 @@ export const ContactUsView: React.FC = () => {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4 bg-white p-5 rounded-2xl border border-stone-200">
+              {submitError && <div className="p-3 rounded-xl border border-red-200 bg-red-50 text-red-800 text-xs font-semibold">{submitError}</div>}
               <h3 className="font-bold text-sm text-stone-900 font-cinzel">
                 {language === 'hi' ? 'संदेश भेजें' : 'Send us an Inquiry / Academic Message'}
               </h3>
