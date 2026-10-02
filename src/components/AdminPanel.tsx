@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { storage } from '../services/firebase';
+import { collection, doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { db, storage } from '../services/firebase';
 import { useCurriculum } from '../context/CurriculumContext';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -135,10 +136,18 @@ export const AdminPanel: React.FC = () => {
   const [newPhotoUrl, setNewPhotoUrl] = useState(babaImageUrl);
   const [photoSaved, setPhotoSaved] = useState(false);
 
-  // Local enquiries state
-  const [enquiriesList, setEnquiriesList] = useState<ContactEnquiry[]>(() => {
-    return JSON.parse(localStorage.getItem('saarthi_enquiries') || '[]');
-  });
+  // Admin inbox is authoritative from Firestore; localStorage is only an offline fallback.
+  const [enquiriesList, setEnquiriesList] = useState<ContactEnquiry[]>([]);
+  useEffect(() => {
+    const localFallback = JSON.parse(localStorage.getItem('saarthi_enquiries') || '[]') as ContactEnquiry[];
+    const unsub = onSnapshot(collection(db, 'enquiries'), snap => {
+      const remote = snap.docs.map(d => ({ id: d.id, ...d.data() } as ContactEnquiry))
+        .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+      const remoteIds = new Set(remote.map(e => e.id));
+      setEnquiriesList([...remote, ...localFallback.filter(e => !remoteIds.has(e.id))]);
+    }, () => setEnquiriesList(localFallback));
+    return () => unsub();
+  }, []);
 
   const managerSubjects = curriculumSubjects.filter(s => s.classes.includes(curriculumClass) && (curriculumClass === 'Class 9' || curriculumClass === 'Class 10' || s.stream === 'General' || s.stream === curriculumStream));
   const addCurriculumSubject = async () => {
@@ -385,12 +394,17 @@ export const AdminPanel: React.FC = () => {
     }
   };
 
-  const handleResolveEnquiry = (enquiryId: string) => {
+  const handleResolveEnquiry = async (enquiryId: string) => {
     const updated = enquiriesList.map((enq) =>
       enq.id === enquiryId ? { ...enq, status: 'resolved' as const } : enq
     );
     setEnquiriesList(updated);
     localStorage.setItem('saarthi_enquiries', JSON.stringify(updated));
+    try {
+      await setDoc(doc(db, 'enquiries', enquiryId), { status: 'resolved', resolvedAt: new Date().toISOString() }, { merge: true });
+    } catch (err) {
+      console.warn('Enquiry status saved locally; Firestore update failed:', err);
+    }
   };
 
   return (
