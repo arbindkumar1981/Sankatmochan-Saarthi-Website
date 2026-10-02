@@ -28,7 +28,7 @@ export const YouTubeLearner: React.FC = () => {
     language
   } = useCurriculum();
 
-  const [activeVideo, setActiveVideo] = useState<YouTubeVideoItem>(youtubeVideos[0] || null);
+  const [activeVideo, setActiveVideo] = useState<YouTubeVideoItem | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [customUrl, setCustomUrl] = useState('');
   const [notesText, setNotesText] = useState('');
@@ -121,7 +121,7 @@ export const YouTubeLearner: React.FC = () => {
     const currentUser = auth.currentUser;
     const apiBase = import.meta.env.VITE_SAARTHI_API_URL;
     if (!apiBase) {
-      openFullYouTubeSearch(query);
+      setSearchError('Saarthi search is not configured. Please contact the administrator. You can paste a YouTube video link to play it here.');
       return;
     }
 
@@ -129,8 +129,7 @@ export const YouTubeLearner: React.FC = () => {
     setSearchError('');
     try {
       if (!currentUser) {
-        openFullYouTubeSearch(query);
-        setSearchError('Opening full YouTube search. Sign in for embedded Saarthi search results.');
+        setSearchError('Please sign in to search YouTube within Sankatmochansaarthi. You can also paste a video link to play it here.');
         return;
       }
       const idToken = await currentUser.getIdToken();
@@ -159,11 +158,9 @@ export const YouTubeLearner: React.FC = () => {
       })).filter((item: YouTubeVideoItem) => Boolean(item.youtubeId));
       setRemoteVideos(mapped);
       if (mapped[0]) setActiveVideo(mapped[0]);
-      else setSearchError('No live YouTube results found. Try a broader search or use full YouTube search.');
+      else setSearchError('No live YouTube results found. Try a broader search or paste a video link to play it here.');
     } catch (error) {
-      // Never trap a student inside the saved Saarthi library: fall back to the full YouTube search.
-      openFullYouTubeSearch(query);
-      setSearchError('Embedded search is temporarily unavailable, so full YouTube search was opened.');
+      setSearchError('Saarthi YouTube search is temporarily unavailable. Please retry. You can paste a video link above to play it within this page.');
     } finally {
       setSearchingRemote(false);
     }
@@ -203,11 +200,6 @@ export const YouTubeLearner: React.FC = () => {
     setCustomUrl('');
   };
 
-  const openFullYouTubeSearch = (query: string) => {
-    const targetQuery = query.trim() || 'Class 10 CBSE NCERT Lectures';
-    const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(targetQuery + ' ' + selectedClass)}`;
-    window.open(url, '_blank', 'noopener,noreferrer');
-  };
 
   return (
     <div className="flex-1 bg-white rounded-2xl border border-orange-200/90 shadow-sm p-4 sm:p-6 flex flex-col gap-5 min-w-0">
@@ -506,18 +498,18 @@ export const YouTubeLearner: React.FC = () => {
               <Compass className="w-8 h-8 text-orange-600 mx-auto" />
               <div>
                 <h4 className="text-xs font-bold text-stone-800">
-                  {language === 'hi' ? 'लाइब्रेरी में कोई सीधा वीडियो नहीं मिला' : 'No local video matched your search'}
+                  {language === 'hi' ? 'यहाँ सर्च परिणाम दिखेंगे' : 'Search results will appear here'}
                 </h4>
                 <p className="text-[11px] text-stone-500 mt-1">
-                  "{searchTerm}" {language === 'hi' ? 'के लिए सीधे पूरे यूट्यूब पर खोजें:' : 'Search YouTube directly:'}
+                  "{searchTerm}" {language === 'hi' ? 'के लिए इसी पोर्टल पर खोजें:' : 'Search within Sankatmochansaarthi:'}
                 </p>
               </div>
 
               <button
-                onClick={() => openFullYouTubeSearch(searchTerm)}
+                onClick={() => { document.querySelector<HTMLFormElement>('form')?.requestSubmit(); }}
                 className="w-full py-2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl shadow-xs flex items-center justify-center gap-1.5 transition-colors"
               >
-                <span>{language === 'hi' ? 'यूट्यूब पर लाइव खोजें' : 'Search on YouTube Live'}</span>
+                <span>{language === 'hi' ? 'यहाँ खोजें / दोबारा कोशिश करें' : 'Search here / Retry'}</span>
                 <ExternalLink className="w-3.5 h-3.5" />
               </button>
 
@@ -583,12 +575,12 @@ export const YouTubeLearner: React.FC = () => {
               {/* Online YouTube Fallback Button at end of list */}
               <div className="pt-2 border-t border-stone-100">
                 <button
-                  onClick={() => openFullYouTubeSearch(searchTerm || 'Class 10 CBSE')}
+                  onClick={() => { document.querySelector<HTMLFormElement>('form')?.requestSubmit(); }}
                   className="w-full py-2 bg-stone-100 hover:bg-orange-100 border border-stone-200 text-stone-700 hover:text-orange-900 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-colors"
                 >
                   <Search className="w-3.5 h-3.5 text-red-600" />
                   <span>
-                    {language === 'hi' ? 'यूट्यूब पर और अधिक व्याख्यान खोजें' : 'Search more on YouTube'}
+                    {language === 'hi' ? 'दोबारा खोजें' : 'Retry search'}
                   </span>
                   <ExternalLink className="w-3 h-3 text-stone-400" />
                 </button>
