@@ -144,8 +144,14 @@ export interface YouTubeVideoItem {
   board: BoardType;
   classGrade: ClassGrade;
   subjectId: string;
+  subjectName?: string;
   chapterId: string;
+  chapterTitle?: string;
   topicId?: string;
+  topicTitle?: string;
+  subtopicId?: string;
+  subtopicTitle?: string;
+  stream?: StreamType;
   description: string;
   tags?: string[];
   approved: boolean;
