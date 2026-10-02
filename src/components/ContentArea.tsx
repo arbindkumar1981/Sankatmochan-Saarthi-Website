@@ -114,6 +114,20 @@ export const ContentArea: React.FC = () => {
     return name;
   };
 
+  const subjectStyleProfile = (name: string) => {
+    const n = name.toLowerCase();
+    if (n.includes('physics')) return 'Physics: concept first; precise definitions; formula box with symbols, SI units and conditions; derivation in numbered steps; labelled diagram guidance; solved numerical; common mistakes; board-exam key points.';
+    if (n.includes('chemistry')) return 'Chemistry: concept and NCERT terminology; balanced equations/reactions; conditions and observations; tables for comparison; mechanisms/steps where relevant; exceptions; practical examples; board-exam key points.';
+    if (n.includes('biology')) return 'Biology: NCERT terminology; definition; structure/process in sequence; labelled-diagram guidance; flowcharts and comparison tables; keywords; common misconceptions; board-answer points.';
+    if (n.includes('history')) return 'History: chronological narrative; context/background; timeline; causes; major events and personalities; consequences; key dates/terms; source-based perspective; board-answer structure.';
+    if (n.includes('geography')) return 'Geography: concept; spatial context; map/diagram guidance; processes; causes and effects; data/examples; comparison tables; key terminology and board-answer points.';
+    if (n.includes('political')) return 'Political Science: concept and constitutional vocabulary; context; institutions/processes; examples; balanced explanation; comparison; key terms; structured board answers.';
+    if (n.includes('economics')) return 'Economics: definition; concept; assumptions; formula/graph guidance where relevant; stepwise mechanism; examples; tables; interpretation; common errors; board-answer points.';
+    if (n.includes('mathematics') || n.includes('math')) return 'Mathematics: concept; notation; formula/theorem with conditions; stepwise method; worked examples from easy to board level; shortcuts only when valid; common errors; practice cues.';
+    if (n.includes('english')) return 'English: clear literary/language analysis; context; theme; character/idea; textual evidence without long quotation; vocabulary; answer-writing framework and concise revision points.';
+    return 'Use a clear subject-appropriate CBSE/NCERT academic structure with headings, key terms, examples, exam points and age-appropriate language.';
+  };
+
   const generateWithTeacher = async () => {
     if (!profile || !user) { openAuthModal('student'); return; }
     if (!selectedSubject || !selectedChapter) return;
@@ -122,19 +136,26 @@ export const ContentArea: React.FC = () => {
     setStudentGenerating(true); setStudentGenerationError('');
     try {
       const token = await user.getIdToken();
-      const assetType = activeModule === 'revision_notes' ? 'REVISION_NOTES' : 'DETAILED_NOTES';
+      const assetType = activeModule === 'revision_notes' ? 'REVISION_NOTES' : activeModule === 'formulae' ? 'DEFINITIONS_FORMULAE' : activeModule === 'flashcards' ? 'FLASHCARDS' : 'DETAILED_NOTES';
       const topic = selectedTopic?.title || selectedChapter.title;
+      const topicId = `${selectedSubject.id}:${selectedChapter.id}:${selectedTopic?.id || 'chapter'}`;
+      const sample = learningContents.find(x => x.subjectId === selectedSubject.id && x.contentType === 'detailed_notes' && x.approved && x.published && x.bodyText)?.bodyText?.slice(0, 4000) || '';
       const res = await fetch(`${api}/v1/website/teacher/generate`, {
         method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
-          board: selectedBoard, class_name: selectedClass.replace('Class ', selectedClass === 'Class 9' ? 'IX' : selectedClass === 'Class 10' ? 'X' : selectedClass === 'Class 11' ? 'XI' : 'XII'),
-          subject: teacherSubjectName(selectedSubject.name), language, asset_type: assetType,
-          topic_id: `${selectedSubject.id}:${selectedChapter.id}:${selectedTopic?.id || 'chapter'}`,
-          knowledge: { verification_status: 'VERIFIED', facts: [`Curriculum topic: ${topic}; chapter: ${selectedChapter.title}`], provenance: [{ source: 'Saarthi curriculum selection', board: selectedBoard }] }
+          board: selectedBoard, class_level: selectedClass === 'Class 9' ? 'IX' : selectedClass === 'Class 10' ? 'X' : selectedClass === 'Class 11' ? 'XI' : 'XII',
+          subject: teacherSubjectName(selectedSubject.name), language: language === 'hi' ? 'HINDI' : 'ENGLISH', asset_type: assetType, topic_id: topicId,
+          style_profile: subjectStyleProfile(selectedSubject.name), sample_style_reference: sample,
+          knowledge: {
+            knowledge_id: `curriculum-${topicId}`, topic_id: topicId, concept: topic,
+            facts: [`Curriculum selection: ${selectedChapter.title} — ${topic}`], relations: [], misconceptions: [], examples: [],
+            provenance: [{ source: 'Sankatmochansaarthi curriculum selection', board: selectedBoard, chapter: selectedChapter.title }],
+            curriculum_version: '2026-27', verification_status: 'VERIFIED', version: 1
+          }
         })
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || 'Teacher Agent could not generate this material.');
+      if (!res.ok) throw new Error(typeof data.detail === 'string' ? data.detail : 'Sankatmochansaarthi could not generate this material.');
       setStudentGeneratedText(data.content || '');
     } catch (e:any) { setStudentGenerationError(e.message || 'Generation failed. Please try again.'); }
     finally { setStudentGenerating(false); }
@@ -143,9 +164,13 @@ export const ContentArea: React.FC = () => {
   const downloadGeneratedNotes = () => {
     if (!studentGeneratedText) return;
     const safeTitle = `${selectedSubject?.name || 'Saarthi'}-${selectedChapter?.title || 'Notes'}-${activeModule}`.replace(/[^a-z0-9-_]+/gi, '-');
-    const html = `<!doctype html><html><head><meta charset="utf-8"><title>${safeTitle}</title><style>body{font-family:Arial,sans-serif;line-height:1.65;max-width:900px;margin:40px auto;padding:20px;color:#292524}h1{color:#9a3412}.wm{position:fixed;bottom:20px;right:20px;opacity:.35;font-size:12px}</style></head><body><h1>SankatmochanSaarthi</h1><h2>${selectedSubject?.name || ''} — ${selectedChapter?.title || ''}</h2><pre style="white-space:pre-wrap;font:inherit">${studentGeneratedText.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre><div class="wm">Generated for ${profile?.displayName || 'Student'} • SankatmochanSaarthi</div></body></html>`;
-    const blob = new Blob([html], {type:'text/html;charset=utf-8'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=safeTitle+'.html'; a.click(); URL.revokeObjectURL(url);
+    const escaped = studentGeneratedText.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const w = window.open('', '_blank');
+    if (!w) { setStudentGenerationError('Please allow pop-ups to download the PDF.'); return; }
+    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${safeTitle}</title><style>@page{size:A4;margin:18mm}body{font-family:Arial,'Noto Sans Devanagari',sans-serif;line-height:1.55;color:#292524}.brand{color:#9a3412;font-weight:800;font-size:22px;border-bottom:2px solid #f59e0b;padding-bottom:8px}.meta{font-size:12px;color:#57534e;margin:8px 0 20px}pre{white-space:pre-wrap;font:inherit}.wm{position:fixed;bottom:4mm;right:4mm;color:#a8a29e;font-size:9px}</style></head><body><div class="brand">Sankatmochansaarthi</div><div class="meta">${selectedBoard} • ${selectedClass} • ${selectedSubject?.name || ''} • ${selectedChapter?.title || ''}<br>Generated for: ${profile?.displayName || 'Student'}</div><pre>${escaped}</pre><div class="wm">Sankatmochansaarthi • Personal Learning Copy</div><script>document.title='${safeTitle}';setTimeout(()=>window.print(),250)<\/script></body></html>`);
+    w.document.close();
   };
+
 
   // State for Flashcards
   const [currentFlashcardIndex, setCurrentFlashcardIndex] = useState(0);
@@ -392,7 +417,7 @@ export const ContentArea: React.FC = () => {
             <div><div className="font-bold text-sm text-orange-950">Saarthi Teacher Agent</div><div className="text-[11px] text-stone-600">Generate this material for your selected chapter/topic and language.</div></div>
             <div className="flex gap-2">
               <button onClick={generateWithTeacher} disabled={studentGenerating} className="px-3 py-2 rounded-xl bg-orange-600 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5"><WandSparkles className="w-4 h-4"/>{studentGenerating ? 'Generating…' : 'Generate with Sankatmochansaarthi'}</button>
-              {studentGeneratedText && <button onClick={downloadGeneratedNotes} className="px-3 py-2 rounded-xl bg-stone-900 text-white text-xs font-bold flex items-center gap-1.5"><Download className="w-4 h-4"/>Download</button>}
+              {studentGeneratedText && <button onClick={downloadGeneratedNotes} className="px-3 py-2 rounded-xl bg-stone-900 text-white text-xs font-bold flex items-center gap-1.5"><Download className="w-4 h-4"/>Download PDF</button>}
             </div>
           </div>
           {studentGenerationError && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs">{studentGenerationError}</div>}
@@ -421,7 +446,10 @@ export const ContentArea: React.FC = () => {
 
       {/* Module 3: Definitions & Formulae */}
       {activeModule === 'formulae' && (
-        <div className="space-y-4">
+        <div className="space-y-4 select-none" onCopy={(e)=>e.preventDefault()} onCut={(e)=>e.preventDefault()} onContextMenu={(e)=>e.preventDefault()}>
+          <div className="flex flex-wrap gap-2 justify-end"><button onClick={generateWithTeacher} disabled={studentGenerating} className="px-3 py-2 rounded-xl bg-orange-600 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5"><WandSparkles className="w-4 h-4"/>{studentGenerating ? 'Generating…' : 'Generate with Sankatmochansaarthi'}</button>{studentGeneratedText && <button onClick={downloadGeneratedNotes} className="px-3 py-2 rounded-xl bg-stone-900 text-white text-xs font-bold flex items-center gap-1.5"><Download className="w-4 h-4"/>Download PDF</button>}</div>
+          {studentGenerationError && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs">{studentGenerationError}</div>}
+          {studentGeneratedText && <div className="whitespace-pre-line bg-stone-50 border border-stone-200 rounded-2xl p-5 text-sm leading-relaxed">{studentGeneratedText}</div>}
           {!hasPublishedModuleContent || !(displayContent.formulaItems?.length) ? (
             <div className="p-8 text-center text-stone-500 bg-stone-50 rounded-2xl border border-stone-200">No verified definitions or formulae have been published for this selection yet.</div>
           ) : <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -511,7 +539,10 @@ export const ContentArea: React.FC = () => {
 
       {/* Module 5: Interactive Flashcards */}
       {activeModule === 'flashcards' && (
-        <div className="space-y-4 max-w-xl mx-auto w-full">
+        <div className="space-y-4 max-w-xl mx-auto w-full select-none" onCopy={(e)=>e.preventDefault()} onCut={(e)=>e.preventDefault()} onContextMenu={(e)=>e.preventDefault()}>
+          <div className="flex flex-wrap gap-2 justify-end"><button onClick={generateWithTeacher} disabled={studentGenerating} className="px-3 py-2 rounded-xl bg-orange-600 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5"><WandSparkles className="w-4 h-4"/>{studentGenerating ? 'Generating…' : 'Generate with Sankatmochansaarthi'}</button>{studentGeneratedText && <button onClick={downloadGeneratedNotes} className="px-3 py-2 rounded-xl bg-stone-900 text-white text-xs font-bold flex items-center gap-1.5"><Download className="w-4 h-4"/>Download PDF</button>}</div>
+          {studentGenerationError && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs">{studentGenerationError}</div>}
+          {studentGeneratedText && <div className="whitespace-pre-line bg-amber-50 border border-orange-200 rounded-2xl p-5 text-sm leading-relaxed">{studentGeneratedText}</div>}
           {displayContent.flashcardItems && displayContent.flashcardItems.length > 0 ? (
             <div>
               {/* Counter & Controls */}
