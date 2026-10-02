@@ -110,6 +110,16 @@ export const AdminPanel: React.FC = () => {
   const [videoYoutubeId, setVideoYoutubeId] = useState('');
   const [videoChannel, setVideoChannel] = useState('Sankatmochan Academy');
   const [videoDuration, setVideoDuration] = useState('35:00');
+  const [videoBoard, setVideoBoard] = useState<BoardType>(selectedBoard);
+  const [videoClass, setVideoClass] = useState<ClassGrade>(selectedClass);
+  const [videoStream, setVideoStream] = useState<StreamType>(selectedStream);
+  const [videoSubjectId, setVideoSubjectId] = useState('');
+  const [videoChapterId, setVideoChapterId] = useState('');
+  const [videoTopic, setVideoTopic] = useState('');
+  const [videoSubtopic, setVideoSubtopic] = useState('');
+  const videoSubjects = curriculumSubjects.filter(s => s.classes.includes(videoClass) && (videoClass === 'Class 9' || videoClass === 'Class 10' || s.stream === 'General' || s.stream === videoStream));
+  const videoSubject = videoSubjects.find(s => s.id === videoSubjectId) || videoSubjects[0] || null;
+  const videoChapter = videoSubject?.chapters.find(ch => ch.id === videoChapterId) || videoSubject?.chapters[0] || null;
 
   // New Notice Form State
   const [showNoticeForm, setShowNoticeForm] = useState(false);
@@ -253,12 +263,18 @@ export const AdminPanel: React.FC = () => {
       duration: videoDuration.trim() || '30:00',
       views: '1K views',
       thumbnail: `https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=640&auto=format&fit=crop`,
-      board: selectedBoard,
-      classGrade: selectedClass,
-      subjectId: selectedSubject?.id || 'c10-science',
-      chapterId: selectedSubject?.chapters[0]?.id || 'ch-1',
+      board: videoBoard,
+      classGrade: videoClass,
+      stream: videoStream,
+      subjectId: videoSubject?.id || 'general',
+      subjectName: videoSubject?.name,
+      chapterId: videoChapter?.id || 'general-chapter',
+      chapterTitle: videoChapter?.title,
+      topicId: videoTopic.trim() ? 'topic-' + videoTopic.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0,70) : undefined,
+      topicTitle: videoTopic.trim() || undefined,
+      subtopicTitle: videoSubtopic.trim() || undefined,
       description: 'Curated official lecture approved by Sankatmochan Saarthi Academic Board.',
-      tags: ['Board Lecture', selectedClass],
+      tags: ['Saarthi Recommended', videoClass, videoSubject?.name || '', videoChapter?.title || '', videoTopic.trim(), videoSubtopic.trim()].filter(Boolean),
       approved: true,
       published: true,
       createdAt: new Date().toISOString()
@@ -266,6 +282,8 @@ export const AdminPanel: React.FC = () => {
 
     setVideoTitle('');
     setVideoYoutubeId('');
+    setVideoTopic('');
+    setVideoSubtopic('');
     setShowVideoForm(false);
   };
 
@@ -604,14 +622,14 @@ export const AdminPanel: React.FC = () => {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-stone-900 uppercase tracking-wider font-cinzel">
-              YouTube Video Library
+              Saarthi Recommended Videos
             </h3>
             <button
               onClick={() => setShowVideoForm(!showVideoForm)}
               className="px-3.5 py-1.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-xs flex items-center gap-1 shadow-sm transition-all"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>{showVideoForm ? 'Cancel' : 'Add Curated Video'}</span>
+              <span>{showVideoForm ? 'Cancel' : 'Add Recommended Video'}</span>
             </button>
           </div>
 
@@ -644,6 +662,16 @@ export const AdminPanel: React.FC = () => {
                     className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white outline-none font-mono"
                   />
                 </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                <div><label className="block text-[11px] font-semibold mb-1">Board *</label><select value={videoBoard} onChange={e=>setVideoBoard(e.target.value as BoardType)} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white"><option value="CBSE">CBSE</option><option value="ICSE_ISC">ICSE / ISC</option><option value="UP_BOARD">UP Board</option><option value="BIHAR_BOARD">Bihar Board</option><option value="STATE_BOARD">State Board</option></select></div>
+                <div><label className="block text-[11px] font-semibold mb-1">Class *</label><select value={videoClass} onChange={e=>{setVideoClass(e.target.value as ClassGrade);setVideoSubjectId('');setVideoChapterId('')}} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white"><option>Class 9</option><option>Class 10</option><option>Class 11</option><option>Class 12</option></select></div>
+                <div><label className="block text-[11px] font-semibold mb-1">Stream</label><select value={videoStream} onChange={e=>{setVideoStream(e.target.value as StreamType);setVideoSubjectId('');setVideoChapterId('')}} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white"><option>General</option><option>Science</option><option>Commerce</option><option>Humanities</option></select></div>
+                <div><label className="block text-[11px] font-semibold mb-1">Subject *</label><select value={videoSubject?.id || ''} onChange={e=>{setVideoSubjectId(e.target.value);setVideoChapterId('')}} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white">{videoSubjects.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></div>
+                <div><label className="block text-[11px] font-semibold mb-1">Chapter *</label><select value={videoChapter?.id || ''} onChange={e=>setVideoChapterId(e.target.value)} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white">{videoSubject?.chapters.map(ch=><option key={ch.id} value={ch.id}>{ch.chapterNumber}. {ch.title}</option>)}</select></div>
+                <div><label className="block text-[11px] font-semibold mb-1">Topic (write yourself)</label><input value={videoTopic} onChange={e=>setVideoTopic(e.target.value)} placeholder="Type topic name" className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white"/></div>
+                <div><label className="block text-[11px] font-semibold mb-1">Sub-topic (write yourself)</label><input value={videoSubtopic} onChange={e=>setVideoSubtopic(e.target.value)} placeholder="Type sub-topic name" className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white"/></div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
