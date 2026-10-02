@@ -639,11 +639,10 @@ const LEGACY_SUBJECTS: SubjectMeta[] = [
   }
 ];
 
-const CURRENT_KEYS = new Set(CURRENT_CBSE_NCERT_SUBJECTS.flatMap(s => s.classes.map(c => `${c}|${s.name}`)));
-export const ALL_SUBJECTS: SubjectMeta[] = [
-  ...CURRENT_CBSE_NCERT_SUBJECTS,
-  ...LEGACY_SUBJECTS.filter(s => !s.classes.some(c => CURRENT_KEYS.has(`${c}|${s.name}`)))
-];
+// Dropdowns use only the current 2026-27 catalogue. Legacy subjects remain below solely
+// to preserve IDs referenced by historical seeded learning content; they must never leak
+// into current subject/chapter selectors as duplicate partial subjects.
+export const ALL_SUBJECTS: SubjectMeta[] = CURRENT_CBSE_NCERT_SUBJECTS;
 
 export const INITIAL_LEARNING_CONTENTS: LearningContent[] = [
   // Class 10 Science Detailed Notes
