@@ -32,6 +32,8 @@ import {
   TrendingUp,
   BrainCircuit,
   Share2,
+  Download,
+  WandSparkles,
   Youtube,
   Play,
   ExternalLink
@@ -91,6 +93,60 @@ export const ContentArea: React.FC = () => {
     updatedAt: new Date().toISOString()
   };
 
+  // Student on-demand Teacher Agent generation (Detailed/Revision Notes first).
+  const [studentGeneratedText, setStudentGeneratedText] = useState('');
+  const [studentGenerating, setStudentGenerating] = useState(false);
+  const [studentGenerationError, setStudentGenerationError] = useState('');
+
+  const teacherSubjectName = (name: string) => {
+    const n = name.toLowerCase();
+    if (n.includes('physics')) return 'Physics';
+    if (n.includes('chemistry')) return 'Chemistry';
+    if (n.includes('biology')) return 'Biology';
+    if (n.includes('mathematics') || n.includes('math')) return 'Mathematics';
+    if (n.includes('history')) return 'History';
+    if (n.includes('geography')) return 'Geography';
+    if (n.includes('political')) return 'Political Science';
+    if (n.includes('economics')) return 'Economics';
+    if (n.includes('science')) return 'Science';
+    if (n.includes('english')) return 'English';
+    if (n.includes('hindi')) return 'Hindi';
+    return name;
+  };
+
+  const generateWithTeacher = async () => {
+    if (!profile || !user) { openAuthModal('student'); return; }
+    if (!selectedSubject || !selectedChapter) return;
+    const api = import.meta.env.VITE_SAARTHI_API_URL;
+    if (!api) { setStudentGenerationError('Saarthi Teacher service is not configured.'); return; }
+    setStudentGenerating(true); setStudentGenerationError('');
+    try {
+      const token = await user.getIdToken();
+      const assetType = activeModule === 'revision_notes' ? 'REVISION_NOTES' : 'DETAILED_NOTES';
+      const topic = selectedTopic?.title || selectedChapter.title;
+      const res = await fetch(`${api}/v1/website/teacher/generate`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          board: selectedBoard, class_name: selectedClass.replace('Class ', selectedClass === 'Class 9' ? 'IX' : selectedClass === 'Class 10' ? 'X' : selectedClass === 'Class 11' ? 'XI' : 'XII'),
+          subject: teacherSubjectName(selectedSubject.name), language, asset_type: assetType,
+          topic_id: `${selectedSubject.id}:${selectedChapter.id}:${selectedTopic?.id || 'chapter'}`,
+          knowledge: { verification_status: 'VERIFIED', facts: [`Curriculum topic: ${topic}; chapter: ${selectedChapter.title}`], provenance: [{ source: 'Saarthi curriculum selection', board: selectedBoard }] }
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Teacher Agent could not generate this material.');
+      setStudentGeneratedText(data.content || '');
+    } catch (e:any) { setStudentGenerationError(e.message || 'Generation failed. Please try again.'); }
+    finally { setStudentGenerating(false); }
+  };
+
+  const downloadGeneratedNotes = () => {
+    if (!studentGeneratedText) return;
+    const safeTitle = `${selectedSubject?.name || 'Saarthi'}-${selectedChapter?.title || 'Notes'}-${activeModule}`.replace(/[^a-z0-9-_]+/gi, '-');
+    const html = `<!doctype html><html><head><meta charset="utf-8"><title>${safeTitle}</title><style>body{font-family:Arial,sans-serif;line-height:1.65;max-width:900px;margin:40px auto;padding:20px;color:#292524}h1{color:#9a3412}.wm{position:fixed;bottom:20px;right:20px;opacity:.35;font-size:12px}</style></head><body><h1>SankatmochanSaarthi</h1><h2>${selectedSubject?.name || ''} — ${selectedChapter?.title || ''}</h2><pre style="white-space:pre-wrap;font:inherit">${studentGeneratedText.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre><div class="wm">Generated for ${profile?.displayName || 'Student'} • SankatmochanSaarthi</div></body></html>`;
+    const blob = new Blob([html], {type:'text/html;charset=utf-8'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=safeTitle+'.html'; a.click(); URL.revokeObjectURL(url);
+  };
+
   // State for Flashcards
   const [currentFlashcardIndex, setCurrentFlashcardIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
@@ -118,6 +174,8 @@ export const ContentArea: React.FC = () => {
     setCurrentQuestionIndex(0);
     setSelectedAnswers({});
     setSubmittedScorecard(null);
+    setStudentGeneratedText('');
+    setStudentGenerationError('');
   }, [activeModule, selectedSubject?.id, selectedChapter?.id, selectedTopic?.id]);
 
   const [testStarted, setTestStarted] = useState(false);
@@ -329,7 +387,15 @@ export const ContentArea: React.FC = () => {
 
       {/* Module 1 & 2: Detailed Notes & Revision Notes */}
       {(activeModule === 'detailed_notes' || activeModule === 'revision_notes') && (
-        <div className="space-y-4">
+        <div className="space-y-4 select-none" onCopy={(e)=>e.preventDefault()} onCut={(e)=>e.preventDefault()} onContextMenu={(e)=>e.preventDefault()}>
+          <div className="flex flex-wrap items-center gap-2 justify-between bg-orange-50 border border-orange-200 rounded-2xl p-3">
+            <div><div className="font-bold text-sm text-orange-950">Saarthi Teacher Agent</div><div className="text-[11px] text-stone-600">Generate this material for your selected chapter/topic and language.</div></div>
+            <div className="flex gap-2">
+              <button onClick={generateWithTeacher} disabled={studentGenerating} className="px-3 py-2 rounded-xl bg-orange-600 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5"><WandSparkles className="w-4 h-4"/>{studentGenerating ? 'Generating…' : 'Generate with Teacher'}</button>
+              {studentGeneratedText && <button onClick={downloadGeneratedNotes} className="px-3 py-2 rounded-xl bg-stone-900 text-white text-xs font-bold flex items-center gap-1.5"><Download className="w-4 h-4"/>Download</button>}
+            </div>
+          </div>
+          {studentGenerationError && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs">{studentGenerationError}</div>}
           <div className="bg-amber-50/50 border border-amber-200/80 rounded-xl p-4 text-xs text-amber-950 font-serif leading-relaxed flex items-center justify-between">
             <span className="flex items-center gap-2 font-medium">
               <Sparkles className="w-4 h-4 text-orange-600 shrink-0" />
@@ -346,9 +412,9 @@ export const ContentArea: React.FC = () => {
           </div>
 
           <div className="prose prose-stone max-w-none text-stone-800 leading-relaxed text-sm sm:text-base space-y-4 whitespace-pre-line bg-gradient-to-b from-stone-50/50 to-white p-5 rounded-2xl border border-stone-200/70 font-sans">
-            {language === 'hi' && displayContent.bodyHindi
+            {studentGeneratedText || (language === 'hi' && displayContent.bodyHindi
               ? displayContent.bodyHindi
-              : displayContent.bodyText}
+              : displayContent.bodyText)}
           </div>
         </div>
       )}
