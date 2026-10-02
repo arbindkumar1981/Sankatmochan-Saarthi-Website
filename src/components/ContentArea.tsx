@@ -60,6 +60,10 @@ export const ContentArea: React.FC = () => {
     if (c.contentType !== activeModule) return false;
     if (c.subjectId !== selectedSubject?.id) return false;
     if (selectedChapter && c.chapterId !== selectedChapter.id) return false;
+    if (selectedTopic) {
+      const topicMatches = c.topicId === selectedTopic.id || (c.topicTitle || '').trim().toLowerCase() === selectedTopic.title.trim().toLowerCase();
+      if (!topicMatches) return false;
+    }
     return true;
   });
 
@@ -100,7 +104,8 @@ export const ContentArea: React.FC = () => {
     return true;
   });
 
-  const activeTest: EvaluationTest | undefined = matchedTests[0] || evaluationTests[0];
+  // Never serve an unrelated fallback test from another subject/chapter.
+  const activeTest: EvaluationTest | undefined = matchedTests[0];
 
   const [testStarted, setTestStarted] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
