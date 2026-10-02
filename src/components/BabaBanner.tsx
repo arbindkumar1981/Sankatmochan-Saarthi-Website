@@ -29,6 +29,8 @@ const BABA_QUOTES = [
   }
 ];
 
+const BABA_PUBLIC_DOMAIN_FALLBACK = 'https://upload.wikimedia.org/wikipedia/commons/6/66/Neemkaroli_14.jpg';
+
 export const BabaBanner: React.FC = () => {
   const { language, babaImageUrl } = useCurriculum();
   const [quoteIndex, setQuoteIndex] = useState(0);
@@ -62,9 +64,13 @@ export const BabaBanner: React.FC = () => {
           <div className="flex items-center gap-1.5 shrink-0 bg-black/30 border border-amber-300/40 px-2.5 py-1 rounded-lg text-amber-200 shadow-xs">
             <span className="text-amber-300 font-black text-sm">ॐ</span>
             <img
-              src={babaImageUrl}
+              src={babaImageUrl || BABA_PUBLIC_DOMAIN_FALLBACK}
+              onError={(e) => {
+                const img = e.currentTarget;
+                if (img.src !== BABA_PUBLIC_DOMAIN_FALLBACK) img.src = BABA_PUBLIC_DOMAIN_FALLBACK;
+              }}
               alt="Baba Neem Karoli Ji"
-              className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover object-top ring-2 ring-amber-300/90 shadow-md bg-amber-50"
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover object-[center_28%] ring-2 ring-amber-300 shadow-lg bg-amber-50"
             />
             <span className="text-xs sm:text-sm font-extrabold tracking-wide text-amber-100 font-cinzel whitespace-nowrap">
               {language === 'hi' ? 'नीम करौली बाबा जी विचार :' : 'Baba Neem Karoli Ji Quotes :'}
