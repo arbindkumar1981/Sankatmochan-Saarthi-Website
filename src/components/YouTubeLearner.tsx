@@ -107,7 +107,7 @@ export const YouTubeLearner: React.FC = () => {
     });
   }, [youtubeVideos, searchTerm, selectedCategory]);
 
-  // Show live backend results when available; otherwise show approved/local matches.
+  // Live search results are independent from Saarthi Recommended videos.
   const displayedVideos = remoteVideos.length > 0 ? remoteVideos : filteredVideos;
 
   const handleSearchSubmit = async (e: React.FormEvent) => {
@@ -143,14 +143,7 @@ export const YouTubeLearner: React.FC = () => {
       return;
     }
 
-    // Prefer approved local content. If none matches, use the authenticated Saarthi backend.
-    if (filteredVideos.length > 0) {
-      setRemoteVideos([]);
-      setSearchError('');
-      setActiveVideo(filteredVideos[0]);
-      return;
-    }
-
+    // Always perform a live YouTube search for text queries. Recommended videos remain a separate curated list.
     const currentUser = auth.currentUser;
     const apiBase = import.meta.env.VITE_SAARTHI_API_URL;
     if (!currentUser || !apiBase) {
@@ -187,7 +180,7 @@ export const YouTubeLearner: React.FC = () => {
       })).filter((item: YouTubeVideoItem) => Boolean(item.youtubeId));
       setRemoteVideos(mapped);
       if (mapped[0]) setActiveVideo(mapped[0]);
-      else setSearchError('No live results found.');
+      else setSearchError('No live YouTube results found. Saarthi Recommended videos are still shown below.');
     } catch (error) {
       setSearchError(error instanceof Error ? error.message : 'Live search unavailable.');
     } finally {
@@ -258,7 +251,7 @@ export const YouTubeLearner: React.FC = () => {
 
           <div className="flex items-center gap-2 self-start sm:self-auto">
             <span className="text-[11px] font-bold bg-white/20 backdrop-blur-xs px-2.5 py-1 rounded-full border border-white/30 text-white">
-              {displayedVideos.length} {language === 'hi' ? 'व्याख्यान उपलब्ध' : 'Lectures Available'}
+              {remoteVideos.length > 0 ? remoteVideos.length : filteredVideos.length} {remoteVideos.length > 0 ? (language === 'hi' ? 'लाइव परिणाम' : 'Live Results') : (language === 'hi' ? 'अनुशंसित वीडियो' : 'Recommended Videos')}
             </span>
           </div>
         </div>
