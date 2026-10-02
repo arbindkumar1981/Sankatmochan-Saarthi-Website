@@ -14,6 +14,7 @@ import {
   BookOpen,
   ChevronDown,
   Sparkles,
+  Youtube,
   ChevronRight
 } from 'lucide-react';
 
@@ -100,6 +101,14 @@ export const LearningSidebar: React.FC = () => {
       hindiLabel: 'केस-आधारित अध्ययन',
       icon: FileSpreadsheet,
       color: 'text-teal-600 bg-teal-50'
+    },
+    {
+      id: 'recommended_videos',
+      label: 'Recommended Videos',
+      hindiLabel: 'अनुशंसित वीडियो',
+      icon: Youtube,
+      color: 'text-red-600 bg-red-50',
+      tag: 'Saarthi Pick'
     },
     {
       id: 'test_yourself',
