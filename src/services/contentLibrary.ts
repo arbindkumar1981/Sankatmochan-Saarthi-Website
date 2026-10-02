@@ -78,6 +78,23 @@ export const findReusablePublishedContent = async (
   return { id: hit.id, ...hit.data() } as LearningContent;
 };
 
+// Firestore rejects undefined field values. Remove undefined recursively while
+// preserving Firestore special values (serverTimestamp, increment, etc.) and
+// all other non-plain objects.
+const omitUndefined = <T>(value: T): T => {
+  if (Array.isArray(value)) {
+    return value.filter(item => item !== undefined).map(item => omitUndefined(item)) as T;
+  }
+  if (value && typeof value === 'object' && Object.getPrototypeOf(value) === Object.prototype) {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .filter(([, item]) => item !== undefined)
+        .map(([key, item]) => [key, omitUndefined(item)])
+    ) as T;
+  }
+  return value;
+};
+
 export const saveCanonicalContent = async (
   identity: ContentIdentity,
   content: Omit<LearningContent, 'id'>
@@ -98,6 +115,7 @@ export const saveCanonicalContent = async (
     reuseCount: 0,
     generatedAt: content.generatedAt || new Date().toISOString()
   };
-  await setDoc(ref, item, { merge: false });
-  return item;
+  const firestoreItem = omitUndefined(item);
+  await setDoc(ref, firestoreItem, { merge: false });
+  return firestoreItem;
 };
