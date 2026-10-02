@@ -64,7 +64,7 @@ export const AdminPanel: React.FC = () => {
     language
   } = useCurriculum();
 
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
 
   const [adminTab, setAdminTab] = useState<
     'content' | 'videos' | 'tests' | 'notices' | 'students' | 'enquiries' | 'settings'
@@ -87,6 +87,7 @@ export const AdminPanel: React.FC = () => {
   const [contentSubtopic, setContentSubtopic] = useState('');
   const [contentFile, setContentFile] = useState<File | null>(null);
   const [contentSaving, setContentSaving] = useState(false);
+  const [contentGenerating, setContentGenerating] = useState(false);
   const [contentError, setContentError] = useState('');
   const [showCurriculumManager, setShowCurriculumManager] = useState(false);
   const [curriculumClass, setCurriculumClass] = useState<ClassGrade>('Class 9');
@@ -163,6 +164,71 @@ export const AdminPanel: React.FC = () => {
   const removeCurriculumChapter = async (subject: any, chapterId: string) => {
     if (!window.confirm('Delete this chapter?')) return;
     await saveCurriculumSubject({ ...subject, chapters: subject.chapters.filter((ch: any) => ch.id !== chapterId).map((ch: any, i: number) => ({...ch, chapterNumber:i+1})) });
+  };
+
+  const normalizeTeacherSubject = (name: string) => {
+    const n = name.toLowerCase();
+    if (n.includes('mathematics')) return 'Mathematics';
+    if (n.includes('science') && !n.includes('social')) return 'Science';
+    if (n.includes('physics')) return 'Physics';
+    if (n.includes('chemistry')) return 'Chemistry';
+    if (n.includes('biology')) return 'Biology';
+    if (n.includes('social science')) return 'Social Science';
+    if (n.includes('history')) return 'History';
+    if (n.includes('geography')) return 'Geography';
+    if (n.includes('political')) return 'Political Science';
+    if (n.includes('economics')) return 'Economics';
+    if (n.includes('sociology')) return 'Sociology';
+    if (n.includes('psychology')) return 'Psychology';
+    if (n.includes('accountancy')) return 'Accountancy';
+    if (n.includes('business studies')) return 'Business Studies';
+    if (n.includes('computer science')) return 'Computer Science';
+    if (n.includes('informatics')) return 'Informatics Practices';
+    if (n.includes('english')) return 'English';
+    if (n.includes('hindi')) return 'Hindi';
+    if (n.includes('sanskrit')) return 'Sanskrit';
+    if (n.includes('physical education')) return 'Physical Education';
+    return name.replace(/\s*\([^)]*\)/g, '').replace(/\s*[—-].*$/, '').trim();
+  };
+
+  const classRoman = (grade: ClassGrade) => ({ 'Class 9': 'IX', 'Class 10': 'X', 'Class 11': 'XI', 'Class 12': 'XII' }[grade]);
+
+  const handleGenerateDetailedNotes = async () => {
+    setContentError('');
+    if (!formSubject || !formChapter) { setContentError('Select Subject and Chapter first.'); return; }
+    if (contentBoard !== 'CBSE') { setContentError('Teacher Agent generation currently supports CBSE only.'); return; }
+    if (!user) { setContentError('Admin login is required.'); return; }
+    const apiBase = (import.meta.env.VITE_SAARTHI_API_URL || '').replace(/\/$/, '');
+    if (!apiBase) { setContentError('Saarthi backend URL is not configured.'); return; }
+    const concept = contentSubtopic.trim() || contentTopicTitle.trim() || formChapter.title;
+    const topicId = (contentTopicTitle.trim() || formChapter.title).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0,70) || formChapter.id;
+    setContentGenerating(true);
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch(`${apiBase}/v1/website/teacher/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          board: 'CBSE', class_level: classRoman(contentClass),
+          subject: normalizeTeacherSubject(formSubject.name),
+          language: language === 'hi' ? 'HINDI' : 'ENGLISH',
+          asset_type: 'DETAILED_NOTES', topic_id: topicId,
+          knowledge: {
+            knowledge_id: `admin-${topicId}-${Date.now()}`, topic_id: topicId, concept,
+            facts: [`Create curriculum-aligned detailed notes for ${formSubject.name}, ${formChapter.title}${contentTopicTitle.trim() ? ', topic: '+contentTopicTitle.trim() : ''}${contentSubtopic.trim() ? ', sub-topic: '+contentSubtopic.trim() : ''}.`],
+            relations: [], misconceptions: [], examples: [],
+            provenance: [{ source: 'Admin curriculum selection', board: 'CBSE', curriculum_version: '2026-27' }],
+            curriculum_version: '2026-27', verification_status: 'VERIFIED', version: 1
+          }
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Teacher Agent could not generate notes.');
+      setContentBody(data.content || '');
+      if (!contentTitle.trim()) setContentTitle(`${formChapter.title}${contentTopicTitle.trim() ? ' — '+contentTopicTitle.trim() : ''}: Detailed Notes`);
+    } catch (err: any) {
+      setContentError(err?.message || 'Detailed Notes generation failed.');
+    } finally { setContentGenerating(false); }
   };
 
   const handleCreateContent = async (e: React.FormEvent) => {
@@ -532,6 +598,13 @@ export const AdminPanel: React.FC = () => {
                   <option value="case_studies">Case Study</option>
                 </select>
               </div>
+
+              {contentType === 'detailed_notes' && (
+                <div className="rounded-xl border border-orange-300 bg-orange-50 p-3 flex flex-wrap items-center justify-between gap-2">
+                  <div><p className="text-xs font-bold text-orange-950">Saarthi Teacher Agent</p><p className="text-[10px] text-stone-600">Generate detailed notes from the selected CBSE class, subject, chapter, topic and sub-topic. Review before publishing.</p></div>
+                  <button type="button" onClick={handleGenerateDetailedNotes} disabled={contentGenerating || contentSaving} className="px-4 py-2 bg-stone-900 hover:bg-black disabled:opacity-60 text-white rounded-xl text-xs font-bold flex items-center gap-2"><Sparkles className="w-4 h-4"/>{contentGenerating ? 'Generating Notes...' : 'Generate Detailed Notes'}</button>
+                </div>
+              )}
 
               <div>
                 <label className="block text-[11px] font-semibold text-stone-700 mb-1">
