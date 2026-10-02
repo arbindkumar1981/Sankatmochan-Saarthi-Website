@@ -138,10 +138,12 @@ export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       const overrides = new Map<string, SubjectMeta>();
       snap.forEach(d => {
         const data = d.data();
-        if (data.kind === 'subject' && data.subject) overrides.set(data.subject.id, data.subject as SubjectMeta);
+        if (data.kind === 'subject' && data.subject && !data.deleted) overrides.set(data.subject.id, data.subject as SubjectMeta);
       });
-      setCurriculumSubjects(ALL_SUBJECTS.map(s => overrides.get(s.id) || s)
-        .concat([...overrides.values()].filter(s => !ALL_SUBJECTS.some(seed => seed.id === s.id))));
+      const deletedIds = new Set<string>();
+      snap.forEach(d => { const data = d.data(); if (data.kind === 'subject' && data.deleted) deletedIds.add(d.id); });
+      setCurriculumSubjects(ALL_SUBJECTS.filter(s => !deletedIds.has(s.id)).map(s => overrides.get(s.id) || s)
+        .concat([...overrides.values()].filter(s => !ALL_SUBJECTS.some(seed => seed.id === s.id) && !deletedIds.has(s.id))));
     }, err => console.warn('Curriculum sync fallback:', err.message));
     return () => unsub();
   }, []);
@@ -153,7 +155,7 @@ export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   };
   const deleteCurriculumSubject = async (subjectId: string) => {
     requireAdmin();
-    await deleteDoc(doc(db, 'curriculum_nodes', subjectId));
+    await setDoc(doc(db, 'curriculum_nodes', subjectId), { kind: 'subject', deleted: true, updatedAt: new Date().toISOString() });
     setCurriculumSubjects(prev => prev.filter(s => s.id !== subjectId));
   };
 
