@@ -258,7 +258,7 @@ export const YouTubeLearner: React.FC = () => {
 
           <div className="flex items-center gap-2 self-start sm:self-auto">
             <span className="text-[11px] font-bold bg-white/20 backdrop-blur-xs px-2.5 py-1 rounded-full border border-white/30 text-white">
-              {remoteVideos.length > 0 ? remoteVideos.length : filteredVideos.length} {remoteVideos.length > 0 ? (language === 'hi' ? 'लाइव परिणाम' : 'Live Results') : (language === 'hi' ? 'अनुशंसित वीडियो' : 'Recommended Videos')}
+              {remoteVideos.length} {language === 'hi' ? 'लाइव परिणाम' : 'Live Results'}
             </span>
           </div>
         </div>
