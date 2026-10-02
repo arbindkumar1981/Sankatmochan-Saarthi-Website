@@ -10,6 +10,7 @@ import {
   EvaluationTest,
   NoticeItem,
   ContactEnquiry,
+  UserProfile,
   ContentModuleType,
   BoardType,
   ClassGrade,
@@ -147,6 +148,19 @@ export const AdminPanel: React.FC = () => {
       setEnquiriesList([...remote, ...localFallback.filter(e => !remoteIds.has(e.id))]);
     }, () => setEnquiriesList(localFallback));
     return () => unsub();
+  }, []);
+
+  // Live registered-student directory and cross-student result history for administrators.
+  const [registeredStudents, setRegisteredStudents] = useState<UserProfile[]>([]);
+  const [allStudentResults, setAllStudentResults] = useState<any[]>([]);
+  useEffect(() => {
+    const unsubUsers = onSnapshot(collection(db, 'users'), snap => {
+      setRegisteredStudents(snap.docs.map(d => ({ uid: d.id, ...d.data() } as UserProfile)).filter(p => p.role !== 'admin'));
+    }, err => console.warn('Student directory sync failed:', err.message));
+    const unsubResults = onSnapshot(collection(db, 'test_results'), snap => {
+      setAllStudentResults(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    }, err => console.warn('Admin result history sync failed:', err.message));
+    return () => { unsubUsers(); unsubResults(); };
   }, []);
 
   const managerSubjects = curriculumSubjects.filter(s => s.classes.includes(curriculumClass) && (curriculumClass === 'Class 9' || curriculumClass === 'Class 10' || s.stream === 'General' || s.stream === curriculumStream));
@@ -931,41 +945,31 @@ export const AdminPanel: React.FC = () => {
       {adminTab === 'students' && (
         <div className="space-y-4">
           <h3 className="text-sm font-bold text-stone-900 uppercase tracking-wider font-cinzel">
-            Registered Student Directory & Test History
+            Registered Student Directory & Test History ({registeredStudents.length})
           </h3>
-
-          <div className="bg-white border border-stone-200 rounded-2xl overflow-hidden shadow-xs">
-            <div className="p-3 bg-stone-50 border-b border-stone-200 text-xs font-bold text-stone-700 grid grid-cols-4">
-              <span>Student / Name</span>
-              <span>Class & Board</span>
-              <span>Tests Completed</span>
-              <span>Recent Score</span>
-            </div>
-
-            <div className="p-3 divide-y divide-stone-100 text-xs text-stone-800">
-              <div className="py-2.5 grid grid-cols-4 items-center">
-                <div>
-                  <span className="font-bold block">Arbind Kumar (AK)</span>
-                  <span className="text-[11px] text-stone-400 font-mono">principal.a.kumar@gmail.com</span>
+          {registeredStudents.length === 0 ? (
+            <div className="p-8 text-center text-stone-500 bg-stone-50 rounded-2xl border text-xs">No registered students found.</div>
+          ) : (
+            <div className="bg-white border border-stone-200 rounded-2xl overflow-x-auto shadow-xs">
+              <div className="min-w-[680px]">
+                <div className="p-3 bg-stone-50 border-b border-stone-200 text-xs font-bold text-stone-700 grid grid-cols-4">
+                  <span>Student / Email</span><span>Class & Board</span><span>Tests Completed</span><span>Recent Score</span>
                 </div>
-                <div>Class 10 • CBSE</div>
-                <div className="font-bold text-orange-700">{testResults.length} Tests</div>
-                <div className="font-bold text-emerald-700">
-                  {testResults[0] ? `${testResults[0].percentage}%` : '85%'}
+                <div className="px-3 divide-y divide-stone-100 text-xs text-stone-800">
+                  {registeredStudents.map(student => {
+                    const results = allStudentResults.filter(r => r.studentUid === student.uid)
+                      .sort((a,b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+                    return <div key={student.uid} className="py-3 grid grid-cols-4 items-center gap-2">
+                      <div><span className="font-bold block">{student.displayName || 'Student'}</span><span className="text-[11px] text-stone-400 font-mono">{student.email}</span></div>
+                      <div>{student.classGrade || '—'} • {student.board || 'CBSE'}{student.stream && student.stream !== 'General' ? ` (${student.stream})` : ''}</div>
+                      <div className="font-bold text-orange-700">{results.length} Tests</div>
+                      <div className="font-bold text-emerald-700">{results[0] ? `${Math.round(results[0].percentage)}%` : '—'}</div>
+                    </div>;
+                  })}
                 </div>
               </div>
-
-              <div className="py-2.5 grid grid-cols-4 items-center">
-                <div>
-                  <span className="font-bold block">Anaya Sharma</span>
-                  <span className="text-[11px] text-stone-400 font-mono">anaya.s@school.in</span>
-                </div>
-                <div>Class 12 • CBSE (Science)</div>
-                <div className="font-bold text-orange-700">4 Tests</div>
-                <div className="font-bold text-emerald-700">92%</div>
-              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
 
