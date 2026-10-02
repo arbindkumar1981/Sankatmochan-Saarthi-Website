@@ -146,17 +146,22 @@ export const YouTubeLearner: React.FC = () => {
     // Always perform a live YouTube search for text queries. Recommended videos remain a separate curated list.
     const currentUser = auth.currentUser;
     const apiBase = import.meta.env.VITE_SAARTHI_API_URL;
-    if (!currentUser || !apiBase) {
-      setSearchError('Sign in to search live YouTube results.');
+    if (!apiBase) {
+      openFullYouTubeSearch(query);
       return;
     }
 
     setSearchingRemote(true);
     setSearchError('');
     try {
+      if (!currentUser) {
+        openFullYouTubeSearch(query);
+        setSearchError('Opening full YouTube search. Sign in for embedded Saarthi search results.');
+        return;
+      }
       const idToken = await currentUser.getIdToken();
       const response = await fetch(
-        `${apiBase.replace(/\/$/, '')}/v1/website/youtube/search?q=${encodeURIComponent(query)}&max_results=10`,
+        `${apiBase.replace(/\/$/, '')}/v1/website/youtube/search?q=${encodeURIComponent(query)}&max_results=25`,
         { headers: { Authorization: `Bearer ${idToken}` } }
       );
       if (!response.ok) throw new Error(`Search failed (${response.status})`);
@@ -182,7 +187,9 @@ export const YouTubeLearner: React.FC = () => {
       if (mapped[0]) setActiveVideo(mapped[0]);
       else setSearchError('No live YouTube results found. Saarthi Recommended videos are still shown below.');
     } catch (error) {
-      setSearchError(error instanceof Error ? error.message : 'Live search unavailable.');
+      // Never trap a student inside the saved Saarthi library: fall back to the full YouTube search.
+      openFullYouTubeSearch(query);
+      setSearchError('Embedded search is temporarily unavailable, so full YouTube search was opened.');
     } finally {
       setSearchingRemote(false);
     }
