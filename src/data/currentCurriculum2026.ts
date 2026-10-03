@@ -84,7 +84,7 @@ const CORE_CBSE_NCERT_SUBJECTS: SubjectMeta[] = [
 const catalogueSubject = (
   grade: ClassGrade, name: string, code: string, stream: StreamType = 'General'
 ): SubjectMeta => ({
-  id: `cbse-${grade.replace(/\\s+/g, '-').toLowerCase()}-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`,
+  id: `cbse-${grade.replace(/\\s+/g, '-').toLowerCase()}-${stream.toLowerCase()}-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`,
   name, hindiName: name, officialCode: code, stream, classes: [grade], icon: 'BookOpen', chapters: []
 });
 
