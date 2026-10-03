@@ -134,6 +134,10 @@ Verified learning material for **${selectedChapter?.title || 'this chapter'}** i
   const generateWithTeacher = async () => {
     if (!profile || !user) { openAuthModal('student'); return; }
     if (!selectedSubject || !selectedChapter) return;
+    if (!hasPublishedModuleContent || !matchedContent?.bodyText?.trim()) {
+      setStudentGenerationError('Teacher Agent needs approved, published source content for this selection. Please ask the admin to publish verified content first.');
+      return;
+    }
     const api = import.meta.env.VITE_SAARTHI_API_URL;
     if (!api) { setStudentGenerationError('Saarthi Teacher service is not configured.'); return; }
     setStudentGenerating(true); setStudentGenerationError('');
@@ -144,7 +148,7 @@ Verified learning material for **${selectedChapter?.title || 'this chapter'}** i
       const topicId = `${selectedSubject.id}:${selectedChapter.id}:${selectedTopic?.id || 'chapter'}`;
       const sample = learningContents.find(x => x.subjectId === selectedSubject.id && x.contentType === 'detailed_notes' && x.approved && x.published && x.bodyText)?.bodyText?.slice(0, 4000) || '';
       const controller = new AbortController();
-      const timeout = window.setTimeout(() => controller.abort(), 90000);
+      const timeout = window.setTimeout(() => controller.abort(), 600000);
       const res = await fetch(`${api}/v1/website/teacher/generate`, {
         method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, signal: controller.signal,
         body: JSON.stringify({
@@ -153,9 +157,9 @@ Verified learning material for **${selectedChapter?.title || 'this chapter'}** i
           style_profile: subjectStyleProfile(selectedSubject.name), sample_style_reference: sample,
           knowledge: {
             knowledge_id: `curriculum-${topicId}`, topic_id: topicId, concept: topic,
-            facts: [`Curriculum selection: ${selectedChapter.title} — ${topic}`], relations: [], misconceptions: [], examples: [],
-            provenance: [{ source: 'Sankatmochansaarthi curriculum selection', board: selectedBoard, chapter: selectedChapter.title }],
-            curriculum_version: '2026-27', verification_status: 'VERIFIED', version: 1
+            facts: [matchedContent.bodyText.slice(0, 12000)], relations: [], misconceptions: [], examples: [],
+            provenance: [{ source: 'Sankatmochansaarthi approved learning content', content_id: matchedContent.id, board: selectedBoard, chapter: selectedChapter.title }],
+            curriculum_version: matchedContent.curriculumVersion || '2026-27', verification_status: 'VERIFIED', version: matchedContent.version || 1
           }
         })
       });
