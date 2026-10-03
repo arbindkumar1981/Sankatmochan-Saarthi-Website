@@ -111,7 +111,9 @@ Verified learning material for **${selectedChapter?.title || 'this chapter'}** i
     if (n.includes('geography')) return 'Geography';
     if (n.includes('political')) return 'Political Science';
     if (n.includes('economics')) return 'Economics';
+    if (n.includes('social science')) return 'Social Science';
     if (n.includes('science')) return 'Science';
+    if (n === 'it' || n.includes('information technology')) return 'Information Technology';
     if (n.includes('english')) return 'English';
     if (n.includes('hindi')) return 'Hindi';
     return name;
