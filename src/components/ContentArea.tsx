@@ -136,10 +136,6 @@ Verified learning material for **${selectedChapter?.title || 'this chapter'}** i
   const generateWithTeacher = async () => {
     if (!profile || !user) { openAuthModal('student'); return; }
     if (!selectedSubject || !selectedChapter) return;
-    if (!hasPublishedModuleContent || !matchedContent?.bodyText?.trim()) {
-      setStudentGenerationError('Teacher Agent needs approved, published source content for this selection. Please ask the admin to publish verified content first.');
-      return;
-    }
     const api = import.meta.env.VITE_SAARTHI_API_URL;
     if (!api) { setStudentGenerationError('Saarthi Teacher service is not configured.'); return; }
     setStudentGenerating(true); setStudentGenerationError('');
@@ -156,13 +152,16 @@ Verified learning material for **${selectedChapter?.title || 'this chapter'}** i
         body: JSON.stringify({
           board: selectedBoard, class_level: selectedClass === 'Class 9' ? 'IX' : selectedClass === 'Class 10' ? 'X' : selectedClass === 'Class 11' ? 'XI' : 'XII',
           subject: teacherSubjectName(selectedSubject.name), language: language === 'hi' ? 'HINDI' : 'ENGLISH', asset_type: assetType, topic_id: topicId,
+          chapter: selectedChapter.title, topic,
           style_profile: subjectStyleProfile(selectedSubject.name), sample_style_reference: sample,
-          knowledge: {
-            knowledge_id: `curriculum-${topicId}`, topic_id: topicId, concept: topic,
-            facts: [matchedContent.bodyText.slice(0, 12000)], relations: [], misconceptions: [], examples: [],
-            provenance: [{ source: 'Sankatmochansaarthi approved learning content', content_id: matchedContent.id, board: selectedBoard, chapter: selectedChapter.title }],
-            curriculum_version: matchedContent.curriculumVersion || '2026-27', verification_status: 'VERIFIED', version: matchedContent.version || 1
-          }
+          ...(hasPublishedModuleContent && matchedContent?.bodyText?.trim() ? {
+            knowledge: {
+              knowledge_id: `curriculum-${topicId}`, topic_id: topicId, concept: topic,
+              facts: [matchedContent.bodyText.slice(0, 12000)], relations: [], misconceptions: [], examples: [],
+              provenance: [{ source: 'Sankatmochansaarthi approved learning content', content_id: matchedContent.id, board: selectedBoard, chapter: selectedChapter.title }],
+              curriculum_version: matchedContent.curriculumVersion || '2026-27', verification_status: 'VERIFIED', version: matchedContent.version || 1
+            }
+          } : {})
         })
       });
       window.clearTimeout(timeout);
