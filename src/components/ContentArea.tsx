@@ -141,7 +141,12 @@ Verified learning material for **${selectedChapter?.title || 'this chapter'}** i
     setStudentGenerating(true); setStudentGenerationError('');
     try {
       const token = await user.getIdToken();
-      const assetType = activeModule === 'revision_notes' ? 'REVISION_NOTES' : activeModule === 'formulae' ? 'DEFINITIONS_FORMULAE' : activeModule === 'flashcards' ? 'FLASHCARDS' : 'DETAILED_NOTES';
+      const assetType =
+        activeModule === 'revision_notes' ? 'REVISION_NOTES' :
+        activeModule === 'formulae' ? 'DEFINITIONS_FORMULAE' :
+        activeModule === 'flashcards' ? 'FLASHCARDS' :
+        activeModule === 'test' ? 'TEST' :
+        'DETAILED_NOTES';
       const topic = selectedTopic?.title || selectedChapter.title;
       const topicId = `${selectedSubject.id}:${selectedChapter.id}:${selectedTopic?.id || 'chapter'}`;
       const sample = learningContents.find(x => x.subjectId === selectedSubject.id && x.contentType === 'detailed_notes' && x.approved && x.published && x.bodyText)?.bodyText?.slice(0, 4000) || '';
