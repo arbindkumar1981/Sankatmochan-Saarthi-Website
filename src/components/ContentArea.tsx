@@ -144,7 +144,10 @@ Verified learning material for **${selectedChapter?.title || 'this chapter'}** i
       const assetType =
         activeModule === 'revision_notes' ? 'REVISION_NOTES' :
         activeModule === 'formulae' ? 'DEFINITIONS_FORMULAE' :
+        activeModule === 'mindmaps' ? 'MIND_MAP' :
         activeModule === 'flashcards' ? 'FLASHCARDS' :
+        activeModule === 'cbqs' ? 'COMPETENCY' :
+        activeModule === 'case_studies' ? 'CASE_BASED' :
         activeModule === 'test_yourself' ? 'TEST' :
         'DETAILED_NOTES';
       const topic = selectedTopic?.title || selectedChapter.title;
@@ -521,6 +524,9 @@ Verified learning material for **${selectedChapter?.title || 'this chapter'}** i
       {/* Module 4: Mind Maps */}
       {activeModule === 'mindmaps' && (
         <div className="space-y-4">
+          <div className="flex flex-wrap gap-2 justify-end"><button onClick={generateWithTeacher} disabled={studentGenerating} className="px-3 py-2 rounded-xl bg-orange-600 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5"><WandSparkles className="w-4 h-4"/>{studentGenerating ? 'Generating…' : 'Generate with Sankatmochansaarthi'}</button></div>
+          {studentGenerationError && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs">{studentGenerationError}</div>}
+          {studentGeneratedText && <div className="whitespace-pre-line bg-purple-50 border border-purple-200 rounded-2xl p-5 text-sm leading-relaxed">{studentGeneratedText}</div>}
           <div className="bg-gradient-to-r from-purple-50 to-amber-50 border border-purple-200 rounded-2xl p-6 text-center">
             <GitBranch className="w-12 h-12 text-purple-600 mx-auto mb-2 animate-bounce" />
             <h3 className="font-bold text-base text-stone-900 font-cinzel">
@@ -718,6 +724,9 @@ Verified learning material for **${selectedChapter?.title || 'this chapter'}** i
       {/* Module 7 & 8: Competency-Based Questions (CBQs) & Case-Based Studies */}
       {(activeModule === 'cbqs' || activeModule === 'case_studies') && (
         <div className="space-y-5">
+          <div className="flex flex-wrap gap-2 justify-end"><button onClick={generateWithTeacher} disabled={studentGenerating} className="px-3 py-2 rounded-xl bg-orange-600 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5"><WandSparkles className="w-4 h-4"/>{studentGenerating ? 'Generating…' : 'Generate with Sankatmochansaarthi'}</button></div>
+          {studentGenerationError && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs">{studentGenerationError}</div>}
+          {studentGeneratedText && <div className="whitespace-pre-line bg-teal-50 border border-teal-200 rounded-2xl p-5 text-sm leading-relaxed">{studentGeneratedText}</div>}
           {displayContent.caseStudyItem ? (
             <div className="bg-gradient-to-br from-teal-50/40 via-amber-50/20 to-orange-50/30 border border-teal-200 rounded-2xl p-5 shadow-xs">
               <div className="flex items-center gap-2 mb-2">
@@ -773,6 +782,9 @@ Verified learning material for **${selectedChapter?.title || 'this chapter'}** i
       {/* Module 9: Test Yourself (Interactive Objective Testing Engine) */}
       {activeModule === 'test_yourself' && (
         <div className="space-y-5">
+          <div className="flex flex-wrap gap-2 justify-end"><button onClick={generateWithTeacher} disabled={studentGenerating} className="px-3 py-2 rounded-xl bg-orange-600 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5"><WandSparkles className="w-4 h-4"/>{studentGenerating ? 'Generating…' : 'Generate Test with Sankatmochansaarthi'}</button></div>
+          {studentGenerationError && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs">{studentGenerationError}</div>}
+          {studentGeneratedText && <div className="whitespace-pre-line bg-stone-50 border border-stone-200 rounded-2xl p-5 text-sm leading-relaxed">{studentGeneratedText}</div>}
           {!activeTest && (
             <div className="p-8 text-center text-stone-500 bg-stone-50 rounded-2xl border border-stone-200">No published test is available for this subject/chapter selection yet.</div>
           )}
