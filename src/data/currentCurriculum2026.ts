@@ -11,7 +11,7 @@ const makeSubject = (
 });
 
 // CBSE/NCERT 2026-27 catalogue. Topics remain admin/free-text by design.
-export const CURRENT_CBSE_NCERT_SUBJECTS: SubjectMeta[] = [
+const CORE_CBSE_NCERT_SUBJECTS: SubjectMeta[] = [
   makeSubject('c9-math-2026','Mathematics — Ganita Manjari','गणित — गणित मंजरी','041','General','Class 9',[
     'Orienting Yourself: The Use of Coordinates','Introduction to Linear Polynomials','The World of Numbers','Exploring Algebraic Identities',"I'm Up and Down, and Round and Round",'Measuring Space: Perimeter and Area','The Mathematics of Maybe: Introduction to Probability','Predicting What Comes Next: Exploring Sequences and Progressions'
   ],'Calculator'),
@@ -91,4 +91,37 @@ export const CURRENT_CBSE_NCERT_SUBJECTS: SubjectMeta[] = [
   makeSubject('c12-cs-2026','Computer Science','कंप्यूटर साइंस','083','Science','Class 12',['Python Revision and Functions','Exception Handling','File Handling','Data Structures — Stack','Computer Networks','Database Concepts','SQL','Python–SQL Connectivity'],'Cpu'),
   makeSubject('c12-ip-2026','Informatics Practices','इन्फॉर्मेटिक्स प्रैक्टिसेज','065','Commerce','Class 12',['Pandas and Data Handling','Data Visualization','Database Query using SQL','Introduction to Computer Networks','Societal Impacts'],'Cpu'),
   makeSubject('c12-pe-2026','Physical Education','शारीरिक शिक्षा','048','General','Class 12',['Management of Sporting Events','Children and Women in Sports','Yoga as Preventive Measure for Lifestyle Disease','Physical Education and Sports for CWSN','Sports and Nutrition','Test and Measurement in Sports','Physiology and Injuries in Sports','Biomechanics and Sports','Psychology and Sports','Training in Sports'],'Activity')
+];
+
+
+const catalogueSubject = (grade: ClassGrade, name: string, code = '', stream: StreamType = 'General'): SubjectMeta => ({
+  id: `cbse-${grade.replace(/\\s+/g, '-').toLowerCase()}-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`,
+  name, hindiName: name, officialCode: code, stream, classes: [grade], icon: 'BookOpen', chapters: []
+});
+
+const IX_LANGUAGES = ['Arabic','Assamese','Bahasa Melayu','Bengali','Bhoti','Bhutia','Bodo','Dogri','English','French','German','Gujarati','Gurung','Hindi','Japanese','Kannada','Kashmiri','Kokborok','Konkani','Lepcha','Limboo','Malayalam','Manipuri','Marathi','Maithili','Mizo','Nepali','Odia','Persian','Punjabi','Rai','Russian','Sanskrit','Santhali','Sindhi','Spanish','Sherpa','Tamang','Tamil','Tangkhul','Telugu AP','Telugu Telangana','Tibetan','Thai','Urdu'];
+const IX_MAIN_OPTIONAL = ['Mathematics','Mathematics at Advanced Level','Science','Science at Advanced Level','Social Science','Interdisciplinary Area','Vocational Education (Kaushal Vikas)','Computational Thinking & AI','Physical Education & Well Being','Art Education','Home Science','Painting','National Cadet Corps (NCC)','Computer Applications','Elements of Business','Elements of Book Keeping & Accountancy','Retail','Information Technology','Introduction to Financial Markets','Introduction to Tourism','Beauty & Wellness','Front Office Operations','Marketing and Sales','Artificial Intelligence'];
+
+const X_LANGUAGES = ['Arabic','Assamese','Bahasa Melayu','Bengali','Bhoti','Bhutia','Bodo','English Language & Literature','English Communicative','French','German','Gujarati','Gurung','Hindi Course A','Hindi Course B','Japanese','Kannada','Kashmiri','Kokborok','Lepcha','Limboo','Malayalam','Manipuri','Marathi','Mizo','Nepali','Odia','Persian','Punjabi','Rai','Russian','Sanskrit','Sanskrit Communicative','Sindhi','Spanish','Sherpa','Tamang','Tamil','Tangkhul','Telugu AP','Telugu Telangana','Tibetan','Thai','Urdu Course A','Urdu Course B'];
+const X_MAIN_ELECTIVES = ['Mathematics Basic','Mathematics Standard','Science','Social Science','Carnatic Music (Vocal)','Carnatic Music (Melodic Instruments)','Carnatic Music (Percussion Instruments)','Hindustani Music (Vocal)','Hindustani Music (Melodic Instruments)','Hindustani Music (Percussion Instruments)','Painting','Home Science','National Cadet Corps (NCC)','Computer Applications','Elements of Business','Elements of Book Keeping and Accountancy','Health and Physical Education','Work Experience','Art Education'];
+
+const SR_LANGUAGES = ['Arabic','Assamese','Bengali','Bhoti','Bhutia','Bodo','French','German','Gujarati','Hindi Core','Hindi Elective','English Core','English Elective','Japanese','Kannada','Kashmiri','Kokborok','Lepcha','Limboo','Malayalam','Manipuri','Marathi','Mizo','Nepali','Odia','Persian','Punjabi','Russian','Sanskrit Core','Sanskrit Elective','Sindhi','Spanish','Tamil','Tangkhul','Telugu AP','Telugu Telangana','Tibetan','Urdu Core','Urdu Elective'];
+const SR_ELECTIVES = ['Accountancy','Biology','Biotechnology','Business Studies','Carnatic Melodic','Carnatic Vocal','Carnatic Percussion','Chemistry','Computer Science','Economics','Engineering Graphics','Entrepreneurship','Fine Arts','Dance','Geography','Hindustani Melodic','Hindustani Percussion','Hindustani Vocal','History','Home Science','Informatics Practices','Knowledge Tradition - Practices India','Legal Studies','Mathematics','Applied Mathematics','NCC','Physical Education','Physics','Political Science','Psychology','Sociology','Health and Physical Education','Work Experience','General Studies'];
+
+const OFFICIAL_CATALOGUE_SUBJECTS: SubjectMeta[] = [
+  ...[...IX_LANGUAGES, ...IX_MAIN_OPTIONAL].map(name => catalogueSubject('Class 9', name)),
+  ...[...X_LANGUAGES, ...X_MAIN_ELECTIVES].map(name => catalogueSubject('Class 10', name)),
+  ...[...SR_LANGUAGES, ...SR_ELECTIVES].flatMap(name => [
+    catalogueSubject('Class 11', name),
+    catalogueSubject('Class 12', name)
+  ])
+];
+
+// Keep rich NCERT chapter data where Saarthi already has it, and fill every missing
+// official CBSE 2026-27 subject into the selector catalogue.
+const subjectKey = (s: SubjectMeta) => `${s.classes[0]}::${s.name.trim().toLowerCase()}`;
+const richKeys = new Set(CORE_CBSE_NCERT_SUBJECTS.map(subjectKey));
+export const CURRENT_CBSE_NCERT_SUBJECTS: SubjectMeta[] = [
+  ...CORE_CBSE_NCERT_SUBJECTS,
+  ...OFFICIAL_CATALOGUE_SUBJECTS.filter(s => !richKeys.has(subjectKey(s)))
 ];
