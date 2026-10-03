@@ -199,7 +199,20 @@ export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         setSelectedChapter(nextSub.chapters[0] || null);
         setSelectedTopic(null);
       }
+      return;
     }
+
+    // Class XI/XII profiles created before stream selection can carry "General".
+    // Normalize that stale value so the subject list never becomes empty.
+    if ((selectedClass === 'Class 11' || selectedClass === 'Class 12') && selectedStream === 'General') {
+      setSelectedStream('Science');
+      return;
+    }
+
+    // Never leave a stale subject/chapter visible when the active class/stream has no match.
+    setSelectedSubject(null);
+    setSelectedChapter(null);
+    setSelectedTopic(null);
   }, [selectedClass, selectedStream, curriculumSubjects, selectedSubject?.id]);
 
   // When selectedSubject changes, reset selected chapter to its first chapter
