@@ -12,25 +12,12 @@ const makeSubject = (
 
 // CBSE/NCERT 2026-27 catalogue. Topics remain admin/free-text by design.
 const CORE_CBSE_NCERT_SUBJECTS: SubjectMeta[] = [
-  makeSubject('c9-math-2026','Mathematics — Ganita Manjari','गणित — गणित मंजरी','041','General','Class 9',[
-    'Orienting Yourself: The Use of Coordinates','Introduction to Linear Polynomials','The World of Numbers','Exploring Algebraic Identities',"I'm Up and Down, and Round and Round",'Measuring Space: Perimeter and Area','The Mathematics of Maybe: Introduction to Probability','Predicting What Comes Next: Exploring Sequences and Progressions'
-  ],'Calculator'),
-  makeSubject('c9-math-adv-2026','Mathematics Advanced','गणित — उन्नत स्तर','041-A','General','Class 9',[
-    'Advanced Number Sense and Reasoning','Algebraic Reasoning and Polynomials','Coordinate and Spatial Reasoning','Geometry and Proof','Mensuration and Modelling','Probability and Data Reasoning','Sequences, Patterns and Algorithms'
-  ],'Calculator'),
-  makeSubject('c9-science-2026','Science — Exploration','विज्ञान — एक्सप्लोरेशन','086','General','Class 9',[
-    'Exploration: Entering the World of Secondary Science','Cell: The Building Block of Life','Tissues in Action','Describing Motion Around Us','Exploring Mixtures and their Separation','How Forces Affect Motion','Work, Energy, and Simple Machines','Journey Inside the Atom','Atomic Foundations of Matter','Sound Waves: Characteristics and Applications','Reproduction: How Life Continues','Patterns in Life: Diversity and Classification','Earth as a System: Energy, Matter, and Life'
-  ],'Atom'),
-  makeSubject('c9-science-adv-2026','Science Advanced','विज्ञान — उन्नत स्तर','086-A','General','Class 9',[
-    'Scientific Inquiry and Advanced Applications','Life Processes and Biological Systems','Matter and Atomic Systems','Motion, Force, Work and Energy','Sound and Wave Applications','Earth Systems and Sustainability'
-  ],'Atom'),
   makeSubject('c9-social-2026','Social Science — Understanding Society: India and Beyond','सामाजिक विज्ञान — अंडरस्टैंडिंग सोसाइटी: इंडिया एंड बियॉन्ड','087','General','Class 9',[
     'Understanding Society: India and Beyond — Part 1','Understanding Society: India and Beyond — Part 2'
   ],'Globe'),
   makeSubject('c9-english-2026','English — Kaveri','अंग्रेजी — कावेरी','184','General','Class 9',['Kaveri — Grade 9 English: Current NCERT Textbook'],'BookOpen'),
   makeSubject('c9-hindi-2026','Hindi (R1/R2)','हिन्दी (R1/R2)','002/085','General','Class 9',['Current NCERT Grade 9 Hindi — 2026-27'],'BookOpen'),
   makeSubject('c9-sanskrit-2026','Sanskrit','संस्कृत','122','General','Class 9',['Current NCERT Grade 9 Sanskrit — 2026-27'],'Sparkles'),
-  makeSubject('c9-vocational-2026','Vocational Education (Kaushal Vikas)','व्यावसायिक शिक्षा (कौशल विकास)','444','General','Class 9',['Kaushal Vikas — Grade 9'],'Briefcase'),
   makeSubject('c9-ctai-2026','Computational Thinking & AI','कम्प्यूटेशनल थिंकिंग एवं एआई','417','General','Class 9',['Computational Thinking','Artificial Intelligence Foundations','Data and Algorithms','Responsible AI'],'Cpu'),
   makeSubject('c9-it-2026','Information Technology','सूचना प्रौद्योगिकी','402','General','Class 9',['Employability Skills','Digital Documentation','Electronic Spreadsheet','Digital Presentation','Database Management System'],'Cpu'),
 
