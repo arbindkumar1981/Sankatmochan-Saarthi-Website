@@ -100,6 +100,7 @@ Verified learning material for **${selectedChapter?.title || 'this chapter'}** i
   const [studentGenerating, setStudentGenerating] = useState(false);
   const [studentGenerationError, setStudentGenerationError] = useState('');
   const [studentDiagramPlans, setStudentDiagramPlans] = useState<Array<{title:string; labels:string[]; instructions:string}>>([]);
+  const [studentProvenance, setStudentProvenance] = useState<Array<{source?:string; source_url?:string; verification_status?:string}>>([]);
 
   const teacherSubjectName = (name: string) => {
     const n = name.toLowerCase();
@@ -169,6 +170,7 @@ Verified learning material for **${selectedChapter?.title || 'this chapter'}** i
       if (!res.ok) throw new Error(typeof data.detail === 'string' ? data.detail : 'Sankatmochansaarthi could not generate this material.');
       setStudentGeneratedText(data.content || '');
       setStudentDiagramPlans(Array.isArray(data.diagram_plans) ? data.diagram_plans : []);
+      setStudentProvenance(Array.isArray(data.provenance) ? data.provenance : []);
     } catch (e:any) {
       const msg = e?.name === 'AbortError' ? 'Teacher Agent timed out. Please try again.' : (e?.message === 'Failed to fetch' ? 'Teacher Agent service is unreachable. Backend/model configuration is being checked.' : e?.message);
       setStudentGenerationError(msg || 'Generation failed. Please try again.');
@@ -216,6 +218,7 @@ Verified learning material for **${selectedChapter?.title || 'this chapter'}** i
     setSubmittedScorecard(null);
     setStudentGeneratedText('');
     setStudentGenerationError('');
+    setStudentProvenance([]);
   }, [activeModule, selectedSubject?.id, selectedChapter?.id, selectedTopic?.id]);
 
   const [testStarted, setTestStarted] = useState(false);
@@ -719,6 +722,17 @@ Verified learning material for **${selectedChapter?.title || 'this chapter'}** i
           <div className="flex flex-wrap gap-2 justify-end"><button onClick={generateWithTeacher} disabled={studentGenerating} className="px-3 py-2 rounded-xl bg-orange-600 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5"><WandSparkles className="w-4 h-4"/>{studentGenerating ? 'Generating…' : 'Generate with Sankatmochansaarthi'}</button></div>
           {studentGenerationError && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs">{studentGenerationError}</div>}
           {studentGeneratedText && <div className="whitespace-pre-line bg-teal-50 border border-teal-200 rounded-2xl p-5 text-sm leading-relaxed">{studentGeneratedText}</div>}
+          {studentGeneratedText && studentProvenance.length > 0 && (
+            <div className="bg-white border border-stone-200 rounded-2xl p-4 text-xs text-stone-600">
+              <div className="font-bold text-stone-800 mb-2">Verified sources used</div>
+              {studentProvenance.map((source, idx) => (
+                <div key={idx} className="mb-1 break-all">
+                  {source.source_url ? <a className="text-blue-700 underline" href={source.source_url} target="_blank" rel="noreferrer">{source.source || source.source_url}</a> : <span>{source.source || 'Sankatmochansaarthi Internal Knowledge Base'}</span>}
+                  {source.verification_status && <span className="ml-2 text-emerald-700 font-semibold">({source.verification_status})</span>}
+                </div>
+              ))}
+            </div>
+          )}
           {displayContent.caseStudyItem ? (
             <div className="bg-gradient-to-br from-teal-50/40 via-amber-50/20 to-orange-50/30 border border-teal-200 rounded-2xl p-5 shadow-xs">
               <div className="flex items-center gap-2 mb-2">
