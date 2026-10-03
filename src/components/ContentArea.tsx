@@ -145,7 +145,7 @@ Verified learning material for **${selectedChapter?.title || 'this chapter'}** i
         activeModule === 'revision_notes' ? 'REVISION_NOTES' :
         activeModule === 'formulae' ? 'DEFINITIONS_FORMULAE' :
         activeModule === 'flashcards' ? 'FLASHCARDS' :
-        activeModule === 'test' ? 'TEST' :
+        activeModule === 'test_yourself' ? 'TEST' :
         'DETAILED_NOTES';
       const topic = selectedTopic?.title || selectedChapter.title;
       const topicId = `${selectedSubject.id}:${selectedChapter.id}:${selectedTopic?.id || 'chapter'}`;
