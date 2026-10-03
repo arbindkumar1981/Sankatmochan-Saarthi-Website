@@ -25,6 +25,13 @@ export const Header: React.FC = () => {
     setSelectedClass,
     selectedStream,
     setSelectedStream,
+    selectedSubject,
+    setSelectedSubject,
+    selectedChapter,
+    setSelectedChapter,
+    selectedTopic,
+    setSelectedTopic,
+    availableSubjects,
     language,
     toggleLanguage
   } = useCurriculum();
@@ -93,6 +100,67 @@ export const Header: React.FC = () => {
                 <option key={b.id} value={b.id}>
                   {b.id}
                 </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="h-4 w-px bg-orange-200" />
+
+          {/* Subject Select */}
+          <div className="flex items-center gap-1 text-xs">
+            <span className="text-stone-500 font-medium">Subject:</span>
+            <select
+              value={selectedSubject?.id || ''}
+              onChange={(e) => {
+                const subject = availableSubjects.find(s => s.id === e.target.value) || null;
+                setSelectedSubject(subject);
+                setSelectedChapter(subject?.chapters[0] || null);
+                setSelectedTopic(null);
+              }}
+              className="max-w-[150px] bg-transparent font-bold text-orange-900 outline-none cursor-pointer"
+            >
+              <option value="" disabled>Select</option>
+              {availableSubjects.map(subject => (
+                <option key={subject.id} value={subject.id}>{subject.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="h-4 w-px bg-orange-200" />
+
+          {/* Topic Select: chapter/full chapter or an available topic */}
+          <div className="flex items-center gap-1 text-xs">
+            <span className="text-stone-500 font-medium">Topic:</span>
+            <select
+              value={selectedTopic?.id || (selectedChapter ? `chapter:${selectedChapter.id}` : '')}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value.startsWith('chapter:')) {
+                  const chapterId = value.slice('chapter:'.length);
+                  const chapter = selectedSubject?.chapters.find(ch => ch.id === chapterId) || null;
+                  setSelectedChapter(chapter);
+                  setSelectedTopic(null);
+                  return;
+                }
+                const match = selectedSubject?.chapters
+                  .flatMap(ch => ch.topics.map(topic => ({ ch, topic })))
+                  .find(item => item.topic.id === value);
+                if (match) {
+                  setSelectedChapter(match.ch);
+                  setSelectedTopic(match.topic);
+                }
+              }}
+              disabled={!selectedSubject || selectedSubject.chapters.length === 0}
+              className="max-w-[180px] bg-transparent font-bold text-orange-900 outline-none cursor-pointer disabled:opacity-50"
+            >
+              {!selectedSubject?.chapters.length && <option value="">No topics</option>}
+              {selectedSubject?.chapters.map(ch => (
+                <React.Fragment key={ch.id}>
+                  <option value={`chapter:${ch.id}`}>{ch.title} — Full Chapter</option>
+                  {ch.topics.map(topic => (
+                    <option key={topic.id} value={topic.id}>{ch.title} — {topic.title}</option>
+                  ))}
+                </React.Fragment>
               ))}
             </select>
           </div>
