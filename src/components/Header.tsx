@@ -79,6 +79,7 @@ export const Header: React.FC = () => {
                   onChange={(e) => setSelectedStream(e.target.value as StreamType)}
                   className="bg-transparent font-bold text-orange-900 outline-none cursor-pointer"
                 >
+                  <option value="General">General</option>
                   <option value="Science">Science</option>
                   <option value="Commerce">Commerce</option>
                   <option value="Humanities">Humanities</option>
