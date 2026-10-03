@@ -144,10 +144,25 @@ const FOCUSED_SUBJECTS: SubjectMeta[] = [
   ])
 ];
 
+
+// General stream exposes the commonly chosen XI/XII subjects together, while the
+// dedicated Science/Commerce/Humanities streams keep their focused lists.
+const SENIOR_GENERAL_NAMES = new Map<string, string>([
+  ['English Core','301'], ['English Elective','001'], ['Hindi Core','302'], ['Hindi Elective','002'],
+  ['Informatics Practices','065'], ['Computer Science','083'], ['Physical Education','048'],
+  ['Physics','042'], ['Chemistry','043'], ['Mathematics','041'], ['Biology','044'],
+  ['Applied Mathematics','241'], ['Accountancy','055'], ['Business Studies','054'], ['Economics','030'],
+  ['History','027'], ['Political Science','028'], ['Geography','029'], ['Sociology','039'], ['Psychology','037']
+]);
+const SENIOR_GENERAL_SUBJECTS: SubjectMeta[] = (['Class 11','Class 12'] as ClassGrade[]).flatMap(
+  grade => [...SENIOR_GENERAL_NAMES].map(([name, code]) => catalogueSubject(grade, name, code, 'General'))
+);
+
 const subjectKey = (s: SubjectMeta) =>
   `${s.classes[0]}::${s.stream}::${s.name.trim().toLowerCase()}`;
 const richKeys = new Set(CORE_CBSE_NCERT_SUBJECTS.map(subjectKey));
 export const CURRENT_CBSE_NCERT_SUBJECTS: SubjectMeta[] = [
   ...CORE_CBSE_NCERT_SUBJECTS,
-  ...FOCUSED_SUBJECTS.filter(s => !richKeys.has(subjectKey(s)))
+  ...FOCUSED_SUBJECTS.filter(s => !richKeys.has(subjectKey(s))),
+  ...SENIOR_GENERAL_SUBJECTS.filter(s => !richKeys.has(subjectKey(s)))
 ];
