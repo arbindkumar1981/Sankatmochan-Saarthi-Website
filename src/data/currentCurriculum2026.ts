@@ -94,34 +94,60 @@ const CORE_CBSE_NCERT_SUBJECTS: SubjectMeta[] = [
 ];
 
 
-const catalogueSubject = (grade: ClassGrade, name: string, code = '', stream: StreamType = 'General'): SubjectMeta => ({
+const catalogueSubject = (
+  grade: ClassGrade, name: string, code: string, stream: StreamType = 'General'
+): SubjectMeta => ({
   id: `cbse-${grade.replace(/\\s+/g, '-').toLowerCase()}-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`,
   name, hindiName: name, officialCode: code, stream, classes: [grade], icon: 'BookOpen', chapters: []
 });
 
-const IX_LANGUAGES = ['Arabic','Assamese','Bahasa Melayu','Bengali','Bhoti','Bhutia','Bodo','Dogri','English','French','German','Gujarati','Gurung','Hindi','Japanese','Kannada','Kashmiri','Kokborok','Konkani','Lepcha','Limboo','Malayalam','Manipuri','Marathi','Maithili','Mizo','Nepali','Odia','Persian','Punjabi','Rai','Russian','Sanskrit','Santhali','Sindhi','Spanish','Sherpa','Tamang','Tamil','Tangkhul','Telugu AP','Telugu Telangana','Tibetan','Thai','Urdu'];
-const IX_MAIN_OPTIONAL = ['Mathematics','Mathematics at Advanced Level','Science','Science at Advanced Level','Social Science','Interdisciplinary Area','Vocational Education (Kaushal Vikas)','Computational Thinking & AI','Physical Education & Well Being','Art Education','Home Science','Painting','National Cadet Corps (NCC)','Computer Applications','Elements of Business','Elements of Book Keeping & Accountancy','Retail','Information Technology','Introduction to Financial Markets','Introduction to Tourism','Beauty & Wellness','Front Office Operations','Marketing and Sales','Artificial Intelligence'];
-
-const X_LANGUAGES = ['Arabic','Assamese','Bahasa Melayu','Bengali','Bhoti','Bhutia','Bodo','English Language & Literature','English Communicative','French','German','Gujarati','Gurung','Hindi Course A','Hindi Course B','Japanese','Kannada','Kashmiri','Kokborok','Lepcha','Limboo','Malayalam','Manipuri','Marathi','Mizo','Nepali','Odia','Persian','Punjabi','Rai','Russian','Sanskrit','Sanskrit Communicative','Sindhi','Spanish','Sherpa','Tamang','Tamil','Tangkhul','Telugu AP','Telugu Telangana','Tibetan','Thai','Urdu Course A','Urdu Course B'];
-const X_MAIN_ELECTIVES = ['Mathematics Basic','Mathematics Standard','Science','Social Science','Carnatic Music (Vocal)','Carnatic Music (Melodic Instruments)','Carnatic Music (Percussion Instruments)','Hindustani Music (Vocal)','Hindustani Music (Melodic Instruments)','Hindustani Music (Percussion Instruments)','Painting','Home Science','National Cadet Corps (NCC)','Computer Applications','Elements of Business','Elements of Book Keeping and Accountancy','Health and Physical Education','Work Experience','Art Education'];
-
-const SR_LANGUAGES = ['Arabic','Assamese','Bengali','Bhoti','Bhutia','Bodo','French','German','Gujarati','Hindi Core','Hindi Elective','English Core','English Elective','Japanese','Kannada','Kashmiri','Kokborok','Lepcha','Limboo','Malayalam','Manipuri','Marathi','Mizo','Nepali','Odia','Persian','Punjabi','Russian','Sanskrit Core','Sanskrit Elective','Sindhi','Spanish','Tamil','Tangkhul','Telugu AP','Telugu Telangana','Tibetan','Urdu Core','Urdu Elective'];
-const SR_ELECTIVES = ['Accountancy','Biology','Biotechnology','Business Studies','Carnatic Melodic','Carnatic Vocal','Carnatic Percussion','Chemistry','Computer Science','Economics','Engineering Graphics','Entrepreneurship','Fine Arts','Dance','Geography','Hindustani Melodic','Hindustani Percussion','Hindustani Vocal','History','Home Science','Informatics Practices','Knowledge Tradition - Practices India','Legal Studies','Mathematics','Applied Mathematics','NCC','Physical Education','Physics','Political Science','Psychology','Sociology','Health and Physical Education','Work Experience','General Studies'];
-
-const OFFICIAL_CATALOGUE_SUBJECTS: SubjectMeta[] = [
-  ...[...IX_LANGUAGES, ...IX_MAIN_OPTIONAL].map(name => catalogueSubject('Class 9', name)),
-  ...[...X_LANGUAGES, ...X_MAIN_ELECTIVES].map(name => catalogueSubject('Class 10', name)),
-  ...[...SR_LANGUAGES, ...SR_ELECTIVES].flatMap(name => [
-    catalogueSubject('Class 11', name),
-    catalogueSubject('Class 12', name)
+// Saarthi's focused student catalogue: the CBSE subjects requested for regular use.
+// Rich NCERT chapter entries above win over these catalogue-only records.
+const FOCUSED_SUBJECTS: SubjectMeta[] = [
+  ...(['Class 9','Class 10'] as ClassGrade[]).flatMap(grade => [
+    catalogueSubject(grade,'English Language & Literature','184'),
+    catalogueSubject(grade,'Hindi Course A','002'),
+    catalogueSubject(grade,'Hindi Course B','085'),
+    catalogueSubject(grade,'Mathematics Basic','241'),
+    catalogueSubject(grade,'Mathematics Standard','041'),
+    catalogueSubject(grade,'Science','086'),
+    catalogueSubject(grade,'Social Science','087'),
+    catalogueSubject(grade,'Information Technology','402'),
+    catalogueSubject(grade,'Computer Applications','165'),
+    catalogueSubject(grade,'Artificial Intelligence','417'),
+    catalogueSubject(grade,'Sanskrit','122')
+  ]),
+  ...(['Class 11','Class 12'] as ClassGrade[]).flatMap(grade => [
+    catalogueSubject(grade,'English Core','301'),
+    catalogueSubject(grade,'English Elective','001'),
+    catalogueSubject(grade,'Hindi Core','302'),
+    catalogueSubject(grade,'Hindi Elective','002'),
+    catalogueSubject(grade,'Informatics Practices','065'),
+    catalogueSubject(grade,'Computer Science','083'),
+    catalogueSubject(grade,'Physical Education','048'),
+    catalogueSubject(grade,'Physics','042','Science'),
+    catalogueSubject(grade,'Chemistry','043','Science'),
+    catalogueSubject(grade,'Mathematics','041','Science'),
+    catalogueSubject(grade,'Biology','044','Science'),
+    catalogueSubject(grade,'Applied Mathematics','241','Science'),
+    catalogueSubject(grade,'Accountancy','055','Commerce'),
+    catalogueSubject(grade,'Business Studies','054','Commerce'),
+    catalogueSubject(grade,'Economics','030','Commerce'),
+    catalogueSubject(grade,'Mathematics','041','Commerce'),
+    catalogueSubject(grade,'Applied Mathematics','241','Commerce'),
+    catalogueSubject(grade,'History','027','Humanities'),
+    catalogueSubject(grade,'Political Science','028','Humanities'),
+    catalogueSubject(grade,'Geography','029','Humanities'),
+    catalogueSubject(grade,'Sociology','039','Humanities'),
+    catalogueSubject(grade,'Psychology','037','Humanities'),
+    catalogueSubject(grade,'Economics','030','Humanities')
   ])
 ];
 
-// Keep rich NCERT chapter data where Saarthi already has it, and fill every missing
-// official CBSE 2026-27 subject into the selector catalogue.
-const subjectKey = (s: SubjectMeta) => `${s.classes[0]}::${s.name.trim().toLowerCase()}`;
+const subjectKey = (s: SubjectMeta) =>
+  `${s.classes[0]}::${s.stream}::${s.name.trim().toLowerCase()}`;
 const richKeys = new Set(CORE_CBSE_NCERT_SUBJECTS.map(subjectKey));
 export const CURRENT_CBSE_NCERT_SUBJECTS: SubjectMeta[] = [
   ...CORE_CBSE_NCERT_SUBJECTS,
-  ...OFFICIAL_CATALOGUE_SUBJECTS.filter(s => !richKeys.has(subjectKey(s)))
+  ...FOCUSED_SUBJECTS.filter(s => !richKeys.has(subjectKey(s)))
 ];
