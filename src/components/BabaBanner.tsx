@@ -9,7 +9,7 @@ const BABA_PUBLIC_DOMAIN_FALLBACK = 'https://upload.wikimedia.org/wikipedia/comm
 
 export const BabaBanner: React.FC = () => {
   const { text: websiteText } = useWebsite();
-  const { language, babaImageUrl } = useCurriculum();
+  const { language, babaImageUrl, setActiveTab } = useCurriculum();
   const { config } = useWebsite();
   const quotes = config.quotes.filter(x => !x.deleted);
   const [quoteIndex, setQuoteIndex] = useState(0);
@@ -40,7 +40,13 @@ export const BabaBanner: React.FC = () => {
 
       <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 relative z-10">
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-          <SankatmochanLogo className="w-28 sm:w-44 justify-self-start" />
+          <SankatmochanLogo
+            className="w-28 sm:w-44 justify-self-start"
+            onClick={() => {
+              setActiveTab('learning');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+          />
           <div className="flex items-center justify-center">
             {babaImageUrl && <img
               src={babaImageUrl}
@@ -57,12 +63,12 @@ export const BabaBanner: React.FC = () => {
             <span><WebsiteText original={"सब दुख दूर करें संकटमोचन हनुमान जी"} /></span>
           </div>
         </div>
-        <div className="flex items-center gap-2 sm:gap-3 mt-2 min-w-0">
+        <div className="grid grid-cols-[2rem_minmax(0,1fr)_2rem] md:grid-cols-[4rem_minmax(0,1fr)_4rem] items-center gap-2 mt-2 min-w-0">
           <span className="text-amber-300 font-black text-sm shrink-0"><WebsiteText original={"ॐ"} /></span>
           {/* Baba Ji Sacred Quote placed directly here */}
-          <div className="min-w-0 flex-1 flex items-center gap-1.5 overflow-hidden">
-            <Quote className="w-3.5 h-3.5 text-amber-300 shrink-0 fill-amber-300/20 hidden sm:inline" />
-            <p className="text-xs sm:text-sm font-semibold text-amber-50 font-serif italic">
+          <div className="relative min-w-0 w-fit max-w-full mx-auto">
+            <Quote className="absolute -left-5 top-0.5 w-3.5 h-3.5 text-amber-300 fill-amber-300/20 hidden sm:inline" />
+            <p className="text-center text-xs sm:text-sm font-semibold text-amber-50 font-serif italic">
               "{currentQuote}"
             </p>
           </div>
@@ -70,7 +76,7 @@ export const BabaBanner: React.FC = () => {
           {/* Quick Next Quote Trigger */}
           <button
             onClick={handleNextQuote}
-            className="px-2 py-0.5 rounded-md bg-black/20 hover:bg-black/40 text-amber-200 hover:text-white border border-amber-300/30 text-xs flex items-center gap-1 transition-colors shrink-0"
+            className="justify-self-end px-2 py-0.5 rounded-md bg-black/20 hover:bg-black/40 text-amber-200 hover:text-white border border-amber-300/30 text-xs flex items-center gap-1 transition-colors shrink-0"
             title={websiteText("अगला विचार (Next Quote)")}
           >
             <RotateCw
