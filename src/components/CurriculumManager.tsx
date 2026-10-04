@@ -27,7 +27,7 @@ export function CurriculumManager() {
     <h3 className="font-bold">Curriculum — Subjects / Chapters / Topics</h3>
     <input aria-label="Find curriculum subject" className={input} placeholder="Search subjects" value={search} onChange={e => setSearch(e.target.value)} />
     <select aria-label="Choose curriculum subject" className={input} value={selected} onChange={e => { const subject = allCurriculumSubjects.find(x => x.id === e.target.value); setSelected(e.target.value); setDraft(subject ? structuredClone({ ...subject, teacherSubject: subject.teacherSubject || subject.name }) : null); setMessage(''); }}>
-      <option value="">Choose an item to replace, delete or restore</option>
+      <option value="">Choose a subject to edit, delete or restore</option>
       {allCurriculumSubjects.filter(x => `${x.name} ${x.classes.join(' ')} ${x.stream} ${x.board || 'CBSE'}`.toLowerCase().includes(search.toLowerCase())).map(x => <option key={x.id} value={x.id}>{x.board || 'CBSE'} · {x.classes.join(', ')} · {x.stream} · {x.name}{x.deleted ? ' (Deleted)' : ''}</option>)}
     </select>
     <button className={button} onClick={() => { setSelected(''); setDraft({ id: newId('subject'), name: 'New subject', hindiName: '', board: activeOptions(config.boards)[0]?.id || 'CBSE', classes: [activeOptions(config.classes)[0]?.id || 'Class 9'], stream: activeOptions(config.streams)[0]?.id || 'General', icon: 'BookOpen', chapters: [] }); }}>Add subject</button>

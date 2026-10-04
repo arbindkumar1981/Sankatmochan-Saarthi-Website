@@ -534,7 +534,7 @@ export const AdminPanel: React.FC = () => {
             </button>
           </div>
 
-          <div className="flex justify-end"><button type="button" onClick={() => setShowCurriculumManager(!showCurriculumManager)} className="px-3 py-2 bg-stone-800 text-white rounded-xl text-xs font-bold">{showCurriculumManager ? 'Close Curriculum Manager' : 'Manage Subjects & Chapters'}</button></div>
+          <div className="flex justify-end"><button type="button" onClick={() => setShowCurriculumManager(!showCurriculumManager)} className="px-3 py-2 bg-stone-800 text-white rounded-xl text-xs font-bold">{showCurriculumManager ? 'Close Curriculum Manager' : 'Subjects — Add / Edit / Delete'}</button></div>
           {showCurriculumManager && <CurriculumManager />}
 
           {showContentForm && (
