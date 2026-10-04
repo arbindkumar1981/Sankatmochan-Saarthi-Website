@@ -43,7 +43,7 @@ export const Header: React.FC = () => {
 
   return (
     <header className="bg-white border-b border-orange-200/80 shadow-sm sticky top-0 z-30">
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 sm:py-2.5 flex items-center justify-between gap-3">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 sm:py-2.5 flex flex-wrap items-center justify-between gap-3">
         {/* Official Sankatmochan Saarthi Brand Logo (Clicking opens Home Page) */}
         <SankatmochanLogo
           onClick={handleLogoClick}
@@ -51,7 +51,7 @@ export const Header: React.FC = () => {
         />
 
         {/* Board & Class Quick Controls (Desktop / Tablet) */}
-        <div className="hidden lg:flex items-center gap-2 bg-amber-50/70 border border-orange-200 px-2 py-1 rounded-xl">
+        <div className="hidden lg:flex order-last w-full flex-wrap items-center gap-2 bg-amber-50/70 border border-orange-200 px-2 py-1 rounded-xl">
           {/* Class Select */}
           <div className="flex items-center gap-1 text-xs">
             <span className="text-stone-500 font-medium">Class:</span>
@@ -168,7 +168,7 @@ export const Header: React.FC = () => {
         </div>
 
         {/* Right Actions: Language Switcher + Student Sign In / Admin Login together */}
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           {/* Language Switcher */}
           <button
             onClick={toggleLanguage}

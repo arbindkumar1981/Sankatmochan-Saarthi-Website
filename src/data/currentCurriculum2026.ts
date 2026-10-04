@@ -148,8 +148,35 @@ const SENIOR_GENERAL_SUBJECTS: SubjectMeta[] = (['Class 11','Class 12'] as Class
 const subjectKey = (s: SubjectMeta) =>
   `${s.classes[0]}::${s.stream}::${s.name.trim().toLowerCase()}`;
 const richKeys = new Set(CORE_CBSE_NCERT_SUBJECTS.map(subjectKey));
-export const CURRENT_CBSE_NCERT_SUBJECTS: SubjectMeta[] = [
+const catalogueKeys = new Set<string>();
+const catalogueSubjects: SubjectMeta[] = [
   ...CORE_CBSE_NCERT_SUBJECTS,
   ...FOCUSED_SUBJECTS.filter(s => !richKeys.has(subjectKey(s))),
   ...SENIOR_GENERAL_SUBJECTS.filter(s => !richKeys.has(subjectKey(s)))
-];
+].filter(subject => {
+  const key = subjectKey(subject);
+  if (catalogueKeys.has(key)) return false;
+  catalogueKeys.add(key);
+  return true;
+});
+
+// Reuse existing curriculum chapters across streams of the same class/subject.
+// IDs remain in the selected subject's namespace; published material is not
+// automatically approved or copied into a different subject.
+export const CURRENT_CBSE_NCERT_SUBJECTS: SubjectMeta[] = catalogueSubjects.map(subject => {
+  if (subject.chapters.length) return subject;
+  const reference = CORE_CBSE_NCERT_SUBJECTS.find(candidate =>
+    candidate.classes[0] === subject.classes[0] && candidate.name === subject.name
+  );
+  if (!reference?.chapters.length) return subject;
+  return {
+    ...subject,
+    chapters: reference.chapters.map(chapter => ({
+      ...chapter,
+      id: `${subject.id}-ch${chapter.chapterNumber}`,
+      topics: chapter.topics.map((topic, index) => ({
+        ...topic, id: `${subject.id}-ch${chapter.chapterNumber}-t${index + 1}`
+      }))
+    }))
+  };
+});

@@ -26,8 +26,8 @@ jobs:
       - name: TypeScript check
         run: bun run lint
 
-      - name: PDF preparation tests
-        run: bun test tests/notes-pdf.test.mjs
+      - name: PDF and curriculum tests
+        run: bun test tests/*.test.mjs
 
       - name: Production build
         run: bun run build

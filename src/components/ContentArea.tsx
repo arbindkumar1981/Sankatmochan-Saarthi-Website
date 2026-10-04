@@ -85,10 +85,10 @@ export const ContentArea: React.FC = () => {
     chapterTitle: selectedChapter?.title || '',
     title: `${selectedSubject?.name || 'Subject'}: ${selectedChapter?.title || 'Chapter'} - ${activeModule.replace('_', ' ').toUpperCase()}`,
     hindiTitle: `${selectedSubject?.hindiName || ''} - ${selectedChapter?.hindiTitle || ''}`,
-    bodyText: `### Content not yet published
-Verified learning material for **${selectedChapter?.title || 'this chapter'}** is not available yet. Please choose another published topic or check again after the academic content is approved.`,
-    bodyHindi: `### सामग्री अभी प्रकाशित नहीं है
-**${selectedChapter?.hindiTitle || 'इस अध्याय'}** के लिए सत्यापित अध्ययन सामग्री अभी उपलब्ध नहीं है। कृपया कोई अन्य प्रकाशित विषय चुनें या सामग्री अनुमोदित होने के बाद पुनः देखें।`,
+    bodyText: `Content not yet published
+Verified learning material for ${selectedChapter?.title || 'this chapter'} is not available yet. Please choose another published topic or check again after the academic content is approved.`,
+    bodyHindi: `सामग्री अभी प्रकाशित नहीं है
+${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए सत्यापित अध्ययन सामग्री अभी उपलब्ध नहीं है। कृपया कोई अन्य प्रकाशित विषय चुनें या सामग्री अनुमोदित होने के बाद पुनः देखें।`,
     version: 1,
     approved: true,
     published: true,
@@ -102,24 +102,6 @@ Verified learning material for **${selectedChapter?.title || 'this chapter'}** i
   const [studentGenerationError, setStudentGenerationError] = useState('');
   const [studentDiagramPlans, setStudentDiagramPlans] = useState<Array<{title:string; labels:string[]; instructions:string}>>([]);
   const [studentProvenance, setStudentProvenance] = useState<Array<{source?:string; source_url?:string; verification_status?:string}>>([]);
-
-  const teacherSubjectName = (name: string) => {
-    const n = name.toLowerCase();
-    if (n.includes('physics')) return 'Physics';
-    if (n.includes('chemistry')) return 'Chemistry';
-    if (n.includes('biology')) return 'Biology';
-    if (n.includes('mathematics') || n.includes('math')) return 'Mathematics';
-    if (n.includes('history')) return 'History';
-    if (n.includes('geography')) return 'Geography';
-    if (n.includes('political')) return 'Political Science';
-    if (n.includes('economics')) return 'Economics';
-    if (n.includes('social science')) return 'Social Science';
-    if (n.includes('science')) return 'Science';
-    if (n === 'it' || n.includes('information technology')) return 'Information Technology';
-    if (n.includes('english')) return 'English';
-    if (n.includes('hindi')) return 'Hindi';
-    return name;
-  };
 
   const subjectStyleProfile = (name: string) => {
     const n = name.toLowerCase();
@@ -161,7 +143,7 @@ Verified learning material for **${selectedChapter?.title || 'this chapter'}** i
         method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, signal: controller.signal,
         body: JSON.stringify({
           board: selectedBoard, class_level: selectedClass === 'Class 9' ? 'IX' : selectedClass === 'Class 10' ? 'X' : selectedClass === 'Class 11' ? 'XI' : 'XII',
-          subject: teacherSubjectName(selectedSubject.name), language: language === 'hi' ? 'HINDI' : 'ENGLISH', asset_type: assetType, topic_id: topicId,
+          subject: selectedSubject.name, language: language === 'hi' ? 'HINDI' : 'ENGLISH', asset_type: assetType, topic_id: topicId,
           chapter: selectedChapter.title, topic,
           style_profile: subjectStyleProfile(selectedSubject.name), sample_style_reference: sample
         })
