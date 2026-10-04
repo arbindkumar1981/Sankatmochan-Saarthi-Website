@@ -20,7 +20,9 @@ export function mapLegacyTest(test: EvaluationTest, legacy: SubjectMeta[], curre
 }
 
 export function parseGeneratedQuestions(content: string): TestQuestion[] {
-  const value = JSON.parse(content.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, ''));
+  const clean = content.trim().replace(/^<think>[\s\S]*?<\/think>\s*/i, '').replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
+  let value;
+  try { value = JSON.parse(clean); } catch { throw new Error('Generated questions were incomplete or invalid. Please generate the test again.'); }
   const questions = Array.isArray(value) ? value : value.questions;
   if (!Array.isArray(questions) || !questions.length || questions.length > 50) throw new Error('Generated test has no valid questions. Please generate it again.');
   return questions.map((q, i) => {

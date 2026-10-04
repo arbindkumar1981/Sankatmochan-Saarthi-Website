@@ -27,6 +27,7 @@ test('published seed assessment totals equal their actual question marks', () =>
 test('structured generated questions become objective questions with bounded answer keys', () => {
   const q = { questionText: 'Choose oxygen', options: ['O2','CO2'], correctIndex: 0, explanation: 'O2 is oxygen.', marks: 2 };
   assert.equal(api.parseGeneratedQuestions(JSON.stringify({ questions: [q] }))[0].marks, 2);
+  assert.equal(api.parseGeneratedQuestions('<think>private draft</think>\n' + JSON.stringify({ questions: [q] }))[0].marks, 2);
   assert.equal(api.parseGeneratedQuestions('```json\n' + JSON.stringify({ questions: [q] }) + '\n```')[0].correctIndex, 0);
   for (const bad of [{ ...q, correctIndex: 2 }, { ...q, marks: 0 }, { ...q, explanation: '' }, { ...q, options: ['only one'] }]) assert.throws(() => api.parseGeneratedQuestions(JSON.stringify({ questions: [bad] })));
   assert.throws(() => api.parseGeneratedQuestions('Unstructured notes'));
