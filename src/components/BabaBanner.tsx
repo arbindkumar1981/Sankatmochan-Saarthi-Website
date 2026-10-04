@@ -2,7 +2,7 @@ import { WebsiteText } from '../context/WebsiteContext';
 import { useWebsite } from '../context/WebsiteContext';
 import React, { useState, useEffect } from 'react';
 import { useCurriculum } from '../context/CurriculumContext';
-import { Sparkles, RotateCw, Quote } from 'lucide-react';
+import { Sparkles, RotateCw } from 'lucide-react';
 import { SankatmochanLogo } from './SankatmochanLogo';
 
 const BABA_PUBLIC_DOMAIN_FALLBACK = 'https://upload.wikimedia.org/wikipedia/commons/6/66/Neemkaroli_14.jpg';
@@ -64,12 +64,12 @@ export const BabaBanner: React.FC = () => {
           </div>
         </div>
         <div className="grid grid-cols-[2rem_minmax(0,1fr)_2rem] md:grid-cols-[4rem_minmax(0,1fr)_4rem] items-center gap-2 mt-2 min-w-0">
-          <span className="text-amber-300 font-black text-sm shrink-0"><WebsiteText original={"ॐ"} /></span>
+          <span aria-hidden="true" />
           {/* Baba Ji Sacred Quote placed directly here */}
           <div className="relative min-w-0 w-fit max-w-full mx-auto">
-            <Quote className="absolute -left-5 top-0.5 w-3.5 h-3.5 text-amber-300 fill-amber-300/20 hidden sm:inline" />
             <p className="text-center text-xs sm:text-sm font-semibold text-amber-50 font-serif italic">
-              "{currentQuote}"
+              <span className="mr-2 text-amber-300 font-black not-italic"><WebsiteText original={"ॐ"} /></span>
+              {currentQuote}
             </p>
           </div>
 
