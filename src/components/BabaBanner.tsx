@@ -42,7 +42,7 @@ export const BabaBanner: React.FC = () => {
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
           <div className="min-w-0 flex items-center">
           <SankatmochanLogo
-            className="w-28 sm:absolute sm:top-1/2 sm:-translate-y-1/2 sm:w-44"
+            className="w-28 min-[360px]:w-32 sm:absolute sm:top-1/2 sm:-translate-y-1/2 sm:w-52"
             onClick={() => {
               setActiveTab('learning');
               window.scrollTo({ top: 0, behavior: 'smooth' });
