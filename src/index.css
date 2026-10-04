@@ -1,4 +1,7 @@
 @import "tailwindcss";
+@media print {
+  .protected-material { display: none !important; }
+}
 
 @layer base {
   :root {

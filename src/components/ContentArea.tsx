@@ -14,7 +14,9 @@ import {
   FlashcardItem
 } from '../types';
 import confetti from 'canvas-confetti';
-import { openNotesPdf } from '../services/notesPdf';
+import { doc, setDoc } from 'firebase/firestore';
+import { db } from '../services/firebase';
+import { prepareSavedMaterial } from '../services/savedMaterials';
 import {
   FileText,
   BookmarkCheck,
@@ -178,12 +180,19 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
   };
 
   const downloadGeneratedNotes = async () => {
-    if (!studentGeneratedText) return;
-    const safeTitle = `${selectedSubject?.name || 'Saarthi'}-${selectedChapter?.title || 'Notes'}-${activeModule}`.replace(/[^a-z0-9-_]+/gi, '-');
+    if (!user || user.isAnonymous) { openAuthModal('student'); return; }
+    const structured = matchedContent ? [matchedContent.flashcardItems, matchedContent.formulaItems, matchedContent.pyqItems, matchedContent.caseStudyItem, matchedContent.mindmapNodes].filter(Boolean).map(value => JSON.stringify(value, null, 2)).join('\n\n') : '';
+    const body = studentGeneratedText || (language === 'hi' ? matchedContent?.bodyHindi || matchedContent?.bodyText : matchedContent?.bodyText) || structured;
+    if (!body) { setStudentGenerationError('This material has no readable notes to save yet.'); return; }
     try {
-      await openNotesPdf(safeTitle, studentGeneratedText, [optionLabel(config.boards,selectedBoard,language),optionLabel(config.classes,selectedClass,language),selectedSubject?.name || '',selectedChapter?.title || ''],config.name);
+      const key = `${selectedBoard}:${selectedClass}:${selectedSubject?.id}:${selectedChapter?.id}:${selectedTopic?.id || ''}:${activeModule}:${language}`;
+      const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(key));
+      const id = Array.from(new Uint8Array(hash)).map(byte => byte.toString(16).padStart(2, '0')).join('');
+      const material = prepareSavedMaterial({ id, title: `${selectedSubject?.name || 'Saarthi'}: ${selectedChapter?.title || 'Notes'} — ${activeModule.replaceAll('_', ' ')}`, body, curriculum: [selectedBoard, selectedClass, selectedSubject?.name || '', selectedChapter?.title || ''].join(' · '), savedAt: new Date().toISOString() });
+      await setDoc(doc(db, 'users', user.uid, 'saved_materials', id), material);
+      setStudentGenerationError('Saved to My Dashboard — Saved Materials.');
     } catch (error) {
-      setStudentGenerationError(error instanceof Error ? error.message : 'Unable to prepare PDF. Please try again.');
+      setStudentGenerationError(error instanceof Error ? error.message : 'Unable to save material. Please try again.');
     }
   };
 
@@ -377,9 +386,7 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
   };
 
   const handleCopyFormula = (id: string, formula: string) => {
-    navigator.clipboard.writeText(formula);
-    setCopiedFormulaId(id);
-    setTimeout(() => setCopiedFormulaId(null), 2000);
+    setStudentGenerationError('Read formulas inside your dashboard. Copying is disabled.');
   };
 
   return (
@@ -439,10 +446,11 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
 
       {customModule && <section className="space-y-3">
         <p className="whitespace-pre-wrap break-words">{language==='hi' ? displayContent.bodyHindi || displayContent.bodyText : displayContent.bodyText}</p>
-        {hasPublishedModuleContent && <button className="border rounded-xl px-3 py-2 text-sm" onClick={()=>openNotesPdf(displayContent.title,language==='hi' ? displayContent.bodyHindi || displayContent.bodyText : displayContent.bodyText,[optionLabel(config.boards,selectedBoard,language),optionLabel(config.classes,selectedClass,language),selectedSubject?.name || ''],config.name).catch(error=>setStudentGenerationError(error.message))}>Download PDF</button>}
+        {hasPublishedModuleContent && <button className="border rounded-xl px-3 py-2 text-sm" onClick={downloadGeneratedNotes}>Save to My Dashboard</button>}
         {studentGenerationError && <p role="alert">{studentGenerationError}</p>}
       </section>}
-      {matchedContent?.attachmentUrl && /^https:\/\//.test(matchedContent.attachmentUrl) && <a href={matchedContent.attachmentUrl} target="_blank" rel="noreferrer" className="text-orange-700 underline">{matchedContent.attachmentName || 'Open study file'}</a>}
+      {matchedContent?.attachmentUrl && <p className="border rounded-xl p-3 text-sm">{matchedContent.attachmentName || 'Study file'} — file downloads are disabled. This attachment needs a protected reading version from Admin.</p>}
+      {hasPublishedModuleContent && !customModule && <button className="border rounded-xl px-3 py-2 text-sm mb-3" onClick={downloadGeneratedNotes}>Save to My Dashboard</button>}
 
       {/* Module 1 & 2: Detailed Notes & Revision Notes */}
       {(activeModule === 'detailed_notes' || activeModule === 'revision_notes') && (
@@ -451,7 +459,7 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
             <div><div className="font-bold text-sm text-orange-950"><WebsiteText original={"Saarthi Teacher Agent"} /></div><div className="text-[11px] text-stone-600"><WebsiteText original={"Generate this material for your selected chapter/topic and language."} /></div></div>
             <div className="flex gap-2">
               <button onClick={generateWithTeacher} disabled={studentGenerating} className="px-3 py-2 rounded-xl bg-orange-600 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5"><WandSparkles className="w-4 h-4"/>{studentGenerating ? websiteText("Generating…") : websiteText("Generate with Sankatmochansaarthi")}</button>
-              {studentGeneratedText && <button onClick={downloadGeneratedNotes} className="px-3 py-2 rounded-xl bg-stone-900 text-white text-xs font-bold flex items-center gap-1.5"><Download className="w-4 h-4"/><WebsiteText original={"Download PDF"} /></button>}
+              {studentGeneratedText && <button onClick={downloadGeneratedNotes} className="px-3 py-2 rounded-xl bg-stone-900 text-white text-xs font-bold flex items-center gap-1.5"><Download className="w-4 h-4"/><WebsiteText original={"Save to My Dashboard"} /></button>}
             </div>
           </div>
           {studentGenerationError && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs">{studentGenerationError}</div>}
@@ -482,7 +490,7 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
       {/* Module 3: Definitions & Formulae */}
       {activeModule === 'formulae' && (
         <div className="space-y-4 select-none" onCopy={(e)=>e.preventDefault()} onCut={(e)=>e.preventDefault()} onContextMenu={(e)=>e.preventDefault()}>
-          <div className="flex flex-wrap gap-2 justify-end"><button onClick={generateWithTeacher} disabled={studentGenerating} className="px-3 py-2 rounded-xl bg-orange-600 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5"><WandSparkles className="w-4 h-4"/>{studentGenerating ? websiteText("Generating…") : websiteText("Generate with Sankatmochansaarthi")}</button>{studentGeneratedText && <button onClick={downloadGeneratedNotes} className="px-3 py-2 rounded-xl bg-stone-900 text-white text-xs font-bold flex items-center gap-1.5"><Download className="w-4 h-4"/><WebsiteText original={"Download PDF"} /></button>}</div>
+          <div className="flex flex-wrap gap-2 justify-end"><button onClick={generateWithTeacher} disabled={studentGenerating} className="px-3 py-2 rounded-xl bg-orange-600 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5"><WandSparkles className="w-4 h-4"/>{studentGenerating ? websiteText("Generating…") : websiteText("Generate with Sankatmochansaarthi")}</button>{studentGeneratedText && <button onClick={downloadGeneratedNotes} className="px-3 py-2 rounded-xl bg-stone-900 text-white text-xs font-bold flex items-center gap-1.5"><Download className="w-4 h-4"/><WebsiteText original={"Save to My Dashboard"} /></button>}</div>
           {studentGenerationError && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs">{studentGenerationError}</div>}
           {studentGeneratedText && <div className="whitespace-pre-line bg-stone-50 border border-stone-200 rounded-2xl p-5 text-sm leading-relaxed">{studentGeneratedText}</div>}
           {!hasPublishedModuleContent || !(displayContent.formulaItems?.length) ? (
@@ -574,7 +582,7 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
       {/* Module 5: Interactive Flashcards */}
       {activeModule === 'flashcards' && (
         <div className="space-y-4 max-w-xl mx-auto w-full select-none" onCopy={(e)=>e.preventDefault()} onCut={(e)=>e.preventDefault()} onContextMenu={(e)=>e.preventDefault()}>
-          <div className="flex flex-wrap gap-2 justify-end"><button onClick={generateWithTeacher} disabled={studentGenerating} className="px-3 py-2 rounded-xl bg-orange-600 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5"><WandSparkles className="w-4 h-4"/>{studentGenerating ? websiteText("Generating…") : websiteText("Generate with Sankatmochansaarthi")}</button>{studentGeneratedText && <button onClick={downloadGeneratedNotes} className="px-3 py-2 rounded-xl bg-stone-900 text-white text-xs font-bold flex items-center gap-1.5"><Download className="w-4 h-4"/><WebsiteText original={"Download PDF"} /></button>}</div>
+          <div className="flex flex-wrap gap-2 justify-end"><button onClick={generateWithTeacher} disabled={studentGenerating} className="px-3 py-2 rounded-xl bg-orange-600 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5"><WandSparkles className="w-4 h-4"/>{studentGenerating ? websiteText("Generating…") : websiteText("Generate with Sankatmochansaarthi")}</button>{studentGeneratedText && <button onClick={downloadGeneratedNotes} className="px-3 py-2 rounded-xl bg-stone-900 text-white text-xs font-bold flex items-center gap-1.5"><Download className="w-4 h-4"/><WebsiteText original={"Save to My Dashboard"} /></button>}</div>
           {studentGenerationError && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs">{studentGenerationError}</div>}
           {studentGeneratedText && <div className="whitespace-pre-line bg-amber-50 border border-orange-200 rounded-2xl p-5 text-sm leading-relaxed">{studentGeneratedText}</div>}
           {displayContent.flashcardItems && displayContent.flashcardItems.length > 0 ? (

@@ -43,6 +43,7 @@ import { validateSubject, subjectsForSelection, mergeCurriculum, validateAdminRe
 
 export type MainTabType =
   | 'learning'
+  | 'materials'
   | 'youtube'
   | 'notices'
   | 'evaluation'
@@ -207,7 +208,7 @@ export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     if (!classes.some(x => x.id === selectedClass)) setSelectedClass(classes[0].id);
     if (!streams.some(x => x.id === selectedStream)) setSelectedStream(streams[0].id);
     if (!config.modules.some(x => x.id === activeModule && !x.deleted)) setActiveModule(activeOptions(config.modules)[0].id as ContentModuleType);
-    if (activeTab !== 'admin' && !config.navigation.some(x => x.id === activeTab && !x.deleted) && !config.pages.some(x => `page:${x.id}` === activeTab && !x.deleted)) setActiveTab((activeOptions(config.navigation)[0]?.id || `page:${config.pages.find(x => !x.deleted)?.id || ''}`) as MainTabType);
+    if (activeTab !== 'admin' && activeTab !== 'materials' && !config.navigation.some(x => x.id === activeTab && !x.deleted) && !config.pages.some(x => `page:${x.id}` === activeTab && !x.deleted)) setActiveTab((activeOptions(config.navigation)[0]?.id || `page:${config.pages.find(x => !x.deleted)?.id || ''}`) as MainTabType);
   }, [config, selectedBoard, selectedClass, selectedStream, activeModule, activeTab]);
 
   // Content States
@@ -220,6 +221,8 @@ export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   // Load / Sync Firestore contents
   useEffect(() => {
+    setLearningContents(INITIAL_LEARNING_CONTENTS);
+    if (!user || user.isAnonymous) return;
     // Try to load additional approved learning contents from Firestore
     try {
       const q = isAdmin
@@ -252,7 +255,7 @@ export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     } catch (e) {
       console.warn('Error connecting to learning_contents:', e);
     }
-  }, [isAdmin]);
+  }, [isAdmin, user?.uid]);
 
   // Sync admin-published videos, tests and notices for every client.
   useEffect(() => {

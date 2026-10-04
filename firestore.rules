@@ -42,6 +42,18 @@ service cloud.firestore {
     }
 
     // Admins Collection
+    match /users/{userId}/saved_materials/{materialId} {
+      allow read: if isOwner(userId) && request.auth.token.firebase.sign_in_provider != 'anonymous';
+      allow create, update: if isOwner(userId) && request.auth.token.firebase.sign_in_provider != 'anonymous' && isValidId(materialId) &&
+        incoming().keys().hasOnly(['id', 'title', 'body', 'curriculum', 'savedAt']) && incoming().id == materialId &&
+        incoming().title is string && incoming().title.size() > 0 && incoming().title.size() <= 300 &&
+        incoming().body is string && incoming().body.size() > 0 && incoming().body.size() <= 200000 &&
+        incoming().curriculum is string && incoming().curriculum.size() <= 1000 &&
+        incoming().savedAt is string && incoming().savedAt.size() <= 40;
+      allow delete: if false;
+    }
+
+    // Admins Collection
     match /admins/{adminUid} {
       // Admin membership is privileged authorization data; do not expose the full list.
       allow get: if isSignedIn() && request.auth.uid == adminUid;
@@ -58,7 +70,7 @@ service cloud.firestore {
 
     // Learning Contents Collection
     match /learning_contents/{contentId} {
-      allow read: if (resource.data.published == true && resource.data.approved == true) || isAdmin();
+      allow read: if isAdmin() || (isSignedIn() && request.auth.token.firebase.sign_in_provider != 'anonymous' && resource.data.published == true && resource.data.approved == true);
       allow create: if isAdmin() && isValidId(contentId) &&
         incoming().board is string &&
         incoming().classGrade is string &&
