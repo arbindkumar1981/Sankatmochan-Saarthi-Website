@@ -9,6 +9,7 @@ import {
   FlashcardItem
 } from '../types';
 import confetti from 'canvas-confetti';
+import { openNotesPdf } from '../services/notesPdf';
 import {
   FileText,
   BookmarkCheck,
@@ -178,14 +179,14 @@ Verified learning material for **${selectedChapter?.title || 'this chapter'}** i
     finally { setStudentGenerating(false); }
   };
 
-  const downloadGeneratedNotes = () => {
+  const downloadGeneratedNotes = async () => {
     if (!studentGeneratedText) return;
     const safeTitle = `${selectedSubject?.name || 'Saarthi'}-${selectedChapter?.title || 'Notes'}-${activeModule}`.replace(/[^a-z0-9-_]+/gi, '-');
-    const escaped = studentGeneratedText.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    const w = window.open('', '_blank');
-    if (!w) { setStudentGenerationError('Please allow pop-ups to download the PDF.'); return; }
-    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${safeTitle}</title><style>@page{size:A4;margin:18mm}body{font-family:Arial,'Noto Sans Devanagari',sans-serif;line-height:1.55;color:#292524}.brand{color:#9a3412;font-weight:800;font-size:22px;border-bottom:2px solid #f59e0b;padding-bottom:8px}.meta{font-size:12px;color:#57534e;margin:8px 0 20px}pre{white-space:pre-wrap;font:inherit}.wm{position:fixed;bottom:4mm;right:4mm;color:#a8a29e;font-size:9px}</style></head><body><div class="brand">Sankatmochansaarthi</div><div class="meta">${selectedBoard} • ${selectedClass} • ${selectedSubject?.name || ''} • ${selectedChapter?.title || ''}<br>Generated for: ${profile?.displayName || 'Student'}</div><pre>${escaped}</pre><div class="wm">Sankatmochansaarthi • Personal Learning Copy</div><script>document.title='${safeTitle}';setTimeout(()=>window.print(),250)<\/script></body></html>`);
-    w.document.close();
+    try {
+      await openNotesPdf(safeTitle, studentGeneratedText, [selectedBoard, selectedClass, selectedSubject?.name || '', selectedChapter?.title || '']);
+    } catch (error) {
+      setStudentGenerationError(error instanceof Error ? error.message : 'Unable to prepare PDF. Please try again.');
+    }
   };
 
 
