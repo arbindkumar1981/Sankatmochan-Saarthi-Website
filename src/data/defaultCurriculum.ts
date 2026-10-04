@@ -1163,7 +1163,7 @@ export const INITIAL_YOUTUBE_VIDEOS: YouTubeVideoItem[] = [
 export const INITIAL_TESTS: EvaluationTest[] = [
   {
     id: 'test-c10-sci-ch1-topic',
-    title: 'Topic Test: Chemical Reactions & Types (10 Questions)',
+    title: 'Topic Test: Chemical Reactions & Types (5 Questions)',
     hindiTitle: 'टॉपिक टेस्ट: रासायनिक अभिक्रियाएँ एवं उनके प्रकार',
     testType: 'topic',
     board: 'CBSE',
@@ -1172,8 +1172,8 @@ export const INITIAL_TESTS: EvaluationTest[] = [
     subjectId: 'c10-science',
     chapterId: 'c10-sci-ch1',
     durationMinutes: 15,
-    totalMarks: 10,
-    passingMarks: 6,
+    totalMarks: 5,
+    passingMarks: 3,
     approved: true,
     published: true,
     createdAt: '2026-09-01T00:00:00Z',
