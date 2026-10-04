@@ -24,6 +24,8 @@ import {
 } from '../data/defaultCurriculum';
 import { db, handleFirestoreError, OperationType } from '../services/firebase';
 import { saveCanonicalContent } from '../services/contentLibrary';
+import { mapLegacyTest } from '../services/testAssessment';
+import { LEGACY_SUBJECTS } from '../data/defaultCurriculum';
 import {
   collection,
   setDoc,
@@ -31,7 +33,8 @@ import {
   query,
   where,
   onSnapshot,
-  runTransaction
+  runTransaction,
+  writeBatch
 } from 'firebase/firestore';
 import { useAuth } from './AuthContext';
 import { useWebsite } from './WebsiteContext';
@@ -345,6 +348,7 @@ export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const generatedId = 'res-' + Math.random().toString(36).substring(2, 9) + '-' + Date.now();
     const newResult: TestResult = {
       ...resultData,
+      studentUid: user && !user.isAnonymous ? user.uid : 'guest-108',
       id: generatedId
     };
 
@@ -354,12 +358,12 @@ export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       if (!ans.isCorrect) {
         const mistakeItem: MistakeRecord = {
           id: 'mistake-' + Math.random().toString(36).substring(2, 9) + '-' + idx,
-          studentUid: resultData.studentUid,
+          studentUid: newResult.studentUid,
           testResultId: generatedId,
           testId: resultData.testId,
           subjectId: resultData.subjectId,
           questionText: ans.questionText,
-          options: [], // populated from context if available
+          options: ans.options || [],
           selectedOption: ans.selectedOption,
           correctOption: ans.correctOption,
           explanation: ans.explanation,
@@ -372,12 +376,15 @@ export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
     if (user && !user.isAnonymous) {
       try {
-        await setDoc(doc(db, 'test_results', generatedId), newResult);
+        const batch = writeBatch(db);
+        batch.set(doc(db, 'test_results', generatedId), newResult);
         for (const m of newMistakes) {
-          await setDoc(doc(db, 'mistakes', m.id), m);
+          batch.set(doc(db, 'mistakes', m.id), m);
         }
+        await batch.commit();
       } catch (err) {
         handleFirestoreError(err, OperationType.CREATE, `test_results/${generatedId}`);
+        throw err;
       }
     } else {
       // Local storage fallback for guest/offline
@@ -538,7 +545,7 @@ export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         saveCurriculumSubject,
         learningContents: isAdmin ? learningContents : learningContents.filter(x => x.approved && x.published && !hiddenAssetIds.has(`learning_contents/${x.id}`)),
         youtubeVideos: isAdmin ? youtubeVideos : youtubeVideos.filter(x => x.approved && x.published && !hiddenAssetIds.has(`youtube_videos/${x.id}`)),
-        evaluationTests: isAdmin ? evaluationTests : evaluationTests.filter(x => x.approved && x.published && !hiddenAssetIds.has(`tests/${x.id}`)),
+        evaluationTests: (isAdmin ? evaluationTests : evaluationTests.filter(x => x.approved && x.published && !hiddenAssetIds.has(`tests/${x.id}`))).map(x => mapLegacyTest(x, LEGACY_SUBJECTS, curriculumSubjects)),
         notices: isAdmin ? notices : notices.filter(x => x.active && !hiddenAssetIds.has(`notices/${x.id}`)),
         testResults,
         mistakeRecords,

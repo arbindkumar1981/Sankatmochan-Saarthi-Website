@@ -195,6 +195,7 @@ export interface EvaluationTest {
 }
 
 export interface TestResultAnswer {
+  options?: string[];
   questionId: string;
   questionText: string;
   selectedOption: number;

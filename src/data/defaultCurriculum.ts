@@ -42,7 +42,7 @@ export const SUPPORTED_BOARDS = [
   { id: 'STATE_BOARD', name: 'Other State Education Boards', hindiName: 'अन्य राज्य शिक्षा बोर्ड' }
 ];
 
-const LEGACY_SUBJECTS: SubjectMeta[] = [
+export const LEGACY_SUBJECTS: SubjectMeta[] = [
   // Class 10 Subjects (Strictly conforming to user prompt)
   {
     id: 'c10-hindi-a',

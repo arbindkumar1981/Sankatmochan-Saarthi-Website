@@ -2,7 +2,8 @@ import { DEFAULT_WEBSITE_CONFIG } from '../services/websiteConfig';
 import { optionLabel } from '../services/websiteConfig';
 import { useWebsite } from '../context/WebsiteContext';
 import { WebsiteText } from '../context/WebsiteContext';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { parseGeneratedQuestions } from '../services/testAssessment';
 import { useCurriculum } from '../context/CurriculumContext';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -160,7 +161,13 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
       window.clearTimeout(timeout);
       const data = await res.json();
       if (!res.ok) throw new Error(typeof data.detail === 'string' ? data.detail : 'Sankatmochansaarthi could not generate this material.');
-      setStudentGeneratedText(data.content || '');
+      if (assetType === 'TEST') {
+        const questions = parseGeneratedQuestions(data.content || '');
+        const totalMarks = questions.reduce((sum, q) => sum + q.marks, 0);
+        setTestStarted(false); setTestSubmitted(false); setSelectedAnswers({}); setSaveStatus('');
+        setGeneratedTest({ id: `generated-${crypto.randomUUID()}`, title: `${topic} — Practice Test`, testType: 'chapter', board: selectedBoard, classGrade: selectedClass, stream: selectedStream, subjectId: selectedSubject.id, chapterId: selectedChapter.id, questions, totalMarks, passingMarks: Math.ceil(totalMarks * 0.8), durationMinutes: Math.max(5, questions.length * 2), approved: false, published: false, createdAt: new Date().toISOString() });
+        setStudentGeneratedText('');
+      } else setStudentGeneratedText(data.content || '');
       setStudentDiagramPlans(Array.isArray(data.diagram_plans) ? data.diagram_plans : []);
       setStudentProvenance(Array.isArray(data.provenance) ? data.provenance : []);
     } catch (e:any) {
@@ -198,7 +205,10 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
   });
 
   // Never serve an unrelated fallback test from another subject/chapter.
-  const activeTest: EvaluationTest | undefined = matchedTests[0];
+  const [generatedTest, setGeneratedTest] = useState<EvaluationTest>();
+  const activeTest: EvaluationTest | undefined = generatedTest || matchedTests[0];
+  const submitting = useRef(false);
+  const [saveStatus, setSaveStatus] = useState('');
 
   // Reset interactive module state whenever curriculum/module selection changes.
   useEffect(() => {
@@ -206,6 +216,8 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
     setIsFlipped(false);
     setTestStarted(false);
     setTestSubmitted(false);
+    setGeneratedTest(undefined);
+    setSaveStatus('');
     setCurrentQuestionIndex(0);
     setSelectedAnswers({});
     setSubmittedScorecard(null);
@@ -234,14 +246,14 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
   // Timer effect for test
   useEffect(() => {
     let interval: any = null;
+    if (testStarted && !testSubmitted && testTimeRemaining <= 0) {
+      void handleAutoSubmit();
+      return;
+    }
     if (testStarted && !testSubmitted && testTimeRemaining > 0) {
       interval = setInterval(() => {
         setTestTimeRemaining((prev) => {
-          if (prev <= 1) {
-            handleAutoSubmit();
-            return 0;
-          }
-          return prev - 1;
+          return Math.max(0, prev - 1);
         });
       }, 1000);
     }
@@ -266,7 +278,8 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
   };
 
   const handleAutoSubmit = async () => {
-    if (!activeTest) return;
+    if (!activeTest || submitting.current) return;
+    submitting.current = true;
     const questions = activeTest.questions;
     let score = 0;
     const answers: TestResultAnswer[] = [];
@@ -292,6 +305,7 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
       answers.push({
         questionId: q.id,
         questionText: q.questionText,
+        options: [...q.options],
         selectedOption: selected,
         correctOption: q.correctIndex,
         isCorrect,
@@ -353,10 +367,12 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
     setTestStarted(false);
 
     try {
+      setSaveStatus('Saving result and Mistake Book…');
       await saveTestResult(resultPayload);
+      setSaveStatus('Result and Mistake Book saved.');
     } catch (err) {
-      console.error('Error saving result:', err);
-    }
+      setSaveStatus('Your score is shown, but the result could not be saved. Check your connection before leaving this page.');
+    } finally { submitting.current = false; }
   };
 
   const handleCopyFormula = (id: string, formula: string) => {
@@ -768,6 +784,7 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
       {/* Module 9: Test Yourself (Interactive Objective Testing Engine) */}
       {activeModule === 'test_yourself' && (
         <div className="space-y-5">
+          {saveStatus && <p role="status" className="p-3 border rounded-xl">{saveStatus}</p>}
           <div className="flex flex-wrap gap-2 justify-end"><button onClick={generateWithTeacher} disabled={studentGenerating} className="px-3 py-2 rounded-xl bg-orange-600 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5"><WandSparkles className="w-4 h-4"/>{studentGenerating ? websiteText("Generating…") : websiteText("Generate Test with Sankatmochansaarthi")}</button></div>
           {studentGenerationError && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs">{studentGenerationError}</div>}
           {studentGeneratedText && <div className="whitespace-pre-line bg-stone-50 border border-stone-200 rounded-2xl p-5 text-sm leading-relaxed">{studentGeneratedText}</div>}
