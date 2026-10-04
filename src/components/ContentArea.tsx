@@ -16,7 +16,7 @@ import {
 import confetti from 'canvas-confetti';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
-import { prepareSavedMaterial } from '../services/savedMaterials';
+import { prepareSavedMaterial, matchesMaterialSelection } from '../services/savedMaterials';
 import {
   FileText,
   BookmarkCheck,
@@ -70,8 +70,7 @@ export const ContentArea: React.FC = () => {
   const matchedContent = learningContents.find((c) => {
     if (c.board !== selectedBoard || c.classGrade !== selectedClass || !c.approved || !c.published) return false;
     if (c.contentType !== activeModule) return false;
-    if (c.subjectId !== selectedSubject?.id) return false;
-    if (selectedChapter && c.chapterId !== selectedChapter.id) return false;
+    if (!selectedSubject || !matchesMaterialSelection(c, selectedSubject, selectedChapter)) return false;
     if (selectedTopic) {
       const topicMatches = c.topicId === selectedTopic.id || (c.topicTitle || '').trim().toLowerCase() === selectedTopic.title.trim().toLowerCase();
       if (!topicMatches) return false;
