@@ -24,7 +24,7 @@ export const AboutUsView: React.FC = () => {
 
         {/* Official Brand Logo */}
         <div className="bg-amber-50/70 border border-orange-200 p-2 rounded-2xl shadow-xs self-start md:self-auto flex items-center justify-center">
-          <SankatmochanLogo className="h-16 w-16" />
+          <SankatmochanLogo className="w-52 max-w-full" />
         </div>
       </div>
 

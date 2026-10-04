@@ -26,10 +26,11 @@ export const SankatmochanLogo: React.FC<LogoProps> = ({
       }}
     >
       <img
-        src="/Sankatmochan_Saarthi_Original.svg"
+        src="/sankatmochan-saarthi-logo.png"
         alt={alt}
-        className="w-auto h-full max-h-full object-contain filter drop-shadow-xs"
-        style={{ aspectRatio: '1 / 1' }}
+        width={2164}
+        height={727}
+        className="w-full h-auto max-h-full object-contain"
       />
     </div>
   );

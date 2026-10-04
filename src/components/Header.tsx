@@ -47,7 +47,7 @@ export const Header: React.FC = () => {
         {/* Official Sankatmochan Saarthi Brand Logo (Clicking opens Home Page) */}
         <SankatmochanLogo
           onClick={handleLogoClick}
-          className="h-12 sm:h-14 md:h-16 shrink-0"
+          className="w-40 sm:w-52 md:w-60 shrink-0"
         />
 
         {/* Board & Class Quick Controls (Desktop / Tablet) */}
