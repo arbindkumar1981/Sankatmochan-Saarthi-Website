@@ -1266,7 +1266,7 @@ export const INITIAL_TESTS: EvaluationTest[] = [
     subjectId: 'c10-math-std',
     chapterId: 'c10-math-ch1',
     durationMinutes: 20,
-    totalMarks: 5,
+    totalMarks: 3,
     passingMarks: 3,
     approved: true,
     published: true,

@@ -206,7 +206,8 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
 
   // Never serve an unrelated fallback test from another subject/chapter.
   const [generatedTest, setGeneratedTest] = useState<EvaluationTest>();
-  const activeTest: EvaluationTest | undefined = generatedTest || matchedTests[0];
+  const testCandidate = generatedTest || matchedTests[0];
+  const activeTest: EvaluationTest | undefined = testCandidate ? { ...testCandidate, totalMarks: testCandidate.questions.reduce((sum, q) => sum + q.marks, 0) } : undefined;
   const submitting = useRef(false);
   const [saveStatus, setSaveStatus] = useState('');
 
