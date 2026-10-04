@@ -3,6 +3,7 @@ import { useWebsite } from '../context/WebsiteContext';
 import React, { useState, useEffect } from 'react';
 import { useCurriculum } from '../context/CurriculumContext';
 import { Sparkles, RotateCw, Quote } from 'lucide-react';
+import { SankatmochanLogo } from './SankatmochanLogo';
 
 const BABA_PUBLIC_DOMAIN_FALLBACK = 'https://upload.wikimedia.org/wikipedia/commons/6/66/Neemkaroli_14.jpg';
 
@@ -37,12 +38,10 @@ export const BabaBanner: React.FC = () => {
       {/* Sacred Subtle Texture Overlay */}
       <div className="absolute inset-0 bg-[radial-gradient(#fed7aa_1px,transparent_1px)] [background-size:16px_16px] opacity-15 pointer-events-none" />
 
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 flex items-center justify-between gap-3 relative z-10">
-        {/* Single-line unified display: Baba Ji Quotes placed directly here without image */}
-        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-          {/* Sacred ॐ Badge */}
-          <div className="flex items-center gap-1.5 shrink-0 bg-black/30 border border-amber-300/40 px-2.5 py-1 rounded-lg text-amber-200 shadow-xs">
-            <span className="text-amber-300 font-black text-sm"><WebsiteText original={"ॐ"} /></span>
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 relative z-10">
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+          <SankatmochanLogo className="w-28 sm:w-44 justify-self-start" />
+          <div className="flex items-center justify-center">
             {babaImageUrl && <img
               src={babaImageUrl}
               onError={(e) => {
@@ -50,17 +49,20 @@ export const BabaBanner: React.FC = () => {
                 if (img.src !== BABA_PUBLIC_DOMAIN_FALLBACK) img.src = BABA_PUBLIC_DOMAIN_FALLBACK;
               }}
               alt={websiteText("Baba Neem Karoli Ji")}
-              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover object-[center_28%] ring-2 ring-amber-300 shadow-lg bg-amber-50"
+              className="w-12 h-12 sm:w-16 sm:h-16 rounded-full object-cover object-[center_28%] ring-2 ring-amber-300 shadow-lg bg-amber-50"
             />}
-            <span className="text-xs sm:text-sm font-extrabold tracking-wide text-amber-100 font-cinzel whitespace-nowrap">
-              {language === 'hi' ? websiteText("नीम करौली बाबा जी विचार :") : websiteText("Baba Neem Karoli Ji Quotes :")}
-            </span>
           </div>
-
+          <div className="hidden lg:flex items-center justify-self-end gap-1.5 text-amber-200/90 text-xs font-serif italic">
+            <Sparkles className="w-3.5 h-3.5 text-yellow-300 animate-pulse shrink-0" />
+            <span><WebsiteText original={"सब दुख दूर करें संकटमोचन हनुमान जी"} /></span>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 sm:gap-3 mt-2 min-w-0">
+          <span className="text-amber-300 font-black text-sm shrink-0"><WebsiteText original={"ॐ"} /></span>
           {/* Baba Ji Sacred Quote placed directly here */}
           <div className="min-w-0 flex-1 flex items-center gap-1.5 overflow-hidden">
             <Quote className="w-3.5 h-3.5 text-amber-300 shrink-0 fill-amber-300/20 hidden sm:inline" />
-            <p className="text-xs sm:text-sm font-semibold text-amber-50 font-serif italic truncate">
+            <p className="text-xs sm:text-sm font-semibold text-amber-50 font-serif italic">
               "{currentQuote}"
             </p>
           </div>
@@ -80,12 +82,6 @@ export const BabaBanner: React.FC = () => {
               {language === 'hi' ? websiteText("अन्य विचार") : websiteText("Next")}
             </span>
           </button>
-        </div>
-
-        {/* Auspicious Devotional Subtitle */}
-        <div className="hidden lg:flex items-center gap-1.5 text-amber-200/90 text-xs font-serif italic shrink-0">
-          <Sparkles className="w-3.5 h-3.5 text-yellow-300 animate-pulse" />
-          <span><WebsiteText original={"सब दुख दूर करें संकटमोचन हनुमान जी"} /></span>
         </div>
       </div>
     </div>
