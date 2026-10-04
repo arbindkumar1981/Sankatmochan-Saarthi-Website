@@ -81,6 +81,7 @@ export const VerticalNav: React.FC = () => {
 
   return (
     <nav className="w-full lg:w-64 bg-white rounded-2xl border border-orange-200/90 shadow-sm p-2.5 sm:p-3 flex flex-row lg:flex-col gap-1.5 overflow-x-auto lg:overflow-visible shrink-0 scrollbar-none">
+      <button className="px-3 py-3 text-left border rounded-xl font-bold text-orange-900" onClick={() => setActiveTab('materials')}>My Dashboard — Saved Materials</button>
       <div className="hidden lg:block px-3 py-2 border-b border-orange-100 mb-1">
         <span className="text-[11px] font-extrabold uppercase tracking-wider text-orange-900/70 font-cinzel">
           {language === 'hi' ? websiteText("मार्गदर्शन मेनू") : websiteText("Guidance Navigation")}

@@ -7,6 +7,8 @@ import { Header } from './components/Header';
 import { VerticalNav } from './components/VerticalNav';
 import { LearningSidebar } from './components/LearningSidebar';
 import { ContentArea } from './components/ContentArea';
+import { MyMaterials } from './components/MyMaterials';
+import { ProtectedMaterial } from './components/ProtectedMaterial';
 import { YouTubeLearner } from './components/YouTubeLearner';
 import { NoticeBoardView } from './components/NoticeBoardView';
 import { EvaluationHub } from './components/EvaluationHub';
@@ -44,7 +46,7 @@ const MainAppContent: React.FC = () => {
               {/* Learning Sidebar (Hierarchy & 9 Modules) */}
               <LearningSidebar />
               {/* Content and Interactive Test Area */}
-              <ContentArea />
+              <ProtectedMaterial><ContentArea /></ProtectedMaterial>
             </div>
           )}
 
@@ -53,6 +55,7 @@ const MainAppContent: React.FC = () => {
           {activeTab === 'notices' && <NoticeBoardView />}
 
           {activeTab === 'evaluation' && <EvaluationHub />}
+          {activeTab === 'materials' && <MyMaterials />}
 
           {activeTab === 'about' && <AboutUsView />}
 
