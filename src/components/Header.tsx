@@ -7,7 +7,6 @@ import { useAuth } from '../context/AuthContext';
 import { useCurriculum } from '../context/CurriculumContext';
 import { SUPPORTED_BOARDS } from '../data/defaultCurriculum';
 import { BoardType, ClassGrade, StreamType } from '../types';
-import { SankatmochanLogo } from './SankatmochanLogo';
 import {
   Flame,
   User,
@@ -23,7 +22,6 @@ export const Header: React.FC = () => {
   const { config, text: websiteText } = useWebsite();
   const { user, profile, isAdmin, openAuthModal, signOut } = useAuth();
   const {
-    setActiveTab,
     selectedBoard,
     setSelectedBoard,
     selectedClass,
@@ -41,20 +39,9 @@ export const Header: React.FC = () => {
     toggleLanguage
   } = useCurriculum();
 
-  const handleLogoClick = () => {
-    setActiveTab('learning');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
   return (
     <header className="bg-white border-b border-orange-200/80 shadow-sm sticky top-0 z-30">
       <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 sm:py-2.5 flex flex-wrap items-center justify-between gap-3">
-        {/* Official Sankatmochan Saarthi Brand Logo (Clicking opens Home Page) */}
-        <SankatmochanLogo
-          onClick={handleLogoClick}
-          className="w-40 sm:w-52 md:w-60 shrink-0"
-        />
-
         {/* Curriculum controls wrap on mobile as well as desktop. */}
         <div className="flex order-last w-full flex-wrap items-center gap-2 bg-amber-50/70 border border-orange-200 px-2 py-1 rounded-xl">
           {/* Class Select */}
@@ -167,7 +154,7 @@ export const Header: React.FC = () => {
         </div>
 
         {/* Right Actions: Language Switcher + Student Sign In / Admin Login together */}
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+        <div className="ml-auto flex flex-wrap items-center gap-2 sm:gap-3">
           {/* Language Switcher */}
           <button
             onClick={toggleLanguage}
