@@ -21,6 +21,9 @@ test('legacy mapping never crosses boards or ambiguous course identities', () =>
   const target = api.ALL_SUBJECTS.find(s => s.id === 'c10-science-2026');
   assert.equal(api.mapLegacyTest(t, api.LEGACY_SUBJECTS, [target, { ...target, id: 'duplicate' }]).subjectId, t.subjectId);
 });
+test('published seed assessment totals equal their actual question marks', () => {
+  for (const t of api.INITIAL_TESTS) assert.equal(t.totalMarks, t.questions.reduce((sum, q) => sum + q.marks, 0), t.id);
+});
 test('structured generated questions become objective questions with bounded answer keys', () => {
   const q = { questionText: 'Choose oxygen', options: ['O2','CO2'], correctIndex: 0, explanation: 'O2 is oxygen.', marks: 2 };
   assert.equal(api.parseGeneratedQuestions(JSON.stringify({ questions: [q] }))[0].marks, 2);
