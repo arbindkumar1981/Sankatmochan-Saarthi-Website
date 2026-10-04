@@ -1,4 +1,6 @@
+import { WebsiteText } from '../context/WebsiteContext';
 import React from 'react';
+import { useWebsite } from '../context/WebsiteContext';
 import { useCurriculum, MainTabType } from '../context/CurriculumContext';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -14,8 +16,10 @@ import {
 } from 'lucide-react';
 
 export const VerticalNav: React.FC = () => {
+  const { text: websiteText } = useWebsite();
   const { activeTab, setActiveTab, language, testResults } = useCurriculum();
   const { isAdmin } = useAuth();
+  const { config } = useWebsite();
 
   const navItems = [
     {
@@ -79,11 +83,11 @@ export const VerticalNav: React.FC = () => {
     <nav className="w-full lg:w-64 bg-white rounded-2xl border border-orange-200/90 shadow-sm p-2.5 sm:p-3 flex flex-row lg:flex-col gap-1.5 overflow-x-auto lg:overflow-visible shrink-0 scrollbar-none">
       <div className="hidden lg:block px-3 py-2 border-b border-orange-100 mb-1">
         <span className="text-[11px] font-extrabold uppercase tracking-wider text-orange-900/70 font-cinzel">
-          {language === 'hi' ? 'मार्गदर्शन मेनू' : 'Guidance Navigation'}
+          {language === 'hi' ? websiteText("मार्गदर्शन मेनू") : websiteText("Guidance Navigation")}
         </span>
       </div>
 
-      {navItems.map((item) => {
+      {[...navItems.filter(item => item.id === 'admin' || config.navigation.some(x => x.id === item.id && !x.deleted)).map(item => { const option = config.navigation.find(x => x.id === item.id); return option ? { ...item, label: language === 'hi' ? option.hindiLabel || option.label : option.label } : item; }), ...config.pages.filter(p => !p.deleted).map(p => ({ id: `page:${p.id}` as MainTabType, label: language === 'hi' ? p.hindiTitle || p.title : p.title, sub: '', icon: Info, accent: 'from-orange-600 to-amber-700', badge: undefined, count: undefined }))].map((item) => {
         const Icon = item.icon;
         const isActive = activeTab === item.id;
 
@@ -93,8 +97,8 @@ export const VerticalNav: React.FC = () => {
             onClick={() => setActiveTab(item.id)}
             className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all relative whitespace-nowrap lg:whitespace-normal group ${
               isActive
-                ? 'bg-gradient-to-r from-orange-500/10 via-amber-500/15 to-orange-500/5 text-orange-900 border border-orange-300 font-bold shadow-xs'
-                : 'text-stone-700 hover:bg-orange-50/70 hover:text-orange-900 font-medium'
+                ? "bg-gradient-to-r from-orange-500/10 via-amber-500/15 to-orange-500/5 text-orange-900 border border-orange-300 font-bold shadow-xs"
+                : "text-stone-700 hover:bg-orange-50/70 hover:text-orange-900 font-medium"
             }`}
           >
             {/* Icon Bubble */}
@@ -102,7 +106,7 @@ export const VerticalNav: React.FC = () => {
               className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 shadow-xs ${
                 isActive
                   ? `bg-gradient-to-br ${item.accent} text-white`
-                  : 'bg-amber-100/70 text-orange-700'
+                  : "bg-amber-100/70 text-orange-700"
               }`}
             >
               <Icon className="w-4 h-4" />
@@ -112,11 +116,11 @@ export const VerticalNav: React.FC = () => {
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between gap-1">
                 <span className="text-xs sm:text-sm font-semibold truncate leading-tight">
-                  {item.label}
+                  {websiteText(item.label)}
                 </span>
                 {item.badge && (
                   <span className="hidden lg:inline text-[9px] bg-red-100 text-red-700 font-bold px-1.5 py-0.5 rounded-full border border-red-200">
-                    {item.badge}
+                    {websiteText(item.badge)}
                   </span>
                 )}
                 {item.count !== undefined && (
@@ -126,7 +130,7 @@ export const VerticalNav: React.FC = () => {
                 )}
               </div>
               <p className="hidden lg:block text-[11px] text-stone-500 truncate font-normal mt-0.5">
-                {item.sub}
+                {websiteText(item.sub)}
               </p>
             </div>
 

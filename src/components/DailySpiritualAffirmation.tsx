@@ -1,3 +1,5 @@
+import { useWebsite } from '../context/WebsiteContext';
+import { WebsiteText } from '../context/WebsiteContext';
 import React, { useState, useEffect } from 'react';
 import { useCurriculum } from '../context/CurriculumContext';
 import {
@@ -55,6 +57,7 @@ const AFFIRMATIONS: AffirmationItem[] = [
 ];
 
 export const DailySpiritualAffirmation: React.FC = () => {
+  const { text: websiteText } = useWebsite();
   const { babaImageUrl, language } = useCurriculum();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [copied, setCopied] = useState(false);
@@ -89,14 +92,12 @@ export const DailySpiritualAffirmation: React.FC = () => {
       <div className="flex items-center justify-between gap-2.5 min-w-0">
         <div className="flex items-center gap-2.5 min-w-0 flex-1 overflow-hidden">
           {/* Sacred ॐ Flame Emblem */}
-          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-amber-400 to-orange-500 shadow-xs ring-1 ring-orange-400 flex items-center justify-center text-white font-black text-sm shrink-0">
-            ॐ
-          </div>
+          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-amber-400 to-orange-500 shadow-xs ring-1 ring-orange-400 flex items-center justify-center text-white font-black text-sm shrink-0"><WebsiteText original={"ॐ"} /></div>
 
           {/* Badge Label */}
           <span className="text-[11px] font-extrabold uppercase text-orange-950 font-cinzel shrink-0 bg-white/80 border border-orange-300 px-2 py-0.5 rounded-lg flex items-center gap-1">
             <Sparkles className="w-3 h-3 text-orange-600 animate-pulse" />
-            <span>{language === 'hi' ? 'बाबा जी विचार:' : 'Baba Ji Quote:'}</span>
+            <span>{language === 'hi' ? websiteText("बाबा जी विचार:") : websiteText("Baba Ji Quote:")}</span>
           </span>
 
           {/* Quote Text in the EXACT SAME LINE */}
@@ -113,22 +114,22 @@ export const DailySpiritualAffirmation: React.FC = () => {
           <button
             onClick={handleNextQuote}
             className="px-2 py-1 rounded-lg bg-white/90 hover:bg-white border border-orange-200 text-stone-700 text-xs font-bold flex items-center gap-1 shadow-2xs transition-colors"
-            title="Next Quote"
+            title={websiteText("Next Quote")}
           >
             <RotateCw
               className={`w-3 h-3 text-orange-600 transition-transform ${
-                isRotating ? 'rotate-180' : ''
+                isRotating ? "rotate-180" : ''
               }`}
             />
             <span className="hidden sm:inline">
-              {language === 'hi' ? 'अन्य विचार' : 'Next'}
+              {language === 'hi' ? websiteText("अन्य विचार") : websiteText("Next")}
             </span>
           </button>
 
           <button
             onClick={handleCopyQuote}
             className="p-1 sm:px-2 sm:py-1 rounded-lg bg-white/90 hover:bg-white border border-orange-200 text-stone-700 text-xs font-bold flex items-center gap-1 shadow-2xs transition-colors"
-            title="Copy Quote"
+            title={websiteText("Copy Quote")}
           >
             {copied ? (
               <Check className="w-3 h-3 text-emerald-600" />

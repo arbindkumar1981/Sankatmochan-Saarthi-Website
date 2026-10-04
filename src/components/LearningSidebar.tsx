@@ -1,4 +1,7 @@
+import { optionLabel } from '../services/websiteConfig';
+import { WebsiteText } from '../context/WebsiteContext';
 import React from 'react';
+import { useWebsite } from '../context/WebsiteContext';
 import { useCurriculum } from '../context/CurriculumContext';
 import { ContentModuleType, SubjectMeta, ChapterMeta, TopicMeta } from '../types';
 import {
@@ -19,6 +22,7 @@ import {
 } from 'lucide-react';
 
 export const LearningSidebar: React.FC = () => {
+  const { config, text: websiteText } = useWebsite();
   const {
     activeModule,
     setActiveModule,
@@ -126,21 +130,21 @@ export const LearningSidebar: React.FC = () => {
       <div className="bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-amber-500/15 border border-orange-200/90 rounded-xl p-2.5">
         <div className="text-[10px] font-bold text-orange-950 uppercase tracking-wide flex items-center gap-1 font-cinzel">
           <Sparkles className="w-3 h-3 text-orange-600" />
-          <span>{language === 'hi' ? 'पाठ्यक्रम अनुक्रम' : 'Curriculum Hierarchy'}</span>
+          <span>{language === 'hi' ? websiteText("पाठ्यक्रम अनुक्रम") : websiteText("Curriculum Hierarchy")}</span>
         </div>
         <div className="text-xs font-bold text-stone-800 mt-1 flex flex-wrap items-center gap-1">
           <span className="bg-white px-2 py-0.5 rounded border border-orange-200 text-orange-800">
-            {selectedBoard}
+            {optionLabel(config.boards,selectedBoard,language)}
           </span>
           <span className="text-orange-400">→</span>
           <span className="bg-white px-2 py-0.5 rounded border border-orange-200 text-orange-800">
-            {selectedClass}
+            {optionLabel(config.classes,selectedClass,language)}
           </span>
           {(selectedClass === 'Class 11' || selectedClass === 'Class 12') && (
             <>
               <span className="text-orange-400">→</span>
               <span className="bg-white px-2 py-0.5 rounded border border-orange-200 text-orange-800">
-                {selectedStream}
+                {optionLabel(config.streams,selectedStream,language)}
               </span>
             </>
           )}
@@ -150,7 +154,7 @@ export const LearningSidebar: React.FC = () => {
       {/* Subject Selector */}
       <div>
         <label className="block text-[11px] font-bold text-stone-600 uppercase tracking-wider mb-1">
-          {language === 'hi' ? 'विषय चुनें (Subject)' : 'Select Subject'}
+          {language === 'hi' ? websiteText("विषय चुनें (Subject)") : websiteText("Select Subject")}
         </label>
         <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
           {availableSubjects.map((sub) => {
@@ -165,8 +169,8 @@ export const LearningSidebar: React.FC = () => {
                 }}
                 className={`w-full text-left px-2.5 py-2 rounded-xl text-xs font-semibold flex items-center justify-between transition-all ${
                   isSelected
-                    ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-xs'
-                    : 'bg-stone-50 hover:bg-orange-50 text-stone-800 border border-stone-200/70'
+                    ? "bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-xs"
+                    : "bg-stone-50 hover:bg-orange-50 text-stone-800 border border-stone-200/70"
                 }`}
               >
                 <div className="flex items-center gap-2 truncate">
@@ -178,7 +182,7 @@ export const LearningSidebar: React.FC = () => {
                 {sub.officialCode && (
                   <span
                     className={`text-[10px] px-1.5 py-0.2 rounded font-mono ${
-                      isSelected ? 'bg-white/20 text-white' : 'bg-stone-200 text-stone-600'
+                      isSelected ? "bg-white/20 text-white" : "bg-stone-200 text-stone-600"
                     }`}
                   >
                     {sub.officialCode}
@@ -196,7 +200,7 @@ export const LearningSidebar: React.FC = () => {
           {/* Chapter Selector */}
           <div>
             <label className="block text-[11px] font-bold text-stone-600 uppercase tracking-wider mb-1">
-              {language === 'hi' ? 'अध्याय (Chapter)' : 'Chapter'}
+              {language === 'hi' ? websiteText("अध्याय (Chapter)") : websiteText("Chapter")}
             </label>
             <select
               value={selectedChapter?.id || ''}
@@ -208,8 +212,7 @@ export const LearningSidebar: React.FC = () => {
               className="w-full px-2.5 py-2 text-xs font-semibold bg-amber-50/50 border border-orange-200 rounded-xl text-stone-800 outline-none focus:ring-1 focus:ring-orange-500"
             >
               {selectedSubject.chapters.map((ch) => (
-                <option key={ch.id} value={ch.id}>
-                  Ch {ch.chapterNumber}: {language === 'hi' ? ch.hindiTitle : ch.title}
+                <option key={ch.id} value={ch.id}><WebsiteText original={"Ch "} />{ch.chapterNumber}: {language === 'hi' ? ch.hindiTitle : ch.title}
                 </option>
               ))}
             </select>
@@ -219,19 +222,19 @@ export const LearningSidebar: React.FC = () => {
           {selectedChapter && selectedChapter.topics.length > 0 && (
             <div>
               <label className="block text-[11px] font-bold text-stone-600 uppercase tracking-wider mb-1">
-                {language === 'hi' ? 'विषय-वस्तु / टॉपिक' : 'Topic / Scope'}
+                {language === 'hi' ? websiteText("विषय-वस्तु / टॉपिक") : websiteText("Topic / Scope")}
               </label>
               <div className="grid grid-cols-1 gap-1 max-h-32 overflow-y-auto pr-1">
                 <button
                   onClick={() => setSelectedTopic(null)}
                   className={`w-full text-left px-2 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 ${
                     selectedTopic === null
-                      ? 'bg-orange-100 text-orange-900 font-bold border border-orange-300'
-                      : 'bg-stone-50 hover:bg-stone-100 text-stone-700'
+                      ? "bg-orange-100 text-orange-900 font-bold border border-orange-300"
+                      : "bg-stone-50 hover:bg-stone-100 text-stone-700"
                   }`}
                 >
                   <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
-                  <span>{language === 'hi' ? 'सम्पूर्ण अध्याय (Full Chapter)' : 'Full Chapter Scope'}</span>
+                  <span>{language === 'hi' ? websiteText("सम्पूर्ण अध्याय (Full Chapter)") : websiteText("Full Chapter Scope")}</span>
                 </button>
 
                 {selectedChapter.topics.map((top) => {
@@ -242,8 +245,8 @@ export const LearningSidebar: React.FC = () => {
                       onClick={() => setSelectedTopic(top)}
                       className={`w-full text-left px-2 py-1.5 rounded-lg text-xs flex items-center gap-1.5 ${
                         isTopSelected
-                          ? 'bg-orange-100 text-orange-900 font-bold border border-orange-300'
-                          : 'bg-stone-50 hover:bg-stone-100 text-stone-700'
+                          ? "bg-orange-100 text-orange-900 font-bold border border-orange-300"
+                          : "bg-stone-50 hover:bg-stone-100 text-stone-700"
                       }`}
                     >
                       <ChevronRight className="w-3 h-3 text-orange-500 shrink-0" />
@@ -262,10 +265,10 @@ export const LearningSidebar: React.FC = () => {
       {/* Module Selector (9 Modules strictly organized) */}
       <div className="border-t border-orange-100 pt-2.5">
         <label className="block text-[11px] font-bold text-stone-600 uppercase tracking-wider mb-1.5">
-          {language === 'hi' ? 'शिक्षण मॉड्यूल (Learning Modules)' : 'Learning Modules'}
+          {language === 'hi' ? websiteText("शिक्षण मॉड्यूल (Learning Modules)") : websiteText("Learning Modules")}
         </label>
         <div className="space-y-1">
-          {modules.map((mod) => {
+          {config.modules.filter(option => !option.deleted).map(option => { const builtIn = modules.find(mod => mod.id === option.id); return { id: option.id, icon: FileText, color: 'text-orange-600 bg-orange-50', tag: undefined, ...builtIn, label: option.label, hindiLabel: option.hindiLabel || option.label }; }).map((mod) => {
             const Icon = mod.icon;
             const isModActive = activeModule === mod.id;
             return (
@@ -274,31 +277,31 @@ export const LearningSidebar: React.FC = () => {
                 onClick={() => setActiveModule(mod.id)}
                 className={`w-full text-left px-2.5 py-2 rounded-xl text-xs font-semibold flex items-center justify-between transition-all group ${
                   isModActive
-                    ? 'bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow-xs font-bold'
-                    : 'bg-stone-50 hover:bg-orange-50/80 text-stone-700 border border-stone-200/60'
+                    ? "bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow-xs font-bold"
+                    : "bg-stone-50 hover:bg-orange-50/80 text-stone-700 border border-stone-200/60"
                 }`}
               >
                 <div className="flex items-center gap-2 truncate">
                   <div
                     className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${
-                      isModActive ? 'bg-white/20 text-white' : mod.color
+                      isModActive ? "bg-white/20 text-white" : mod.color
                     }`}
                   >
                     <Icon className="w-3.5 h-3.5" />
                   </div>
                   <span className="truncate">
-                    {language === 'hi' ? mod.hindiLabel : mod.label}
+                    {websiteText(language === 'hi' ? mod.hindiLabel : mod.label)}
                   </span>
                 </div>
                 {mod.tag && (
                   <span
                     className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
                       isModActive
-                        ? 'bg-white/30 text-white'
-                        : 'bg-orange-100 text-orange-800'
+                        ? "bg-white/30 text-white"
+                        : "bg-orange-100 text-orange-800"
                     }`}
                   >
-                    {mod.tag}
+                    {websiteText(mod.tag)}
                   </span>
                 )}
               </button>

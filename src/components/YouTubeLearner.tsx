@@ -1,3 +1,6 @@
+import { optionLabel } from '../services/websiteConfig';
+import { useWebsite } from '../context/WebsiteContext';
+import { WebsiteText } from '../context/WebsiteContext';
 import React, { useState } from 'react';
 import { auth } from '../services/firebase';
 import { useCurriculum } from '../context/CurriculumContext';
@@ -21,6 +24,7 @@ import {
 } from 'lucide-react';
 
 export const YouTubeLearner: React.FC = () => {
+  const { config, text: websiteText } = useWebsite();
   const {
     youtubeVideos,
     selectedSubject,
@@ -212,19 +216,19 @@ export const YouTubeLearner: React.FC = () => {
                 <Tv className="w-5 h-5" />
               </span>
               <h2 className="text-xl sm:text-2xl font-black font-cinzel">
-                {language === 'hi' ? 'यूट्यूब स्मार्ट सर्च इंजन' : 'YouTube Smart Search Engine'}
+                {language === 'hi' ? websiteText("यूट्यूब स्मार्ट सर्च इंजन") : websiteText("YouTube Smart Search Engine")}
               </h2>
             </div>
             <p className="text-xs text-orange-100 mt-1">
               {language === 'hi'
-                ? 'कोई भी अध्याय, विषय, प्रश्न या यूट्यूब लिंक लिखें और तुरंत वीडियो देखें'
-                : 'Search any chapter, concept, board PYQ or paste any YouTube link to play instantly'}
+                ? websiteText("कोई भी अध्याय, विषय, प्रश्न या यूट्यूब लिंक लिखें और तुरंत वीडियो देखें")
+                : websiteText("Search any chapter, concept, board PYQ or paste any YouTube link to play instantly")}
             </p>
           </div>
 
           <div className="flex items-center gap-2 self-start sm:self-auto">
             <span className="text-[11px] font-bold bg-white/20 backdrop-blur-xs px-2.5 py-1 rounded-full border border-white/30 text-white">
-              {remoteVideos.length} {language === 'hi' ? 'लाइव परिणाम' : 'Live Results'}
+              {remoteVideos.length} {language === 'hi' ? websiteText("लाइव परिणाम") : websiteText("Live Results")}
             </span>
           </div>
         </div>
@@ -237,8 +241,8 @@ export const YouTubeLearner: React.FC = () => {
               type="text"
               placeholder={
                 language === 'hi'
-                  ? 'अध्याय, टॉपिक खोजें (जैसे: Electricity, Chemical Reactions, Trigonometry या YouTube URL)...'
-                  : 'Search topics, formulas, chapters or paste any YouTube link/ID...'
+                  ? websiteText("अध्याय, टॉपिक खोजें (जैसे: Electricity, Chemical Reactions, Trigonometry या YouTube URL)...")
+                  : websiteText("Search topics, formulas, chapters or paste any YouTube link/ID...")
               }
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -249,7 +253,7 @@ export const YouTubeLearner: React.FC = () => {
                 type="button"
                 onClick={() => setSearchTerm('')}
                 className="absolute right-3 top-2.5 p-0.5 text-stone-400 hover:text-stone-700 rounded-full"
-                title="Clear Search"
+                title={websiteText("Clear Search")}
               >
                 <X className="w-4 h-4" />
               </button>
@@ -260,7 +264,7 @@ export const YouTubeLearner: React.FC = () => {
             type="submit"
             className="px-4 sm:px-6 py-2.5 bg-stone-900 hover:bg-black text-white text-xs sm:text-sm font-bold rounded-xl shadow-md transition-all flex items-center gap-1.5 shrink-0"
           >
-            <span>{language === 'hi' ? 'खोजें' : 'Search'}</span>
+            <span>{language === 'hi' ? websiteText("खोजें") : websiteText("Search")}</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </form>
@@ -269,7 +273,7 @@ export const YouTubeLearner: React.FC = () => {
         <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none text-xs">
           <span className="flex items-center gap-1 text-[11px] font-bold text-amber-200 shrink-0">
             <TrendingUp className="w-3.5 h-3.5" />
-            <span>{language === 'hi' ? 'त्वरित खोज:' : 'Trending:'}</span>
+            <span>{language === 'hi' ? websiteText("त्वरित खोज:") : websiteText("Trending:")}</span>
           </span>
           {popularSearches.map((chip) => (
             <button
@@ -281,8 +285,8 @@ export const YouTubeLearner: React.FC = () => {
               }}
               className={`px-2.5 py-1 rounded-lg text-[11px] font-bold whitespace-nowrap transition-colors ${
                 searchTerm.toLowerCase() === chip.toLowerCase()
-                  ? 'bg-amber-400 text-stone-900 shadow-xs'
-                  : 'bg-white/15 hover:bg-white/25 text-white'
+                  ? "bg-amber-400 text-stone-900 shadow-xs"
+                  : "bg-white/15 hover:bg-white/25 text-white"
               }`}
             >
               {chip}
@@ -293,7 +297,7 @@ export const YouTubeLearner: React.FC = () => {
 
       {(searchingRemote || searchError) && (
         <div className="text-xs font-semibold px-3 py-2 rounded-xl border border-orange-200 bg-orange-50 text-orange-900">
-          {searchingRemote ? 'Searching live Saarthi YouTube results…' : searchError}
+          {searchingRemote ? websiteText("Searching live Saarthi YouTube results…") : searchError}
         </div>
       )}
 
@@ -306,8 +310,8 @@ export const YouTubeLearner: React.FC = () => {
               onClick={() => setSelectedCategory(cat.id)}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
                 selectedCategory === cat.id
-                  ? 'bg-orange-600 text-white shadow-xs'
-                  : 'bg-stone-100 hover:bg-stone-200 text-stone-700'
+                  ? "bg-orange-600 text-white shadow-xs"
+                  : "bg-stone-100 hover:bg-stone-200 text-stone-700"
               }`}
             >
               {cat.label}
@@ -318,14 +322,14 @@ export const YouTubeLearner: React.FC = () => {
         {searchTerm && (
           <div className="flex items-center gap-2 text-xs">
             <span className="text-stone-500">
-              {language === 'hi' ? 'सर्च परिणाम:' : 'Filter applied:'} <strong>"{searchTerm}"</strong>
+              {language === 'hi' ? websiteText("सर्च परिणाम:") : websiteText("Filter applied:")} <strong>"{searchTerm}"</strong>
             </span>
             <button
               onClick={() => setSearchTerm('')}
               className="text-orange-600 hover:underline font-bold flex items-center gap-1"
             >
               <RotateCcw className="w-3 h-3" />
-              <span>{language === 'hi' ? 'रीसेट' : 'Clear'}</span>
+              <span>{language === 'hi' ? websiteText("रीसेट") : websiteText("Clear")}</span>
             </button>
           </div>
         )}
@@ -349,7 +353,7 @@ export const YouTubeLearner: React.FC = () => {
             ) : (
               <div className="w-full h-full flex flex-col items-center justify-center text-stone-400 text-xs gap-2">
                 <Play className="w-8 h-8 text-red-500 animate-pulse" />
-                <span>Select a video from the list or search a topic</span>
+                <span><WebsiteText original={"Select a video from the list or search a topic"} /></span>
               </div>
             )}
           </div>
@@ -364,7 +368,7 @@ export const YouTubeLearner: React.FC = () => {
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg shadow-xs transition-colors"
               >
-                <span>{language === 'hi' ? 'यूट्यूब ऐप/साइट पर देखें' : 'Watch on YouTube App'}</span>
+                <span>{language === 'hi' ? websiteText("यूट्यूब ऐप/साइट पर देखें") : websiteText("Watch on YouTube App")}</span>
                 <ExternalLink className="w-3.5 h-3.5" />
               </a>
             )}
@@ -375,7 +379,7 @@ export const YouTubeLearner: React.FC = () => {
                 <Link2 className="w-3.5 h-3.5 absolute left-2.5 top-2 text-stone-400" />
                 <input
                   type="text"
-                  placeholder={language === 'hi' ? 'अन्य कोई लिंक या Video ID पेस्ट करें...' : 'Paste any YouTube link / Video ID...'}
+                  placeholder={language === 'hi' ? websiteText("अन्य कोई लिंक या Video ID पेस्ट करें...") : websiteText("Paste any YouTube link / Video ID...")}
                   value={customUrl}
                   onChange={(e) => setCustomUrl(e.target.value)}
                   className="w-full pl-8 pr-2 py-1.5 border border-stone-300 rounded-lg text-xs bg-white outline-none focus:ring-1 focus:ring-red-500 font-mono"
@@ -385,7 +389,7 @@ export const YouTubeLearner: React.FC = () => {
                 type="submit"
                 className="px-3 py-1.5 bg-stone-800 hover:bg-stone-900 text-white font-bold rounded-lg text-xs whitespace-nowrap"
               >
-                {language === 'hi' ? 'चलाएं' : 'Run'}
+                {language === 'hi' ? websiteText("चलाएं") : websiteText("Run")}
               </button>
             </form>
           </div>
@@ -407,7 +411,7 @@ export const YouTubeLearner: React.FC = () => {
                       <span>{activeVideo.channelTitle}</span>
                       <CheckCircle className="w-3.5 h-3.5 text-blue-500 fill-blue-500 text-white" />
                     </div>
-                    <span className="text-[11px] text-stone-400">{activeVideo.approved && activeVideo.published ? 'Approved Board Educator' : 'YouTube Source'}</span>
+                    <span className="text-[11px] text-stone-400">{activeVideo.approved && activeVideo.published ? websiteText("Approved Board Educator") : websiteText("YouTube Source")}</span>
                   </div>
                 </div>
 
@@ -448,12 +452,12 @@ export const YouTubeLearner: React.FC = () => {
           <div className="mt-4 bg-amber-50/50 border border-orange-200 rounded-2xl p-4">
             <h4 className="text-xs font-bold text-orange-950 uppercase tracking-wider flex items-center gap-1.5 mb-2 font-cinzel">
               <FileEdit className="w-4 h-4 text-orange-600" />
-              <span>{language === 'hi' ? 'व्याख्यान नोट्स व सूत्र संकलन' : 'Lecture Scratchpad & Quick Revision Notes'}</span>
+              <span>{language === 'hi' ? websiteText("व्याख्यान नोट्स व सूत्र संकलन") : websiteText("Lecture Scratchpad & Quick Revision Notes")}</span>
             </h4>
             <div className="flex gap-2">
               <input
                 type="text"
-                placeholder={language === 'hi' ? 'वीडियो देखते समय कोई मुख्य बिंदु, सूत्र या प्रश्न यहाँ नोट करें...' : 'Jot down a formula, timestamp, or key concept while watching...'}
+                placeholder={language === 'hi' ? websiteText("वीडियो देखते समय कोई मुख्य बिंदु, सूत्र या प्रश्न यहाँ नोट करें...") : websiteText("Jot down a formula, timestamp, or key concept while watching...")}
                 value={notesText}
                 onChange={(e) => setNotesText(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSaveNote()}
@@ -463,7 +467,7 @@ export const YouTubeLearner: React.FC = () => {
                 onClick={handleSaveNote}
                 className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-xl text-xs transition-colors shrink-0"
               >
-                {language === 'hi' ? 'जोड़ें' : 'Add Note'}
+                {language === 'hi' ? websiteText("जोड़ें") : websiteText("Add Note")}
               </button>
             </div>
 
@@ -475,7 +479,7 @@ export const YouTubeLearner: React.FC = () => {
                     className="text-xs bg-white p-2 rounded-lg border border-amber-200 text-stone-700 flex items-center justify-between"
                   >
                     <span>• {n}</span>
-                    <span className="text-[10px] text-stone-400">Just now</span>
+                    <span className="text-[10px] text-stone-400"><WebsiteText original={"Just now"} /></span>
                   </div>
                 ))}
               </div>
@@ -487,9 +491,9 @@ export const YouTubeLearner: React.FC = () => {
         <div className="space-y-3">
           <div className="flex items-center justify-between text-xs font-bold text-stone-800 border-b border-stone-100 pb-2">
             <span>
-              {language === 'hi' ? 'सर्च परिणाम' : 'Search Results'} ({displayedVideos.length})
+              {language === 'hi' ? websiteText("सर्च परिणाम") : websiteText("Search Results")} ({displayedVideos.length})
             </span>
-            <span className="text-[10px] text-orange-600 font-semibold">{selectedClass}</span>
+            <span className="text-[10px] text-orange-600 font-semibold">{optionLabel(config.classes,selectedClass,language)}</span>
           </div>
 
           {/* If No Match in Local Library, Provide 1-Click Search YouTube Online */}
@@ -498,10 +502,10 @@ export const YouTubeLearner: React.FC = () => {
               <Compass className="w-8 h-8 text-orange-600 mx-auto" />
               <div>
                 <h4 className="text-xs font-bold text-stone-800">
-                  {language === 'hi' ? 'यहाँ सर्च परिणाम दिखेंगे' : 'Search results will appear here'}
+                  {language === 'hi' ? websiteText("यहाँ सर्च परिणाम दिखेंगे") : websiteText("Search results will appear here")}
                 </h4>
                 <p className="text-[11px] text-stone-500 mt-1">
-                  "{searchTerm}" {language === 'hi' ? 'के लिए इसी पोर्टल पर खोजें:' : 'Search within Sankatmochansaarthi:'}
+                  "{searchTerm}" {language === 'hi' ? websiteText("के लिए इसी पोर्टल पर खोजें:") : websiteText("Search within Sankatmochansaarthi:")}
                 </p>
               </div>
 
@@ -509,7 +513,7 @@ export const YouTubeLearner: React.FC = () => {
                 onClick={() => { document.querySelector<HTMLFormElement>('form')?.requestSubmit(); }}
                 className="w-full py-2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl shadow-xs flex items-center justify-center gap-1.5 transition-colors"
               >
-                <span>{language === 'hi' ? 'यहाँ खोजें / दोबारा कोशिश करें' : 'Search here / Retry'}</span>
+                <span>{language === 'hi' ? websiteText("यहाँ खोजें / दोबारा कोशिश करें") : websiteText("Search here / Retry")}</span>
                 <ExternalLink className="w-3.5 h-3.5" />
               </button>
 
@@ -517,7 +521,7 @@ export const YouTubeLearner: React.FC = () => {
                 onClick={() => setSearchTerm('')}
                 className="text-[11px] text-stone-500 hover:text-stone-800 underline block mx-auto"
               >
-                {language === 'hi' ? 'सभी वीडियो वापस देखें' : 'View all videos'}
+                {language === 'hi' ? websiteText("सभी वीडियो वापस देखें") : websiteText("View all videos")}
               </button>
             </div>
           ) : (
@@ -531,8 +535,8 @@ export const YouTubeLearner: React.FC = () => {
                     onClick={() => setActiveVideo(vid)}
                     className={`cursor-pointer rounded-xl p-2 transition-all flex gap-3 group ${
                       isPlaying
-                        ? 'bg-orange-100/80 border-2 border-orange-400 shadow-xs'
-                        : 'hover:bg-stone-50 border border-stone-200'
+                        ? "bg-orange-100/80 border-2 border-orange-400 shadow-xs"
+                        : "hover:bg-stone-50 border border-stone-200"
                     }`}
                   >
                     {/* Thumbnail with duration badge */}
@@ -556,7 +560,7 @@ export const YouTubeLearner: React.FC = () => {
                     <div className="flex-1 min-w-0 flex flex-col justify-center">
                       <h5
                         className={`text-xs font-bold line-clamp-2 leading-tight ${
-                          isPlaying ? 'text-orange-950 font-extrabold' : 'text-stone-800'
+                          isPlaying ? "text-orange-950 font-extrabold" : "text-stone-800"
                         }`}
                       >
                         {language === 'hi' && vid.hindiTitle ? vid.hindiTitle : vid.title}
@@ -580,7 +584,7 @@ export const YouTubeLearner: React.FC = () => {
                 >
                   <Search className="w-3.5 h-3.5 text-red-600" />
                   <span>
-                    {language === 'hi' ? 'दोबारा खोजें' : 'Retry search'}
+                    {language === 'hi' ? websiteText("दोबारा खोजें") : websiteText("Retry search")}
                   </span>
                   <ExternalLink className="w-3 h-3 text-stone-400" />
                 </button>

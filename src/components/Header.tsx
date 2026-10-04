@@ -1,3 +1,7 @@
+import { optionLabel } from '../services/websiteConfig';
+import { WebsiteText } from '../context/WebsiteContext';
+import { useWebsite } from '../context/WebsiteContext';
+import { activeOptions } from '../services/websiteConfig';
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useCurriculum } from '../context/CurriculumContext';
@@ -16,6 +20,7 @@ import {
 } from 'lucide-react';
 
 export const Header: React.FC = () => {
+  const { config, text: websiteText } = useWebsite();
   const { user, profile, isAdmin, openAuthModal, signOut } = useAuth();
   const {
     setActiveTab,
@@ -54,16 +59,13 @@ export const Header: React.FC = () => {
         <div className="flex order-last w-full flex-wrap items-center gap-2 bg-amber-50/70 border border-orange-200 px-2 py-1 rounded-xl">
           {/* Class Select */}
           <div className="flex items-center gap-1 text-xs">
-            <span className="text-stone-500 font-medium">Class:</span>
+            <span className="text-stone-500 font-medium"><WebsiteText original={"Class:"} /></span>
             <select
               value={selectedClass}
               onChange={(e) => setSelectedClass(e.target.value as ClassGrade)}
               className="bg-transparent font-bold text-orange-900 outline-none cursor-pointer"
             >
-              <option value="Class 9">Class IX</option>
-              <option value="Class 10">Class X</option>
-              <option value="Class 11">Class XI</option>
-              <option value="Class 12">Class XII</option>
+              {activeOptions(config.classes).map(x => <option key={x.id} value={x.id}>{language === 'hi' ? x.hindiLabel || x.label : x.label}</option>)}
             </select>
           </div>
 
@@ -73,16 +75,13 @@ export const Header: React.FC = () => {
           {(selectedClass === 'Class 11' || selectedClass === 'Class 12') && (
             <>
               <div className="flex items-center gap-1 text-xs">
-                <span className="text-stone-500 font-medium">Stream:</span>
+                <span className="text-stone-500 font-medium"><WebsiteText original={"Stream:"} /></span>
                 <select
                   value={selectedStream}
                   onChange={(e) => setSelectedStream(e.target.value as StreamType)}
                   className="bg-transparent font-bold text-orange-900 outline-none cursor-pointer"
                 >
-                  <option value="General">General</option>
-                  <option value="Science">Science</option>
-                  <option value="Commerce">Commerce</option>
-                  <option value="Humanities">Humanities</option>
+                  {activeOptions(config.streams).map(x => <option key={x.id} value={x.id}>{language === 'hi' ? x.hindiLabel || x.label : x.label}</option>)}
                 </select>
               </div>
               <div className="h-4 w-px bg-orange-200" />
@@ -91,15 +90,15 @@ export const Header: React.FC = () => {
 
           {/* Board Select */}
           <div className="flex items-center gap-1 text-xs">
-            <span className="text-stone-500 font-medium">Board:</span>
+            <span className="text-stone-500 font-medium"><WebsiteText original={"Board:"} /></span>
             <select
               value={selectedBoard}
               onChange={(e) => setSelectedBoard(e.target.value as BoardType)}
               className="bg-transparent font-bold text-orange-900 outline-none cursor-pointer"
             >
-              {SUPPORTED_BOARDS.map((b) => (
+              {activeOptions(config.boards).map((b) => (
                 <option key={b.id} value={b.id}>
-                  {b.id}
+                  {language === 'hi' ? b.hindiLabel || b.label : b.label}
                 </option>
               ))}
             </select>
@@ -109,7 +108,7 @@ export const Header: React.FC = () => {
 
           {/* Subject Select */}
           <div className="flex items-center gap-1 text-xs">
-            <span className="text-stone-500 font-medium">Subject:</span>
+            <span className="text-stone-500 font-medium"><WebsiteText original={"Subject:"} /></span>
             <select
               value={selectedSubject?.id || ''}
               onChange={(e) => {
@@ -120,7 +119,7 @@ export const Header: React.FC = () => {
               }}
               className="max-w-[150px] bg-transparent font-bold text-orange-900 outline-none cursor-pointer"
             >
-              <option value="" disabled>Select</option>
+              <option value="" disabled><WebsiteText original={"Select"} /></option>
               {availableSubjects.map(subject => (
                 <option key={subject.id} value={subject.id}>{subject.name}</option>
               ))}
@@ -131,7 +130,7 @@ export const Header: React.FC = () => {
 
           {/* Topic Select: chapter/full chapter or an available topic */}
           <div className="flex items-center gap-1 text-xs">
-            <span className="text-stone-500 font-medium">Topic:</span>
+            <span className="text-stone-500 font-medium"><WebsiteText original={"Topic:"} /></span>
             <select
               value={selectedTopic?.id || (selectedChapter ? `chapter:${selectedChapter.id}` : '')}
               onChange={(e) => {
@@ -154,10 +153,10 @@ export const Header: React.FC = () => {
               disabled={!selectedSubject || selectedSubject.chapters.length === 0}
               className="max-w-[180px] bg-transparent font-bold text-orange-900 outline-none cursor-pointer disabled:opacity-50"
             >
-              {!selectedSubject?.chapters.length && <option value="">No topics</option>}
+              {!selectedSubject?.chapters.length && <option value=""><WebsiteText original={"No topics"} /></option>}
               {selectedSubject?.chapters.map(ch => (
                 <React.Fragment key={ch.id}>
-                  <option value={`chapter:${ch.id}`}>{ch.title} — Full Chapter</option>
+                  <option value={`chapter:${ch.id}`}>{ch.title}<WebsiteText original={" — Full Chapter"} /></option>
                   {ch.topics.map(topic => (
                     <option key={topic.id} value={topic.id}>{ch.title} — {topic.title}</option>
                   ))}
@@ -173,10 +172,10 @@ export const Header: React.FC = () => {
           <button
             onClick={toggleLanguage}
             className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold rounded-lg border border-orange-200 bg-amber-50/60 hover:bg-orange-100/70 text-orange-900 transition-colors"
-            title="Switch Language / भाषा बदलें"
+            title={websiteText("Switch Language / भाषा बदलें")}
           >
             <Languages className="w-3.5 h-3.5 text-orange-600" />
-            <span>{language === 'en' ? 'हिन्दी' : 'English'}</span>
+            <span>{language === 'en' ? websiteText("हिन्दी") : websiteText("English")}</span>
           </button>
 
           {/* Authentication Section: Student Sign Up/In & Admin Login placed TOGETHER */}
@@ -185,7 +184,7 @@ export const Header: React.FC = () => {
               {/* Study Streak Badge */}
               <div className="hidden sm:flex items-center gap-1 bg-gradient-to-r from-amber-100 to-orange-100 border border-amber-300 text-orange-800 px-2 py-1 rounded-lg text-xs font-bold shadow-xs">
                 <Flame className="w-3.5 h-3.5 text-orange-600 animate-pulse" />
-                <span>{profile.studyStreakDays || 1}d Streak</span>
+                <span>{profile.studyStreakDays || 1}<WebsiteText original={"d Streak"} /></span>
               </div>
 
               {/* User Profile Capsule */}
@@ -200,17 +199,16 @@ export const Header: React.FC = () => {
                   <div className="text-[10px] text-orange-600 font-semibold flex items-center gap-1">
                     {profile.role === 'admin' ? (
                       <span className="text-red-600 flex items-center gap-0.5">
-                        <ShieldCheck className="w-3 h-3" /> Admin
-                      </span>
+                        <ShieldCheck className="w-3 h-3" /><WebsiteText original={" Admin"} /></span>
                     ) : (
-                      <span>Student ({selectedClass})</span>
+                      <span><WebsiteText original={"Student ("} />{optionLabel(config.classes,selectedClass,language)})</span>
                     )}
                   </div>
                 </div>
                 <button
                   onClick={signOut}
                   className="p-1.5 text-stone-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors"
-                  title="Logout"
+                  title={websiteText("Logout")}
                 >
                   <LogOut className="w-4 h-4" />
                 </button>
@@ -225,7 +223,7 @@ export const Header: React.FC = () => {
               >
                 <GraduationCap className="w-3.5 h-3.5" />
                 <span className="whitespace-nowrap">
-                  {language === 'hi' ? 'छात्र प्रवेश' : 'Student Sign In'}
+                  {language === 'hi' ? websiteText("छात्र प्रवेश") : websiteText("Student Sign In")}
                 </span>
               </button>
 
@@ -236,7 +234,7 @@ export const Header: React.FC = () => {
               >
                 <ShieldCheck className="w-3.5 h-3.5 text-amber-200" />
                 <span className="whitespace-nowrap">
-                  {language === 'hi' ? 'प्रशासक लॉगिन' : 'Admin Login'}
+                  {language === 'hi' ? websiteText("प्रशासक लॉगिन") : websiteText("Admin Login")}
                 </span>
               </button>
             </div>

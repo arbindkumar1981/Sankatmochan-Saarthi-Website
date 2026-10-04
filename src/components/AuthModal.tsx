@@ -1,3 +1,7 @@
+import { subjectsForSelection } from '../services/adminValidation';
+import { WebsiteText } from '../context/WebsiteContext';
+import { useWebsite } from '../context/WebsiteContext';
+import { activeOptions } from '../services/websiteConfig';
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useCurriculum } from '../context/CurriculumContext';
@@ -16,6 +20,8 @@ import {
 } from 'lucide-react';
 
 export const AuthModal: React.FC = () => {
+  const { text: websiteText } = useWebsite();
+  const { config } = useWebsite();
   const {
     authModalOpen,
     authModalInitialTab,
@@ -35,16 +41,12 @@ export const AuthModal: React.FC = () => {
   const [showAllSeniorSubjects, setShowAllSeniorSubjects] = useState(false);
 
   const isSeniorClass = selectedClass === 'Class 11' || selectedClass === 'Class 12';
-  const seniorClassSubjects = curriculumSubjects.filter((sub) => sub.classes.includes(selectedClass));
-  const loginSubjects = curriculumSubjects.filter((sub) => {
-    if (!sub.classes.includes(selectedClass)) return false;
-    if (isSeniorClass) return showAllSeniorSubjects || sub.stream === selectedStream || sub.stream === 'General';
-    return sub.stream === 'General';
-  });
+  const seniorClassSubjects = curriculumSubjects.filter((sub) => sub.classes.includes(selectedClass) && (sub.board || 'CBSE') === selectedBoard);
+  const loginSubjects = subjectsForSelection(curriculumSubjects, selectedBoard, selectedClass, selectedStream, isSeniorClass && showAllSeniorSubjects);
 
   React.useEffect(() => {
     if (!loginSubjects.some(s => s.id === selectedSubjectId)) setSelectedSubjectId(loginSubjects[0]?.id || '');
-  }, [selectedClass, selectedStream, showAllSeniorSubjects, curriculumSubjects]);
+  }, [selectedBoard, selectedClass, selectedStream, showAllSeniorSubjects, curriculumSubjects]);
 
   const [adminError, setAdminError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -103,12 +105,12 @@ export const AuthModal: React.FC = () => {
             </span>
             <div>
               <h3 className="font-extrabold text-lg font-cinzel">
-                {language === 'hi' ? 'सारथी प्रवेश द्वार' : 'Saarthi Access Gateway'}
+                {language === 'hi' ? websiteText("सारथी प्रवेश द्वार") : websiteText("Saarthi Access Gateway")}
               </h3>
               <p className="text-xs text-amber-100">
                 {language === 'hi'
-                  ? 'छात्र एवं प्रशासक (Admin) प्रमाणीकरण'
-                  : 'Student & Administrative Authentication'}
+                  ? websiteText("छात्र एवं प्रशासक (Admin) प्रमाणीकरण")
+                  : websiteText("Student & Administrative Authentication")}
               </p>
             </div>
           </div>
@@ -129,12 +131,12 @@ export const AuthModal: React.FC = () => {
             }}
             className={`py-2.5 px-4 text-sm font-bold rounded-xl flex items-center justify-center gap-2 transition-all ${
               activeTab === 'student'
-                ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md'
-                : 'text-stone-600 hover:text-orange-600 hover:bg-amber-100/50'
+                ? "bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md"
+                : "text-stone-600 hover:text-orange-600 hover:bg-amber-100/50"
             }`}
           >
             <GraduationCap className="w-4 h-4" />
-            <span>{language === 'hi' ? 'छात्र साइन इन / रजिस्टर' : 'Student Sign In / Sign Up'}</span>
+            <span>{language === 'hi' ? websiteText("छात्र साइन इन / रजिस्टर") : websiteText("Student Sign In / Sign Up")}</span>
           </button>
 
           <button
@@ -144,12 +146,12 @@ export const AuthModal: React.FC = () => {
             }}
             className={`py-2.5 px-4 text-sm font-bold rounded-xl flex items-center justify-center gap-2 transition-all ${
               activeTab === 'admin'
-                ? 'bg-gradient-to-r from-red-600 to-orange-700 text-white shadow-md'
-                : 'text-stone-600 hover:text-red-700 hover:bg-amber-100/50'
+                ? "bg-gradient-to-r from-red-600 to-orange-700 text-white shadow-md"
+                : "text-stone-600 hover:text-red-700 hover:bg-amber-100/50"
             }`}
           >
             <ShieldCheck className="w-4 h-4" />
-            <span>{language === 'hi' ? 'प्रशासक (Admin) लॉगिन' : 'Admin Portal Login'}</span>
+            <span>{language === 'hi' ? websiteText("प्रशासक (Admin) लॉगिन") : websiteText("Admin Portal Login")}</span>
           </button>
         </div>
 
@@ -184,8 +186,8 @@ export const AuthModal: React.FC = () => {
                   </svg>
                   <span>
                     {language === 'hi'
-                      ? 'गूगल खाते से छात्र लॉगिन करें'
-                      : 'Continue with Google Account'}
+                      ? websiteText("गूगल खाते से छात्र लॉगिन करें")
+                      : websiteText("Continue with Google Account")}
                   </span>
                 </button>
               </div>
@@ -193,7 +195,7 @@ export const AuthModal: React.FC = () => {
               <div className="relative flex items-center justify-center">
                 <div className="border-t border-stone-200 w-full" />
                 <span className="bg-white px-3 text-xs text-stone-400 uppercase font-semibold">
-                  {language === 'hi' ? 'या त्वरित छात्र प्रवेश' : 'Or Quick Student Sign In'}
+                  {language === 'hi' ? websiteText("या त्वरित छात्र प्रवेश") : websiteText("Or Quick Student Sign In")}
                 </span>
                 <div className="border-t border-stone-200 w-full" />
               </div>
@@ -202,14 +204,14 @@ export const AuthModal: React.FC = () => {
               <form onSubmit={handleGuestStudentSubmit} className="space-y-3.5">
                 <div>
                   <label className="block text-xs font-semibold text-stone-700 mb-1">
-                    {language === 'hi' ? 'विद्यार्थी का नाम' : 'Student Full Name'} *
+                    {language === 'hi' ? websiteText("विद्यार्थी का नाम") : websiteText("Student Full Name")} *
                   </label>
                   <div className="relative">
                     <User className="w-4 h-4 absolute left-3 top-3 text-stone-400" />
                     <input
                       type="text"
                       required
-                      placeholder={language === 'hi' ? 'जैसे: अर्णव शर्मा' : 'e.g. Arbind Kumar'}
+                      placeholder={language === 'hi' ? websiteText("जैसे: अर्णव शर्मा") : websiteText("e.g. Arbind Kumar")}
                       value={studentName}
                       onChange={(e) => setStudentName(e.target.value)}
                       className="w-full pl-9 pr-3 py-2 text-sm border border-stone-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
@@ -220,32 +222,29 @@ export const AuthModal: React.FC = () => {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-semibold text-stone-700 mb-1">
-                      {language === 'hi' ? 'कक्षा (Class)' : 'Class'}
+                      {language === 'hi' ? websiteText("कक्षा (Class)") : websiteText("Class")}
                     </label>
                     <select
                       value={selectedClass}
                       onChange={(e) => setSelectedClass(e.target.value as ClassGrade)}
                       className="w-full px-3 py-2 text-sm border border-stone-300 rounded-xl bg-white focus:ring-2 focus:ring-orange-500 outline-none"
                     >
-                      <option value="Class 9">Class IX (9th)</option>
-                      <option value="Class 10">Class X (10th)</option>
-                      <option value="Class 11">Class XI (11th)</option>
-                      <option value="Class 12">Class XII (12th)</option>
+                      {activeOptions(config.classes).map(x => <option key={x.id} value={x.id}>{language === 'hi' ? x.hindiLabel || x.label : x.label}</option>)}
                     </select>
                   </div>
 
                   <div>
                     <label className="block text-xs font-semibold text-stone-700 mb-1">
-                      {language === 'hi' ? 'शिक्षा बोर्ड (Board)' : 'Board'}
+                      {language === 'hi' ? websiteText("शिक्षा बोर्ड (Board)") : websiteText("Board")}
                     </label>
                     <select
                       value={selectedBoard}
                       onChange={(e) => setSelectedBoard(e.target.value as BoardType)}
                       className="w-full px-3 py-2 text-sm border border-stone-300 rounded-xl bg-white focus:ring-2 focus:ring-orange-500 outline-none"
                     >
-                      {SUPPORTED_BOARDS.map((b) => (
+                      {activeOptions(config.boards).map((b) => (
                         <option key={b.id} value={b.id}>
-                          {b.id}
+                          {language === 'hi' ? b.hindiLabel || b.label : b.label}
                         </option>
                       ))}
                     </select>
@@ -254,9 +253,9 @@ export const AuthModal: React.FC = () => {
 
                 {(selectedClass === 'Class 11' || selectedClass === 'Class 12') && (
                   <div>
-                    <label className="block text-xs font-semibold text-stone-700 mb-1">{language === 'hi' ? 'स्ट्रीम (Stream)' : 'Stream'}</label>
+                    <label className="block text-xs font-semibold text-stone-700 mb-1">{language === 'hi' ? websiteText("स्ट्रीम (Stream)") : websiteText("Stream")}</label>
                     <select value={selectedStream} onChange={(e) => setSelectedStream(e.target.value as StreamType)} className="w-full px-3 py-2 text-sm border border-stone-300 rounded-xl bg-white focus:ring-2 focus:ring-orange-500 outline-none">
-                      <option value="Science">Science</option><option value="Commerce">Commerce</option><option value="Humanities">Humanities</option>
+                      {activeOptions(config.streams).map(x=><option key={x.id} value={x.id}>{language === 'hi' ? x.hindiLabel || x.label : x.label}</option>)}
                     </select>
                   </div>
                 )}
@@ -264,15 +263,15 @@ export const AuthModal: React.FC = () => {
                 {isSeniorClass && (
                   <label className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50/70 px-3 py-2 text-xs text-stone-700">
                     <input type="checkbox" checked={showAllSeniorSubjects} onChange={(e) => setShowAllSeniorSubjects(e.target.checked)} className="accent-orange-600" />
-                    <span>{language === 'hi' ? 'अन्य / वैकल्पिक विषय भी दिखाएँ' : 'Show other / optional subjects too'}</span>
-                    <span className="ml-auto text-[10px] text-stone-500">{seniorClassSubjects.length} available</span>
+                    <span>{language === 'hi' ? websiteText("अन्य / वैकल्पिक विषय भी दिखाएँ") : websiteText("Show other / optional subjects too")}</span>
+                    <span className="ml-auto text-[10px] text-stone-500">{seniorClassSubjects.length}<WebsiteText original={" available"} /></span>
                   </label>
                 )}
 
                 <div>
-                  <label className="block text-xs font-semibold text-stone-700 mb-1">{language === 'hi' ? 'विषय चुनें (Subject)' : 'Select Subject'}</label>
+                  <label className="block text-xs font-semibold text-stone-700 mb-1">{language === 'hi' ? websiteText("विषय चुनें (Subject)") : websiteText("Select Subject")}</label>
                   <select required value={selectedSubjectId} onChange={(e) => setSelectedSubjectId(e.target.value)} className="w-full px-3 py-2 text-sm border border-stone-300 rounded-xl bg-white focus:ring-2 focus:ring-orange-500 outline-none">
-                    {loginSubjects.length ? loginSubjects.map(sub => <option key={sub.id} value={sub.id}>{language === 'hi' ? sub.hindiName : sub.name}{sub.officialCode ? ` (${sub.officialCode})` : ''}</option>) : <option value="">No subject available</option>}
+                    {loginSubjects.length ? loginSubjects.map(sub => <option key={sub.id} value={sub.id}>{language === 'hi' ? sub.hindiName : sub.name}{sub.officialCode ? ` (${sub.officialCode})` : ''}</option>) : <option value=""><WebsiteText original={"No subject available"} /></option>}
                   </select>
                 </div>
 
@@ -282,7 +281,7 @@ export const AuthModal: React.FC = () => {
                 >
                   <LogIn className="w-4 h-4" />
                   <span>
-                    {language === 'hi' ? 'अध्ययन प्रारंभ करें' : 'Start Learning with Saarthi'}
+                    {language === 'hi' ? websiteText("अध्ययन प्रारंभ करें") : websiteText("Start Learning with Saarthi")}
                   </span>
                 </button>
               </form>
@@ -291,8 +290,8 @@ export const AuthModal: React.FC = () => {
                 <CheckCircle2 className="w-4 h-4 text-orange-600 shrink-0 mt-0.5" />
                 <span>
                   {language === 'hi'
-                    ? 'छात्रों के टेस्ट अंक, मिस्टेक बुक और प्रगति रिपोर्ट निजी व सुरक्षित रहते हैं।'
-                    : 'All test scores, Mistake Book records, and personal progress remain private to you.'}
+                    ? websiteText("छात्रों के टेस्ट अंक, मिस्टेक बुक और प्रगति रिपोर्ट निजी व सुरक्षित रहते हैं।")
+                    : websiteText("All test scores, Mistake Book records, and personal progress remain private to you.")}
                 </span>
               </div>
             </div>
@@ -303,8 +302,8 @@ export const AuthModal: React.FC = () => {
                 <Lock className="w-5 h-5 text-red-600 shrink-0" />
                 <p className="text-xs text-red-900 leading-relaxed">
                   {language === 'hi'
-                    ? 'प्रशासकीय नियंत्रण कक्ष: पाठ्यक्रम, सामग्री अनुमोदन, टेस्ट, वीडियो, नोटिस एवं छात्र प्रबंधन।'
-                    : 'Administrative Control: Full authorization to manage curriculum, publish notes, tests, videos, circulars, and student records.'}
+                    ? websiteText("प्रशासकीय नियंत्रण कक्ष: पाठ्यक्रम, सामग्री अनुमोदन, टेस्ट, वीडियो, नोटिस एवं छात्र प्रबंधन।")
+                    : websiteText("Administrative Control: Full authorization to manage curriculum, publish notes, tests, videos, circulars, and student records.")}
                 </p>
               </div>
 
@@ -315,12 +314,12 @@ export const AuthModal: React.FC = () => {
                 className="w-full py-2.5 px-4 border border-stone-300 rounded-xl font-semibold text-stone-700 bg-white hover:bg-stone-50 hover:border-red-500 flex items-center justify-center gap-3 shadow-sm transition-all text-sm"
               >
                 <ShieldCheck className="w-5 h-5 text-red-600" />
-                <span>Sign In as Admin via Google (principal.a.kumar@gmail.com)</span>
+                <span><WebsiteText original={"Sign In as Admin via Google (principal.a.kumar@gmail.com)"} /></span>
               </button>
 
               {adminError && (
                 <div role="alert" className="text-xs text-red-700 bg-red-50 border border-red-200 p-3 rounded-lg break-words">
-                  <strong>Google sign-in failed:</strong> {adminError}
+                  <strong><WebsiteText original={"Google sign-in failed:"} /></strong> {adminError}
                 </div>
               )}
 

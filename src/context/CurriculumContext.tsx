@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import {
   BoardType,
   ClassGrade,
@@ -20,21 +20,23 @@ import {
   INITIAL_LEARNING_CONTENTS,
   INITIAL_YOUTUBE_VIDEOS,
   INITIAL_TESTS,
-  INITIAL_NOTICES,
-  BABA_IMAGE_URL
+  INITIAL_NOTICES
 } from '../data/defaultCurriculum';
 import { db, handleFirestoreError, OperationType } from '../services/firebase';
 import { saveCanonicalContent } from '../services/contentLibrary';
 import {
   collection,
   setDoc,
-  deleteDoc,
   doc,
   query,
   where,
-  onSnapshot
+  onSnapshot,
+  runTransaction
 } from 'firebase/firestore';
 import { useAuth } from './AuthContext';
+import { useWebsite } from './WebsiteContext';
+import { activeOptions } from '../services/websiteConfig';
+import { validateSubject, subjectsForSelection, mergeCurriculum, validateAdminRecord, assetMarker, assetVisibility } from '../services/adminValidation';
 
 export type MainTabType =
   | 'learning'
@@ -43,7 +45,8 @@ export type MainTabType =
   | 'evaluation'
   | 'about'
   | 'contact'
-  | 'admin';
+  | 'admin'
+  | `page:${string}`;
 
 interface CurriculumContextType {
   activeTab: MainTabType;
@@ -74,8 +77,9 @@ interface CurriculumContextType {
 
   availableSubjects: SubjectMeta[];
   curriculumSubjects: SubjectMeta[];
+  allCurriculumSubjects: SubjectMeta[];
+  deletedAssetIds: Set<string>;
   saveCurriculumSubject: (subject: SubjectMeta) => Promise<void>;
-  deleteCurriculumSubject: (subjectId: string) => Promise<void>;
   learningContents: LearningContent[];
   youtubeVideos: YouTubeVideoItem[];
   evaluationTests: EvaluationTest[];
@@ -84,14 +88,12 @@ interface CurriculumContextType {
   mistakeRecords: MistakeRecord[];
 
   babaImageUrl: string;
-  setBabaImageUrl: (url: string) => void;
 
   // Actions
   saveTestResult: (result: Omit<TestResult, 'id'>) => Promise<string>;
   updateMistakeStatus: (mistakeId: string, status: 'pending' | 'reviewed' | 'mastered') => Promise<void>;
   addNewLearningContent: (content: Omit<LearningContent, 'id'>) => Promise<void>;
   updateContentApproval: (contentId: string, approved: boolean, published: boolean) => Promise<void>;
-  deleteLearningContent: (contentId: string) => Promise<void>;
   addNewTest: (test: Omit<EvaluationTest, 'id'>) => Promise<void>;
   addNewVideo: (video: Omit<YouTubeVideoItem, 'id'>) => Promise<void>;
   addNewNotice: (notice: Omit<NoticeItem, 'id'>) => Promise<void>;
@@ -101,6 +103,7 @@ const CurriculumContext = createContext<CurriculumContextType | undefined>(undef
 
 export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, profile, isAdmin } = useAuth();
+  const { config } = useWebsite();
 
   const [activeTab, setActiveTab] = useState<MainTabType>('learning');
   const [activeModule, setActiveModule] = useState<ContentModuleType>('detailed_notes');
@@ -112,72 +115,41 @@ export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [language, setLanguage] = useState<Language>(profile?.preferredLanguage || 'en');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Custom Baba Photo URL with authentic fallback
-  const [babaImageUrl, setBabaImageUrlState] = useState<string>(() => {
-    const stored = localStorage.getItem('saarthi_baba_photo_url');
-    if (!stored || stored.includes('unsplash.com') || stored.includes('wikipedia')) {
-      localStorage.setItem('saarthi_baba_photo_url', BABA_IMAGE_URL);
-      return BABA_IMAGE_URL;
-    }
-    return stored;
-  });
-
-  const setBabaImageUrl = (url: string) => {
-    setBabaImageUrlState(url);
-    localStorage.setItem('saarthi_baba_photo_url', url);
-  };
+  const babaImageUrl = config.babaImageUrl;
 
   const toggleLanguage = () => {
     setLanguage(prev => (prev === 'en' ? 'hi' : 'en'));
   };
 
   // Admin-editable curriculum: Firestore overrides the bundled NCERT/CBSE seed.
-  const [curriculumSubjects, setCurriculumSubjects] = useState<SubjectMeta[]>(ALL_SUBJECTS);
+  const [allCurriculumSubjects, setCurriculumSubjects] = useState<SubjectMeta[]>(ALL_SUBJECTS);
+  const curriculumSubjects = useMemo(() => allCurriculumSubjects.filter(s => !s.deleted), [allCurriculumSubjects]);
+  const [deletedAssetIds, setDeletedAssetIds] = useState<Set<string>>(new Set());
+  const [hiddenAssetIds, setHiddenAssetIds] = useState<Set<string>>(new Set());
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'curriculum_nodes'), snap => {
-      const overrides = new Map<string, SubjectMeta>();
-      snap.forEach(d => {
-        const data = d.data();
-        if (data.kind === 'subject' && data.subject && !data.deleted) overrides.set(data.subject.id, data.subject as SubjectMeta);
-      });
-      const deletedIds = new Set<string>();
-      snap.forEach(d => { const data = d.data(); if (data.kind === 'subject' && data.deleted) deletedIds.add(d.id); });
-      setCurriculumSubjects(ALL_SUBJECTS.filter(s => !deletedIds.has(s.id)).map(seed => {
-        const override = overrides.get(seed.id);
-        if (!override) return seed;
-        // Preserve current bundled chapters when an older Firestore override only changed subject metadata.
-        // An explicit non-empty chapter list remains authoritative for admin curriculum edits.
-        return {
-          ...seed,
-          ...override,
-          chapters: override.chapters?.length ? override.chapters : seed.chapters
-        };
-      }).concat([...overrides.values()].filter(s => !ALL_SUBJECTS.some(seed => seed.id === s.id) && !deletedIds.has(s.id))));
+      const documents = snap.docs.map(d => ({ id: d.id, data: d.data() }));
+      setDeletedAssetIds(new Set(documents.filter(d => d.data.kind === 'asset_visibility' && d.data.deleted).map(d => `${d.data.collection}/${d.data.assetId}`)));
+      setHiddenAssetIds(new Set(documents.filter(d => d.data.kind === 'asset_visibility' && (d.data.deleted || d.data.hidden)).map(d => `${d.data.collection}/${d.data.assetId}`)));
+      setCurriculumSubjects(mergeCurriculum(ALL_SUBJECTS, documents));
     }, err => console.warn('Curriculum sync fallback:', err.message));
     return () => unsub();
   }, []);
 
   const saveCurriculumSubject = async (subject: SubjectMeta) => {
     requireAdmin();
-    await setDoc(doc(db, 'curriculum_nodes', subject.id), { kind: 'subject', subject, updatedAt: new Date().toISOString() });
-    setCurriculumSubjects(prev => prev.some(s => s.id === subject.id) ? prev.map(s => s.id === subject.id ? subject : s) : [...prev, subject]);
+    validateSubject(subject);
+    const saved = { ...subject, revision: (subject.revision || 0) + 1 };
+    await runTransaction(db, async transaction => {
+      const reference = doc(db, 'curriculum_nodes', subject.id);
+      const current = await transaction.get(reference);
+      if (Number(current.data()?.subject?.revision || 0) !== (subject.revision || 0)) throw new Error('Another admin changed this subject. Select it again before saving.');
+      transaction.set(reference, { kind: 'subject', subject: JSON.parse(JSON.stringify(saved)), deleted: subject.deleted || false, chaptersExplicit: true, updatedAt: new Date().toISOString() });
+    });
+    setCurriculumSubjects(prev => prev.some(s => s.id === subject.id) ? prev.map(s => s.id === subject.id ? saved : s) : [...prev, saved]);
   };
-  const deleteCurriculumSubject = async (subjectId: string) => {
-    requireAdmin();
-    await setDoc(doc(db, 'curriculum_nodes', subjectId), { kind: 'subject', deleted: true, updatedAt: new Date().toISOString() });
-    setCurriculumSubjects(prev => prev.filter(s => s.id !== subjectId));
-  };
-
   // Filter subjects for the chosen class and stream
-  const availableSubjects = curriculumSubjects.filter((sub) => {
-    const classMatch = sub.classes.includes(selectedClass);
-    if (!classMatch) return false;
-    if (selectedClass === 'Class 11' || selectedClass === 'Class 12') {
-      if (sub.stream === 'General') return true;
-      return sub.stream === selectedStream;
-    }
-    return true;
-  });
+  const availableSubjects = useMemo(() => subjectsForSelection(curriculumSubjects, selectedBoard, selectedClass, selectedStream), [curriculumSubjects, selectedBoard, selectedClass, selectedStream]);
 
   const [selectedSubject, setSelectedSubject] = useState<SubjectMeta | null>(() => {
     return availableSubjects.find(s => s.id === 'c10-science') || availableSubjects[0] || null;
@@ -192,7 +164,9 @@ export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   // When class or stream changes, update selected subject if not available
   useEffect(() => {
     if (availableSubjects.length > 0) {
-      const stillValid = availableSubjects.some(s => s.id === selectedSubject?.id);
+      const current = availableSubjects.find(s => s.id === selectedSubject?.id);
+      const stillValid = Boolean(current);
+      if (current && JSON.stringify(current) !== JSON.stringify(selectedSubject)) setSelectedSubject(current);
       if (!stillValid) {
         const nextSub = availableSubjects[0];
         setSelectedSubject(nextSub);
@@ -202,18 +176,11 @@ export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       return;
     }
 
-    // Class XI/XII profiles created before stream selection can carry "General".
-    // Normalize that stale value so the subject list never becomes empty.
-    if ((selectedClass === 'Class 11' || selectedClass === 'Class 12') && selectedStream === 'General') {
-      setSelectedStream('Science');
-      return;
-    }
-
     // Never leave a stale subject/chapter visible when the active class/stream has no match.
     setSelectedSubject(null);
     setSelectedChapter(null);
     setSelectedTopic(null);
-  }, [selectedClass, selectedStream, curriculumSubjects, selectedSubject?.id]);
+  }, [selectedBoard, selectedClass, selectedStream, allCurriculumSubjects, selectedSubject?.id]);
 
   // When selectedSubject changes, reset selected chapter to its first chapter
   useEffect(() => {
@@ -223,8 +190,22 @@ export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         setSelectedChapter(selectedSubject.chapters[0]);
         setSelectedTopic(null);
       }
-    }
-  }, [selectedSubject, selectedChapter?.id]);
+    } else { setSelectedChapter(null); setSelectedTopic(null); }
+    const currentChapter = selectedSubject?.chapters.find(c => c.id === selectedChapter?.id);
+    if (currentChapter && JSON.stringify(currentChapter) !== JSON.stringify(selectedChapter)) setSelectedChapter(currentChapter);
+    const currentTopic = currentChapter?.topics.find(t => t.id === selectedTopic?.id);
+    if (selectedTopic && !currentTopic) setSelectedTopic(null);
+    else if (currentTopic && JSON.stringify(currentTopic) !== JSON.stringify(selectedTopic)) setSelectedTopic(currentTopic);
+  }, [selectedSubject, selectedChapter?.id, selectedTopic?.id]);
+
+  useEffect(() => {
+    const boards = activeOptions(config.boards), classes = activeOptions(config.classes), streams = activeOptions(config.streams);
+    if (!boards.some(x => x.id === selectedBoard)) setSelectedBoard(boards[0].id);
+    if (!classes.some(x => x.id === selectedClass)) setSelectedClass(classes[0].id);
+    if (!streams.some(x => x.id === selectedStream)) setSelectedStream(streams[0].id);
+    if (!config.modules.some(x => x.id === activeModule && !x.deleted)) setActiveModule(activeOptions(config.modules)[0].id as ContentModuleType);
+    if (activeTab !== 'admin' && !config.navigation.some(x => x.id === activeTab && !x.deleted) && !config.pages.some(x => `page:${x.id}` === activeTab && !x.deleted)) setActiveTab((activeOptions(config.navigation)[0]?.id || `page:${config.pages.find(x => !x.deleted)?.id || ''}`) as MainTabType);
+  }, [config, selectedBoard, selectedClass, selectedStream, activeModule, activeTab]);
 
   // Content States
   const [learningContents, setLearningContents] = useState<LearningContent[]>(INITIAL_LEARNING_CONTENTS);
@@ -244,7 +225,7 @@ export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       const unsub = onSnapshot(
         q,
         (snapshot) => {
-          if (!snapshot.empty) {
+          {
             const remoteContents: LearningContent[] = [];
             snapshot.forEach((d) => {
               remoteContents.push({ id: d.id, ...d.data() } as LearningContent);
@@ -467,36 +448,29 @@ export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const updateContentApproval = async (contentId: string, approved: boolean, published: boolean) => {
     requireAdmin();
-    setLearningContents(prev =>
-      prev.map(c => (c.id === contentId ? { ...c, approved, published } : c))
-    );
-    if (user && !user.isAnonymous) {
-      try {
-        await setDoc(doc(db, 'learning_contents', contentId), { approved, published }, { merge: true });
-      } catch (err) {
-        handleFirestoreError(err, OperationType.UPDATE, `learning_contents/${contentId}`);
-      }
-    }
-  };
-
-  const deleteLearningContent = async (contentId: string) => {
-    requireAdmin();
-    try {
-      await deleteDoc(doc(db, 'learning_contents', contentId));
-      setLearningContents(prev => prev.filter(c => c.id !== contentId));
-    } catch (err) {
-      handleFirestoreError(err, OperationType.DELETE, `learning_contents/${contentId}`);
-    }
+    if (published && !approved) throw new Error('Approve content before publishing.');
+    const item = learningContents.find(x=>x.id===contentId);
+    if (!item || deletedAssetIds.has(`learning_contents/${contentId}`)) throw new Error('Restore deleted content in the manager first.');
+    const marker = await assetMarker('learning_contents',contentId);
+    await runTransaction(db,async transaction=>{
+      const reference=doc(db,'learning_contents',contentId);
+      const current=await transaction.get(reference);
+      if(current.exists() && (current.data()?.deleted || current.data()?.updatedAt!==item.updatedAt)) throw new Error('This item changed. Reload before changing approval.');
+      const saved={...item,...current.data(),approved,published,updatedAt:new Date().toISOString()};
+      transaction.set(reference,JSON.parse(JSON.stringify(saved)));
+      transaction.set(doc(db,'curriculum_nodes',marker),assetVisibility('learning_contents',saved));
+    });
   };
 
   const addNewTest = async (test: Omit<EvaluationTest, 'id'>) => {
     requireAdmin();
-    const id = 'test-' + Math.random().toString(36).substring(2, 9);
+    const id = 'test-' + crypto.randomUUID();
     const item: EvaluationTest = { ...test, id };
-    setEvaluationTests(prev => [item, ...prev]);
     if (user && !user.isAnonymous) {
       try {
-        await setDoc(doc(db, 'tests', id), item);
+        validateAdminRecord('tests', item);
+        await setDoc(doc(db, 'tests', id), JSON.parse(JSON.stringify(item)));
+        setEvaluationTests(prev => [item, ...prev]);
       } catch (err) {
         handleFirestoreError(err, OperationType.CREATE, `tests/${id}`);
       }
@@ -505,12 +479,13 @@ export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const addNewVideo = async (video: Omit<YouTubeVideoItem, 'id'>) => {
     requireAdmin();
-    const id = 'vid-' + Math.random().toString(36).substring(2, 9);
+    const id = 'vid-' + crypto.randomUUID();
     const item: YouTubeVideoItem = { ...video, id };
-    setYoutubeVideos(prev => [item, ...prev]);
     if (user && !user.isAnonymous) {
       try {
-        await setDoc(doc(db, 'youtube_videos', id), item);
+        validateAdminRecord('youtube_videos', item);
+        await setDoc(doc(db, 'youtube_videos', id), JSON.parse(JSON.stringify(item)));
+        setYoutubeVideos(prev => [item, ...prev]);
       } catch (err) {
         handleFirestoreError(err, OperationType.CREATE, `youtube_videos/${id}`);
       }
@@ -519,12 +494,13 @@ export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   const addNewNotice = async (notice: Omit<NoticeItem, 'id'>) => {
     requireAdmin();
-    const id = 'notice-' + Math.random().toString(36).substring(2, 9);
+    const id = 'notice-' + crypto.randomUUID();
     const item: NoticeItem = { ...notice, id };
-    setNotices(prev => [item, ...prev]);
     if (user && !user.isAnonymous) {
       try {
-        await setDoc(doc(db, 'notices', id), item);
+        validateAdminRecord('notices', item);
+        await setDoc(doc(db, 'notices', id), JSON.parse(JSON.stringify(item)));
+        setNotices(prev => [item, ...prev]);
       } catch (err) {
         handleFirestoreError(err, OperationType.CREATE, `notices/${id}`);
       }
@@ -557,21 +533,20 @@ export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         setSearchQuery,
         availableSubjects,
         curriculumSubjects,
+        allCurriculumSubjects,
+        deletedAssetIds,
         saveCurriculumSubject,
-        deleteCurriculumSubject,
-        learningContents,
-        youtubeVideos,
-        evaluationTests,
-        notices,
+        learningContents: isAdmin ? learningContents : learningContents.filter(x => x.approved && x.published && !hiddenAssetIds.has(`learning_contents/${x.id}`)),
+        youtubeVideos: isAdmin ? youtubeVideos : youtubeVideos.filter(x => x.approved && x.published && !hiddenAssetIds.has(`youtube_videos/${x.id}`)),
+        evaluationTests: isAdmin ? evaluationTests : evaluationTests.filter(x => x.approved && x.published && !hiddenAssetIds.has(`tests/${x.id}`)),
+        notices: isAdmin ? notices : notices.filter(x => x.active && !hiddenAssetIds.has(`notices/${x.id}`)),
         testResults,
         mistakeRecords,
         babaImageUrl,
-        setBabaImageUrl,
         saveTestResult,
         updateMistakeStatus,
         addNewLearningContent,
         updateContentApproval,
-        deleteLearningContent,
         addNewTest,
         addNewVideo,
         addNewNotice
