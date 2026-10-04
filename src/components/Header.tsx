@@ -50,8 +50,8 @@ export const Header: React.FC = () => {
           className="w-40 sm:w-52 md:w-60 shrink-0"
         />
 
-        {/* Board & Class Quick Controls (Desktop / Tablet) */}
-        <div className="hidden lg:flex order-last w-full flex-wrap items-center gap-2 bg-amber-50/70 border border-orange-200 px-2 py-1 rounded-xl">
+        {/* Curriculum controls wrap on mobile as well as desktop. */}
+        <div className="flex order-last w-full flex-wrap items-center gap-2 bg-amber-50/70 border border-orange-200 px-2 py-1 rounded-xl">
           {/* Class Select */}
           <div className="flex items-center gap-1 text-xs">
             <span className="text-stone-500 font-medium">Class:</span>
