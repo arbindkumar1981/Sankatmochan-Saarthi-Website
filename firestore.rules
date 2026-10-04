@@ -52,7 +52,8 @@ service cloud.firestore {
     // Curriculum Nodes Collection
     match /curriculum_nodes/{nodeId} {
       allow read: if true;
-      allow write: if isAdmin() && isValidId(nodeId);
+      allow write: if isAdmin() && (isValidId(nodeId) ||
+        (nodeId.size() <= 128 && nodeId.matches('^cbse-class (11|12)-[a-z0-9_\\-]+$')));
     }
 
     // Learning Contents Collection
