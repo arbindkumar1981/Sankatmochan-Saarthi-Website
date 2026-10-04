@@ -3,7 +3,10 @@ import type { SubjectMeta, BoardType, ClassGrade, StreamType } from '../types';
 export function validateSubject(subject: SubjectMeta): SubjectMeta {
   const ids = new Set<string>();
   const identity = (id: string) => {
-    if (typeof id !== 'string' || !/^[a-zA-Z0-9_-]{1,128}$/.test(id) || ids.has(id)) throw new Error('Invalid or duplicate curriculum identity.');
+    // Earlier bundled catalogue IDs contain "class 11" / "class 12".
+    // Keep those identities editable without permitting arbitrary spaced IDs.
+    const legacyCatalogueId = typeof id === 'string' && id.length <= 128 && /^cbse-class (11|12)-[a-z0-9_-]+$/.test(id);
+    if (typeof id !== 'string' || (!/^[a-zA-Z0-9_-]{1,128}$/.test(id) && !legacyCatalogueId) || ids.has(id)) throw new Error('Invalid or duplicate curriculum identity.');
     ids.add(id);
   };
   identity(subject.id);
@@ -57,7 +60,7 @@ export function activeSubject(subject: SubjectMeta): SubjectMeta {
 
 export function subjectsForSelection(subjects: SubjectMeta[], board: BoardType, grade: ClassGrade, stream: StreamType, allStreams = false) {
   return subjects.filter(s => !s.deleted && (s.board || 'CBSE') === board && s.classes.includes(grade) &&
-    (allStreams || !['Class 11', 'Class 12'].includes(grade) || s.stream === 'General' || s.stream === stream)).map(activeSubject);
+    (allStreams || !['Class 11', 'Class 12'].includes(grade) || s.stream === stream)).map(activeSubject);
 }
 
 export function mergeCurriculum(seed: SubjectMeta[], documents: { id: string; data: Record<string, any> }[]) {

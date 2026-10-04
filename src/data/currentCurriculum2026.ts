@@ -151,6 +151,7 @@ const richKeys = new Set(CORE_CBSE_NCERT_SUBJECTS.map(subjectKey));
 const catalogueKeys = new Set<string>();
 const catalogueSubjects: SubjectMeta[] = [
   ...CORE_CBSE_NCERT_SUBJECTS,
+  ...(['Class 11', 'Class 12'] as ClassGrade[]).map(grade => ({ ...catalogueSubject(grade, 'Painting', '049'), id: `cbse-class-${grade === 'Class 11' ? '11' : '12'}-general-painting` })),
   ...FOCUSED_SUBJECTS.filter(s => !richKeys.has(subjectKey(s))),
   ...SENIOR_GENERAL_SUBJECTS.filter(s => !richKeys.has(subjectKey(s)))
 ].filter(subject => {
@@ -163,7 +164,18 @@ const catalogueSubjects: SubjectMeta[] = [
 // Reuse existing curriculum chapters across streams of the same class/subject.
 // IDs remain in the selected subject's namespace; published material is not
 // automatically approved or copied into a different subject.
-export const CURRENT_CBSE_NCERT_SUBJECTS: SubjectMeta[] = catalogueSubjects.map(subject => {
+const seniorStreamSubjects: Record<string, string[]> = {
+  Science: ['Physics', 'Chemistry', 'Mathematics', 'Biology'],
+  Commerce: ['Accountancy', 'Economics', 'Business Studies'],
+  General: ['English Core', 'Painting', 'Physical Education']
+};
+
+export const CURRENT_CBSE_NCERT_SUBJECTS: SubjectMeta[] = catalogueSubjects.map(original => {
+  // Archive defaults without removing identities/content. Admin can restore them
+  // or add new subjects through curriculum overrides.
+  const allowed = seniorStreamSubjects[original.stream];
+  const subject = ['Class 11', 'Class 12'].includes(original.classes[0]) && allowed && !allowed.includes(original.name)
+    ? { ...original, deleted: true } : original;
   if (subject.chapters.length) return subject;
   const reference = CORE_CBSE_NCERT_SUBJECTS.find(candidate =>
     candidate.classes[0] === subject.classes[0] && candidate.name === subject.name

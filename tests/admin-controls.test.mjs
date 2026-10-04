@@ -13,6 +13,34 @@ const config = () => structuredClone(api.DEFAULT_WEBSITE_CONFIG);
 const subject = () => structuredClone(api.ALL_SUBJECTS.find(s => s.classes.includes('Class 10') && s.chapters.length));
 const assessment = () => ({ id: 'exam-1', title: 'Practice', board: 'CBSE', classGrade: 'Class 10', subjectId: 'science', approved: true, published: true, durationMinutes: 15, totalMarks: 2, passingMarks: 1, questions: [{ id: 'q1', questionText: 'Select the correct statement', options: ['A', 'B'], correctIndex: 1, explanation: 'B is correct.', marks: 2 }] });
 
+test('XI and XII show exactly the requested subjects in each senior stream', () => {
+  const expected = {
+    Science: ['Biology', 'Chemistry', 'Mathematics', 'Physics'],
+    Commerce: ['Accountancy', 'Business Studies', 'Economics'],
+    General: ['English Core', 'Painting', 'Physical Education']
+  };
+  for (const grade of ['Class 11', 'Class 12']) {
+    for (const [stream, names] of Object.entries(expected)) {
+      assert.deepEqual(api.subjectsForSelection(api.ALL_SUBJECTS, 'CBSE', grade, stream).map(s => s.name).sort(), names);
+    }
+  }
+});
+
+test('admin can add, edit, archive and restore senior subjects without losing chapters', () => {
+  const archived = api.ALL_SUBJECTS.find(s => s.deleted && s.stream === 'General' && s.name === 'Physics' && s.classes.includes('Class 12'));
+  assert.ok(archived.chapters.length);
+  const edited = { ...archived, name: 'Restored Physics', deleted: false };
+  api.validateSubject(edited);
+  const merged = api.mergeCurriculum(api.ALL_SUBJECTS, [{ id: edited.id, data: { kind: 'subject', subject: edited, deleted: false, chaptersExplicit: true } }]);
+  assert.ok(api.subjectsForSelection(merged, 'CBSE', 'Class 12', 'General').some(s => s.id === edited.id && s.name === edited.name));
+  assert.deepEqual(merged.find(s => s.id === edited.id).chapters, archived.chapters);
+  const added = { ...edited, id: 'admin-custom-subject', chapters: [] };
+  api.validateSubject(added);
+  const withAdded = api.mergeCurriculum(merged, [{ id: added.id, data: { kind: 'subject', subject: added } }]);
+  assert.ok(api.subjectsForSelection(withAdded, 'CBSE', 'Class 12', 'General').some(s => s.id === added.id));
+  assert.ok(!api.subjectsForSelection([{ ...added, deleted: true }], 'CBSE', 'Class 12', 'General').length);
+});
+
 test('unpublished and archived resources stay hidden, including bundled resources', () => {
   const exam = assessment();
   assert.equal(api.assetVisibility('tests', exam).hidden, false);
