@@ -40,13 +40,15 @@ export const BabaBanner: React.FC = () => {
 
       <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 relative z-10">
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+          <div className="min-w-0 flex items-center">
           <SankatmochanLogo
-            className="w-28 sm:w-44 justify-self-start"
+            className="w-28 sm:absolute sm:top-1/2 sm:-translate-y-1/2 sm:w-44"
             onClick={() => {
               setActiveTab('learning');
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
           />
+          </div>
           <div className="flex items-center justify-center">
             {babaImageUrl && <img
               src={babaImageUrl}
