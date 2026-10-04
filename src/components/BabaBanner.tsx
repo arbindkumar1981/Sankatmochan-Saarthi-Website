@@ -1,56 +1,36 @@
+import { WebsiteText } from '../context/WebsiteContext';
+import { useWebsite } from '../context/WebsiteContext';
 import React, { useState, useEffect } from 'react';
 import { useCurriculum } from '../context/CurriculumContext';
 import { Sparkles, RotateCw, Quote } from 'lucide-react';
 
-const BABA_QUOTES = [
-  {
-    hi: 'सबको प्यार करो, सबकी सेवा करो, भगवान को याद रखो और सदा सत्य बोलो।',
-    en: 'Love everyone, serve everyone, remember God, and tell the truth.'
-  },
-  {
-    hi: 'सब एक है (Sub Ek Hai)। चिंता छोड़ो, परमात्मा की कृपा पर विश्वास रखो।',
-    en: 'All is One (Sub Ek Hai). Release anxiety and trust divine grace.'
-  },
-  {
-    hi: 'कवन सो काज कठिन जग माहीं। जो नहिं तात होत तुम्ह पाहीं॥',
-    en: 'No task in this world is too difficult when pursued with sincere devotion.'
-  },
-  {
-    hi: 'विद्यावान गुनी अति चातुर। राम काज करिबे को आतुर॥',
-    en: 'Endowed with wisdom, character and vigilance in righteous duties.'
-  },
-  {
-    hi: 'कर्म पूरी निष्ठा से करो, फल की चिंता परमात्मा पर छोड़ दो — विजय निश्चित है।',
-    en: 'Perform your duties with dedication; leave results to the Divine.'
-  },
-  {
-    hi: 'मन को शांत और पवित्र रखो, संकटमोचन स्वयं हर राह में सहायता करेंगे।',
-    en: 'Keep your heart pure and mind calm; divine grace guides every step.'
-  }
-];
-
 const BABA_PUBLIC_DOMAIN_FALLBACK = 'https://upload.wikimedia.org/wikipedia/commons/6/66/Neemkaroli_14.jpg';
 
 export const BabaBanner: React.FC = () => {
+  const { text: websiteText } = useWebsite();
   const { language, babaImageUrl } = useCurriculum();
+  const { config } = useWebsite();
+  const quotes = config.quotes.filter(x => !x.deleted);
   const [quoteIndex, setQuoteIndex] = useState(0);
   const [isRotating, setIsRotating] = useState(false);
 
   // Auto-rotate quote every 12 seconds
   useEffect(() => {
     const timer = setInterval(() => {
-      setQuoteIndex((prev) => (prev + 1) % BABA_QUOTES.length);
+      setQuoteIndex((prev) => (prev + 1) % Math.max(quotes.length, 1));
     }, 12000);
     return () => clearInterval(timer);
-  }, []);
+  }, [quotes.length]);
 
   const handleNextQuote = () => {
     setIsRotating(true);
-    setQuoteIndex((prev) => (prev + 1) % BABA_QUOTES.length);
+    setQuoteIndex((prev) => (prev + 1) % Math.max(quotes.length, 1));
     setTimeout(() => setIsRotating(false), 400);
   };
 
-  const currentQuote = language === 'hi' ? BABA_QUOTES[quoteIndex].hi : BABA_QUOTES[quoteIndex].en;
+  const quote = quotes[quoteIndex % Math.max(quotes.length, 1)];
+  const currentQuote = quote ? (language === 'hi' ? quote.hi || quote.en : quote.en) : '';
+  if (!config.bannerVisible) return null;
 
   return (
     <div className="relative bg-gradient-to-r from-amber-700 via-orange-600 to-red-700 text-white shadow-sm border-b border-amber-400/50">
@@ -62,18 +42,18 @@ export const BabaBanner: React.FC = () => {
         <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
           {/* Sacred ॐ Badge */}
           <div className="flex items-center gap-1.5 shrink-0 bg-black/30 border border-amber-300/40 px-2.5 py-1 rounded-lg text-amber-200 shadow-xs">
-            <span className="text-amber-300 font-black text-sm">ॐ</span>
-            <img
-              src={babaImageUrl || BABA_PUBLIC_DOMAIN_FALLBACK}
+            <span className="text-amber-300 font-black text-sm"><WebsiteText original={"ॐ"} /></span>
+            {babaImageUrl && <img
+              src={babaImageUrl}
               onError={(e) => {
                 const img = e.currentTarget;
                 if (img.src !== BABA_PUBLIC_DOMAIN_FALLBACK) img.src = BABA_PUBLIC_DOMAIN_FALLBACK;
               }}
-              alt="Baba Neem Karoli Ji"
+              alt={websiteText("Baba Neem Karoli Ji")}
               className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover object-[center_28%] ring-2 ring-amber-300 shadow-lg bg-amber-50"
-            />
+            />}
             <span className="text-xs sm:text-sm font-extrabold tracking-wide text-amber-100 font-cinzel whitespace-nowrap">
-              {language === 'hi' ? 'नीम करौली बाबा जी विचार :' : 'Baba Neem Karoli Ji Quotes :'}
+              {language === 'hi' ? websiteText("नीम करौली बाबा जी विचार :") : websiteText("Baba Neem Karoli Ji Quotes :")}
             </span>
           </div>
 
@@ -89,15 +69,15 @@ export const BabaBanner: React.FC = () => {
           <button
             onClick={handleNextQuote}
             className="px-2 py-0.5 rounded-md bg-black/20 hover:bg-black/40 text-amber-200 hover:text-white border border-amber-300/30 text-xs flex items-center gap-1 transition-colors shrink-0"
-            title="अगला विचार (Next Quote)"
+            title={websiteText("अगला विचार (Next Quote)")}
           >
             <RotateCw
               className={`w-3 h-3 text-amber-300 transition-transform ${
-                isRotating ? 'rotate-180' : ''
+                isRotating ? "rotate-180" : ''
               }`}
             />
             <span className="hidden md:inline font-sans">
-              {language === 'hi' ? 'अन्य विचार' : 'Next'}
+              {language === 'hi' ? websiteText("अन्य विचार") : websiteText("Next")}
             </span>
           </button>
         </div>
@@ -105,7 +85,7 @@ export const BabaBanner: React.FC = () => {
         {/* Auspicious Devotional Subtitle */}
         <div className="hidden lg:flex items-center gap-1.5 text-amber-200/90 text-xs font-serif italic shrink-0">
           <Sparkles className="w-3.5 h-3.5 text-yellow-300 animate-pulse" />
-          <span>सब दुख दूर करें संकटमोचन हनुमान जी</span>
+          <span><WebsiteText original={"सब दुख दूर करें संकटमोचन हनुमान जी"} /></span>
         </div>
       </div>
     </div>

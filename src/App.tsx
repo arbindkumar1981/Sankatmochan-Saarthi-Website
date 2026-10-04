@@ -1,3 +1,4 @@
+import { WebsiteText } from './context/WebsiteContext';
 import React from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { CurriculumProvider, useCurriculum } from './context/CurriculumContext';
@@ -11,13 +12,17 @@ import { NoticeBoardView } from './components/NoticeBoardView';
 import { EvaluationHub } from './components/EvaluationHub';
 import { AboutUsView } from './components/AboutUsView';
 import { ContactUsView } from './components/ContactUsView';
-import { AdminPanel } from './components/AdminPanel';
+const AdminPanel = React.lazy(() => import('./components/AdminPanel').then(module => ({ default: module.AdminPanel })));
+import { WebsiteProvider, useWebsite } from './context/WebsiteContext';
 import { AuthModal } from './components/AuthModal';
 import { Sparkles, Heart, Shield, Flame } from 'lucide-react';
 
 const MainAppContent: React.FC = () => {
+  const { text: websiteText } = useWebsite();
   const { activeTab, language } = useCurriculum();
   const { isAdmin } = useAuth();
+  const { config } = useWebsite();
+  const page = config.pages.find(p => `page:${p.id}` === activeTab && !p.deleted);
 
   return (
     <div className="min-h-screen flex flex-col bg-amber-50/30 text-stone-800 font-sans selection:bg-orange-500 selection:text-white">
@@ -53,7 +58,8 @@ const MainAppContent: React.FC = () => {
 
           {activeTab === 'contact' && <ContactUsView />}
 
-          {activeTab === 'admin' && isAdmin && <AdminPanel />}
+          {page && <section className="flex-1 w-full bg-white border rounded-2xl p-6"><h2 className="text-2xl font-bold">{language === 'hi' ? page.hindiTitle || page.title : page.title}</h2><p className="mt-4 whitespace-pre-wrap break-words">{language === 'hi' ? page.hindiBody || page.body : page.body}</p></section>}
+          {activeTab === 'admin' && isAdmin && <React.Suspense fallback={<p>Opening Admin panel…</p>}><AdminPanel /></React.Suspense>}
         </div>
       </main>
 
@@ -63,22 +69,19 @@ const MainAppContent: React.FC = () => {
           <div className="space-y-1">
             <div className="flex items-center justify-center sm:justify-start gap-2 text-amber-400 font-bold font-cinzel text-sm">
               <Flame className="w-4 h-4 text-orange-500" />
-              <span>Saarthi by Sankatmochan</span>
+              <span>{config.name}</span>
             </div>
             <p className="text-stone-400 text-[11px]">
               {language === 'hi'
-                ? 'कक्षा 9वीं से 12वीं तक के विद्यार्थियों के लिए समर्पित डिजिटल गुरुकुल'
-                : 'Empowering Classes IX–XII with holistic conceptual mastery, tests & spiritual strength.'}
+                ? websiteText("कक्षा 9वीं से 12वीं तक के विद्यार्थियों के लिए समर्पित डिजिटल गुरुकुल")
+                : websiteText("Empowering Classes IX–XII with holistic conceptual mastery, tests & spiritual strength.")}
             </p>
           </div>
 
-          <div className="text-[11px] text-amber-200/80 font-serif italic text-center">
-            "मनोजवं मारुततुल्यवेगं जितेन्द्रियं बुद्धिमतां वरिष्ठम्। वातात्मजं वानरयूथमुख्यं श्रीरामदूतं शरणं प्रपद्ये॥"
-          </div>
+          <div className="text-[11px] text-amber-200/80 font-serif italic text-center"><WebsiteText original={"\"मनोजवं मारुततुल्यवेगं जितेन्द्रियं बुद्धिमतां वरिष्ठम्। वातात्मजं वानरयूथमुख्यं श्रीरामदूतं शरणं प्रपद्ये॥\""} /></div>
 
           <div className="text-[10px] text-stone-500">
-            © {new Date().getFullYear()} Saarthi by Sankatmochan. All Rights Reserved.
-          </div>
+            © {new Date().getFullYear()} {config.name}<WebsiteText original={". All Rights Reserved."} /></div>
         </div>
       </footer>
 
@@ -91,9 +94,9 @@ const MainAppContent: React.FC = () => {
 export default function App() {
   return (
     <AuthProvider>
-      <CurriculumProvider>
+      <WebsiteProvider><CurriculumProvider>
         <MainAppContent />
-      </CurriculumProvider>
+      </CurriculumProvider></WebsiteProvider>
     </AuthProvider>
   );
 }

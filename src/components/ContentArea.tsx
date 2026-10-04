@@ -1,3 +1,7 @@
+import { DEFAULT_WEBSITE_CONFIG } from '../services/websiteConfig';
+import { optionLabel } from '../services/websiteConfig';
+import { useWebsite } from '../context/WebsiteContext';
+import { WebsiteText } from '../context/WebsiteContext';
 import React, { useState, useEffect } from 'react';
 import { useCurriculum } from '../context/CurriculumContext';
 import { useAuth } from '../context/AuthContext';
@@ -41,6 +45,7 @@ import {
 } from 'lucide-react';
 
 export const ContentArea: React.FC = () => {
+  const { config, text: websiteText } = useWebsite();
   const {
     activeModule,
     selectedBoard,
@@ -60,6 +65,7 @@ export const ContentArea: React.FC = () => {
 
   // Find relevant content matching the subject/chapter/topic and module type
   const matchedContent = learningContents.find((c) => {
+    if (c.board !== selectedBoard || c.classGrade !== selectedClass || !c.approved || !c.published) return false;
     if (c.contentType !== activeModule) return false;
     if (c.subjectId !== selectedSubject?.id) return false;
     if (selectedChapter && c.chapterId !== selectedChapter.id) return false;
@@ -117,7 +123,10 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
     return 'Use a clear subject-appropriate CBSE/NCERT academic structure with headings, key terms, examples, exam points and age-appropriate language.';
   };
 
+  const customModule = !DEFAULT_WEBSITE_CONFIG.modules.some(x=>x.id===activeModule);
   const generateWithTeacher = async () => {
+    if(customModule){setStudentGenerationError('This module uses admin-published learning material.');return;}
+    if (!['Class 9', 'Class 10', 'Class 11', 'Class 12'].includes(selectedClass)) { setStudentGenerationError('AI generation supports Classes IX–XII. Choose admin-published material for other classes.'); return; }
     if (!profile || !user) { openAuthModal('student'); return; }
     if (!selectedSubject || !selectedChapter) return;
     const api = import.meta.env.VITE_SAARTHI_API_URL;
@@ -143,7 +152,7 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
         method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, signal: controller.signal,
         body: JSON.stringify({
           board: selectedBoard, class_level: selectedClass === 'Class 9' ? 'IX' : selectedClass === 'Class 10' ? 'X' : selectedClass === 'Class 11' ? 'XI' : 'XII',
-          subject: selectedSubject.name, language: language === 'hi' ? 'HINDI' : 'ENGLISH', asset_type: assetType, topic_id: topicId,
+          subject: selectedSubject.teacherSubject || selectedSubject.name, language: language === 'hi' ? 'HINDI' : 'ENGLISH', asset_type: assetType, topic_id: topicId,
           chapter: selectedChapter.title, topic,
           style_profile: subjectStyleProfile(selectedSubject.name), sample_style_reference: sample
         })
@@ -165,7 +174,7 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
     if (!studentGeneratedText) return;
     const safeTitle = `${selectedSubject?.name || 'Saarthi'}-${selectedChapter?.title || 'Notes'}-${activeModule}`.replace(/[^a-z0-9-_]+/gi, '-');
     try {
-      await openNotesPdf(safeTitle, studentGeneratedText, [selectedBoard, selectedClass, selectedSubject?.name || '', selectedChapter?.title || '']);
+      await openNotesPdf(safeTitle, studentGeneratedText, [optionLabel(config.boards,selectedBoard,language),optionLabel(config.classes,selectedClass,language),selectedSubject?.name || '',selectedChapter?.title || ''],config.name);
     } catch (error) {
       setStudentGenerationError(error instanceof Error ? error.message : 'Unable to prepare PDF. Please try again.');
     }
@@ -182,6 +191,7 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
 
   // State for Test Yourself
   const matchedTests = evaluationTests.filter((t) => {
+    if(t.board!==selectedBoard || t.classGrade!==selectedClass || !t.approved || !t.published)return false;
     if (t.subjectId !== selectedSubject?.id) return false;
     if (selectedChapter && t.chapterId && t.chapterId !== selectedChapter.id) return false;
     return true;
@@ -362,10 +372,10 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
         <div>
           <div className="flex items-center gap-2">
             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-orange-100 text-orange-800 border border-orange-200">
-              {activeModule.replace('_', ' ')}
+              {optionLabel(config.modules,activeModule,language)}
             </span>
             <span className="text-xs text-stone-500 font-semibold">
-              {selectedBoard} • {selectedClass} • {selectedSubject?.name}
+              {optionLabel(config.boards,selectedBoard,language)} • {optionLabel(config.classes,selectedClass,language)} • {selectedSubject?.name}
             </span>
           </div>
 
@@ -374,8 +384,7 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
           </h2>
 
           {selectedChapter && (
-            <p className="text-xs text-orange-700 font-medium mt-0.5">
-              Chapter {selectedChapter.chapterNumber}: {selectedChapter.title}
+            <p className="text-xs text-orange-700 font-medium mt-0.5"><WebsiteText original={"Chapter "} />{selectedChapter.chapterNumber}: {selectedChapter.title}
               {selectedTopic && ` → ${selectedTopic.title}`}
             </p>
           )}
@@ -395,7 +404,7 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
               if (selectedTopic && v.topicId && v.topicId !== selectedTopic.id && (v.topicTitle || '').toLowerCase() !== selectedTopic.title.toLowerCase()) return false;
               return true;
             });
-            if (!videos.length) return <div className="p-6 text-center border border-dashed border-orange-300 rounded-2xl text-sm text-stone-600">No Saarthi Recommended Video has been published for this selection yet.</div>;
+            if (!videos.length) return <div className="p-6 text-center border border-dashed border-orange-300 rounded-2xl text-sm text-stone-600"><WebsiteText original={"No Saarthi Recommended Video has been published for this selection yet."} /></div>;
             return <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">{videos.map(v => (
               <div key={v.id} className="border border-red-200 rounded-2xl overflow-hidden bg-white shadow-sm">
                 <div className="aspect-video bg-black">
@@ -403,7 +412,7 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
                 </div>
                 <div className="p-3">
                   <div className="flex items-start gap-2"><Youtube className="w-5 h-5 text-red-600 shrink-0"/><div><h3 className="font-bold text-sm text-stone-900">{v.title}</h3><p className="text-[11px] text-stone-500 mt-0.5">{v.channelTitle}{v.topicTitle ? ` • ${v.topicTitle}` : ''}{v.subtopicTitle ? ` → ${v.subtopicTitle}` : ''}</p></div></div>
-                  <a href={`https://www.youtube.com/watch?v=${v.youtubeId}`} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-red-700 hover:underline"><Play className="w-3.5 h-3.5"/>Watch on YouTube<ExternalLink className="w-3 h-3"/></a>
+                  <a href={`https://www.youtube.com/watch?v=${v.youtubeId}`} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-red-700 hover:underline"><Play className="w-3.5 h-3.5"/><WebsiteText original={"Watch on YouTube"} /><ExternalLink className="w-3 h-3"/></a>
                 </div>
               </div>
             ))}</div>;
@@ -411,14 +420,21 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
         </div>
       )}
 
+      {customModule && <section className="space-y-3">
+        <p className="whitespace-pre-wrap break-words">{language==='hi' ? displayContent.bodyHindi || displayContent.bodyText : displayContent.bodyText}</p>
+        {hasPublishedModuleContent && <button className="border rounded-xl px-3 py-2 text-sm" onClick={()=>openNotesPdf(displayContent.title,language==='hi' ? displayContent.bodyHindi || displayContent.bodyText : displayContent.bodyText,[optionLabel(config.boards,selectedBoard,language),optionLabel(config.classes,selectedClass,language),selectedSubject?.name || ''],config.name).catch(error=>setStudentGenerationError(error.message))}>Download PDF</button>}
+        {studentGenerationError && <p role="alert">{studentGenerationError}</p>}
+      </section>}
+      {matchedContent?.attachmentUrl && /^https:\/\//.test(matchedContent.attachmentUrl) && <a href={matchedContent.attachmentUrl} target="_blank" rel="noreferrer" className="text-orange-700 underline">{matchedContent.attachmentName || 'Open study file'}</a>}
+
       {/* Module 1 & 2: Detailed Notes & Revision Notes */}
       {(activeModule === 'detailed_notes' || activeModule === 'revision_notes') && (
         <div className="space-y-4 select-none" onCopy={(e)=>e.preventDefault()} onCut={(e)=>e.preventDefault()} onContextMenu={(e)=>e.preventDefault()}>
           <div className="flex flex-wrap items-center gap-2 justify-between bg-orange-50 border border-orange-200 rounded-2xl p-3">
-            <div><div className="font-bold text-sm text-orange-950">Saarthi Teacher Agent</div><div className="text-[11px] text-stone-600">Generate this material for your selected chapter/topic and language.</div></div>
+            <div><div className="font-bold text-sm text-orange-950"><WebsiteText original={"Saarthi Teacher Agent"} /></div><div className="text-[11px] text-stone-600"><WebsiteText original={"Generate this material for your selected chapter/topic and language."} /></div></div>
             <div className="flex gap-2">
-              <button onClick={generateWithTeacher} disabled={studentGenerating} className="px-3 py-2 rounded-xl bg-orange-600 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5"><WandSparkles className="w-4 h-4"/>{studentGenerating ? 'Generating…' : 'Generate with Sankatmochansaarthi'}</button>
-              {studentGeneratedText && <button onClick={downloadGeneratedNotes} className="px-3 py-2 rounded-xl bg-stone-900 text-white text-xs font-bold flex items-center gap-1.5"><Download className="w-4 h-4"/>Download PDF</button>}
+              <button onClick={generateWithTeacher} disabled={studentGenerating} className="px-3 py-2 rounded-xl bg-orange-600 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5"><WandSparkles className="w-4 h-4"/>{studentGenerating ? websiteText("Generating…") : websiteText("Generate with Sankatmochansaarthi")}</button>
+              {studentGeneratedText && <button onClick={downloadGeneratedNotes} className="px-3 py-2 rounded-xl bg-stone-900 text-white text-xs font-bold flex items-center gap-1.5"><Download className="w-4 h-4"/><WebsiteText original={"Download PDF"} /></button>}
             </div>
           </div>
           {studentGenerationError && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs">{studentGenerationError}</div>}
@@ -428,11 +444,11 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
               <span>
                 {language === 'hi'
                   ? matchedContent?.approved && matchedContent?.published
-                    ? 'संकटमोचन सत्यापित सामग्री: अनुमोदित शैक्षणिक सामग्री प्रकाशित है।'
-                    : 'इस चयन के लिए सत्यापित सामग्री अभी प्रकाशित नहीं हुई है।'
+                    ? websiteText("संकटमोचन सत्यापित सामग्री: अनुमोदित शैक्षणिक सामग्री प्रकाशित है।")
+                    : websiteText("इस चयन के लिए सत्यापित सामग्री अभी प्रकाशित नहीं हुई है।")
                   : matchedContent?.approved && matchedContent?.published
-                    ? 'Sankatmochan Verified: Published academic content.'
-                    : 'No verified content has been published for this selection yet.'}
+                    ? websiteText("Sankatmochan Verified: Published academic content.")
+                    : websiteText("No verified content has been published for this selection yet.")}
               </span>
             </span>
           </div>
@@ -442,18 +458,18 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
               ? displayContent.bodyHindi
               : displayContent.bodyText)}
           </div>
-          {studentDiagramPlans.length > 0 && <div className="grid grid-cols-1 md:grid-cols-2 gap-4">{studentDiagramPlans.map((plan,idx)=><div key={idx} className="rounded-2xl border-2 border-sky-200 bg-sky-50/50 p-4"><div className="text-xs font-black uppercase tracking-wide text-sky-800 mb-3">Sankatmochansaarthi Diagram</div><div className="bg-white rounded-xl border border-sky-200 min-h-48 p-4 flex flex-col items-center justify-center text-center"><div className="w-24 h-24 rounded-full border-4 border-sky-400 bg-gradient-to-br from-emerald-100 to-sky-100 flex items-center justify-center font-bold text-sm text-stone-800 px-2">{plan.title}</div>{plan.labels?.length>0&&<div className="mt-4 flex flex-wrap justify-center gap-2">{plan.labels.map((label,i)=><span key={i} className="px-2 py-1 rounded-full bg-white border border-orange-300 text-[11px] font-semibold">{label}</span>)}</div>}<p className="mt-3 text-[11px] text-stone-600 leading-relaxed">{plan.instructions}</p></div></div>)}</div>}
+          {studentDiagramPlans.length > 0 && <div className="grid grid-cols-1 md:grid-cols-2 gap-4">{studentDiagramPlans.map((plan,idx)=><div key={idx} className="rounded-2xl border-2 border-sky-200 bg-sky-50/50 p-4"><div className="text-xs font-black uppercase tracking-wide text-sky-800 mb-3"><WebsiteText original={"Sankatmochansaarthi Diagram"} /></div><div className="bg-white rounded-xl border border-sky-200 min-h-48 p-4 flex flex-col items-center justify-center text-center"><div className="w-24 h-24 rounded-full border-4 border-sky-400 bg-gradient-to-br from-emerald-100 to-sky-100 flex items-center justify-center font-bold text-sm text-stone-800 px-2">{plan.title}</div>{plan.labels?.length>0&&<div className="mt-4 flex flex-wrap justify-center gap-2">{plan.labels.map((label,i)=><span key={i} className="px-2 py-1 rounded-full bg-white border border-orange-300 text-[11px] font-semibold">{label}</span>)}</div>}<p className="mt-3 text-[11px] text-stone-600 leading-relaxed">{plan.instructions}</p></div></div>)}</div>}
         </div>
       )}
 
       {/* Module 3: Definitions & Formulae */}
       {activeModule === 'formulae' && (
         <div className="space-y-4 select-none" onCopy={(e)=>e.preventDefault()} onCut={(e)=>e.preventDefault()} onContextMenu={(e)=>e.preventDefault()}>
-          <div className="flex flex-wrap gap-2 justify-end"><button onClick={generateWithTeacher} disabled={studentGenerating} className="px-3 py-2 rounded-xl bg-orange-600 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5"><WandSparkles className="w-4 h-4"/>{studentGenerating ? 'Generating…' : 'Generate with Sankatmochansaarthi'}</button>{studentGeneratedText && <button onClick={downloadGeneratedNotes} className="px-3 py-2 rounded-xl bg-stone-900 text-white text-xs font-bold flex items-center gap-1.5"><Download className="w-4 h-4"/>Download PDF</button>}</div>
+          <div className="flex flex-wrap gap-2 justify-end"><button onClick={generateWithTeacher} disabled={studentGenerating} className="px-3 py-2 rounded-xl bg-orange-600 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5"><WandSparkles className="w-4 h-4"/>{studentGenerating ? websiteText("Generating…") : websiteText("Generate with Sankatmochansaarthi")}</button>{studentGeneratedText && <button onClick={downloadGeneratedNotes} className="px-3 py-2 rounded-xl bg-stone-900 text-white text-xs font-bold flex items-center gap-1.5"><Download className="w-4 h-4"/><WebsiteText original={"Download PDF"} /></button>}</div>
           {studentGenerationError && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs">{studentGenerationError}</div>}
           {studentGeneratedText && <div className="whitespace-pre-line bg-stone-50 border border-stone-200 rounded-2xl p-5 text-sm leading-relaxed">{studentGeneratedText}</div>}
           {!hasPublishedModuleContent || !(displayContent.formulaItems?.length) ? (
-            <div className="p-8 text-center text-stone-500 bg-stone-50 rounded-2xl border border-stone-200">No verified definitions or formulae have been published for this selection yet.</div>
+            <div className="p-8 text-center text-stone-500 bg-stone-50 rounded-2xl border border-stone-200"><WebsiteText original={"No verified definitions or formulae have been published for this selection yet."} /></div>
           ) : <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {(displayContent.formulaItems || []).map((item) => (
               <div
@@ -465,7 +481,7 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
                   <button
                     onClick={() => handleCopyFormula(item.id, item.formula)}
                     className="p-1.5 rounded-lg text-stone-400 hover:text-orange-600 hover:bg-orange-100 transition-colors"
-                    title="Copy Formula"
+                    title={websiteText("Copy Formula")}
                   >
                     {copiedFormulaId === item.id ? (
                       <Check className="w-4 h-4 text-emerald-600" />
@@ -485,12 +501,12 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
 
                 {item.units && (
                   <div className="mt-2 text-[11px] text-stone-500 font-mono">
-                    <span className="font-semibold text-orange-800">Units:</span> {item.units}
+                    <span className="font-semibold text-orange-800"><WebsiteText original={"Units:"} /></span> {item.units}
                   </div>
                 )}
                 {item.application && (
                   <div className="mt-1 text-[11px] text-stone-600">
-                    <span className="font-semibold text-orange-800">Use:</span> {item.application}
+                    <span className="font-semibold text-orange-800"><WebsiteText original={"Use:"} /></span> {item.application}
                   </div>
                 )}
               </div>
@@ -502,17 +518,13 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
       {/* Module 4: Mind Maps */}
       {activeModule === 'mindmaps' && (
         <div className="space-y-4">
-          <div className="flex flex-wrap gap-2 justify-end"><button onClick={generateWithTeacher} disabled={studentGenerating} className="px-3 py-2 rounded-xl bg-orange-600 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5"><WandSparkles className="w-4 h-4"/>{studentGenerating ? 'Generating…' : 'Generate with Sankatmochansaarthi'}</button></div>
+          <div className="flex flex-wrap gap-2 justify-end"><button onClick={generateWithTeacher} disabled={studentGenerating} className="px-3 py-2 rounded-xl bg-orange-600 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5"><WandSparkles className="w-4 h-4"/>{studentGenerating ? websiteText("Generating…") : websiteText("Generate with Sankatmochansaarthi")}</button></div>
           {studentGenerationError && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs">{studentGenerationError}</div>}
           {studentGeneratedText && <div className="whitespace-pre-line bg-purple-50 border border-purple-200 rounded-2xl p-5 text-sm leading-relaxed">{studentGeneratedText}</div>}
           <div className="bg-gradient-to-r from-purple-50 to-amber-50 border border-purple-200 rounded-2xl p-6 text-center">
             <GitBranch className="w-12 h-12 text-purple-600 mx-auto mb-2 animate-bounce" />
-            <h3 className="font-bold text-base text-stone-900 font-cinzel">
-              Visual Concept Hierarchy & Flowchart
-            </h3>
-            <p className="text-xs text-stone-600 max-w-md mx-auto mt-1">
-              Structural concept connections designed for photographic memory retention.
-            </p>
+            <h3 className="font-bold text-base text-stone-900 font-cinzel"><WebsiteText original={"Visual Concept Hierarchy & Flowchart"} /></h3>
+            <p className="text-xs text-stone-600 max-w-md mx-auto mt-1"><WebsiteText original={"Structural concept connections designed for photographic memory retention."} /></p>
 
             <div className="mt-6 flex flex-col md:flex-row items-center justify-center gap-3">
               <div className="bg-white border-2 border-orange-500 px-4 py-2.5 rounded-xl shadow-md font-bold text-sm text-orange-900">
@@ -521,20 +533,20 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
               <span className="text-orange-400 font-bold hidden md:inline">→</span>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-xl">
                 <div className="bg-amber-50 border border-amber-300 p-3 rounded-xl text-left text-xs shadow-xs">
-                  <span className="font-bold text-orange-800 block mb-1">Pillar 1: Fundamental Laws</span>
-                  <span>Definitions, experimental validations, conditions, and core postulates.</span>
+                  <span className="font-bold text-orange-800 block mb-1"><WebsiteText original={"Pillar 1: Fundamental Laws"} /></span>
+                  <span><WebsiteText original={"Definitions, experimental validations, conditions, and core postulates."} /></span>
                 </div>
                 <div className="bg-orange-50 border border-orange-300 p-3 rounded-xl text-left text-xs shadow-xs">
-                  <span className="font-bold text-orange-800 block mb-1">Pillar 2: Mathematical Models</span>
-                  <span>Governing formulas, unit conversions, and quantitative relations.</span>
+                  <span className="font-bold text-orange-800 block mb-1"><WebsiteText original={"Pillar 2: Mathematical Models"} /></span>
+                  <span><WebsiteText original={"Governing formulas, unit conversions, and quantitative relations."} /></span>
                 </div>
                 <div className="bg-red-50 border border-red-300 p-3 rounded-xl text-left text-xs shadow-xs">
-                  <span className="font-bold text-red-800 block mb-1">Pillar 3: High-Frequency PYQs</span>
-                  <span>Direct definitions, repeated board derivations, numericals.</span>
+                  <span className="font-bold text-red-800 block mb-1"><WebsiteText original={"Pillar 3: High-Frequency PYQs"} /></span>
+                  <span><WebsiteText original={"Direct definitions, repeated board derivations, numericals."} /></span>
                 </div>
                 <div className="bg-emerald-50 border border-emerald-300 p-3 rounded-xl text-left text-xs shadow-xs">
-                  <span className="font-bold text-emerald-800 block mb-1">Pillar 4: Practical Applications</span>
-                  <span>Daily life occurrences, technological devices, case studies.</span>
+                  <span className="font-bold text-emerald-800 block mb-1"><WebsiteText original={"Pillar 4: Practical Applications"} /></span>
+                  <span><WebsiteText original={"Daily life occurrences, technological devices, case studies."} /></span>
                 </div>
               </div>
             </div>
@@ -545,19 +557,16 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
       {/* Module 5: Interactive Flashcards */}
       {activeModule === 'flashcards' && (
         <div className="space-y-4 max-w-xl mx-auto w-full select-none" onCopy={(e)=>e.preventDefault()} onCut={(e)=>e.preventDefault()} onContextMenu={(e)=>e.preventDefault()}>
-          <div className="flex flex-wrap gap-2 justify-end"><button onClick={generateWithTeacher} disabled={studentGenerating} className="px-3 py-2 rounded-xl bg-orange-600 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5"><WandSparkles className="w-4 h-4"/>{studentGenerating ? 'Generating…' : 'Generate with Sankatmochansaarthi'}</button>{studentGeneratedText && <button onClick={downloadGeneratedNotes} className="px-3 py-2 rounded-xl bg-stone-900 text-white text-xs font-bold flex items-center gap-1.5"><Download className="w-4 h-4"/>Download PDF</button>}</div>
+          <div className="flex flex-wrap gap-2 justify-end"><button onClick={generateWithTeacher} disabled={studentGenerating} className="px-3 py-2 rounded-xl bg-orange-600 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5"><WandSparkles className="w-4 h-4"/>{studentGenerating ? websiteText("Generating…") : websiteText("Generate with Sankatmochansaarthi")}</button>{studentGeneratedText && <button onClick={downloadGeneratedNotes} className="px-3 py-2 rounded-xl bg-stone-900 text-white text-xs font-bold flex items-center gap-1.5"><Download className="w-4 h-4"/><WebsiteText original={"Download PDF"} /></button>}</div>
           {studentGenerationError && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs">{studentGenerationError}</div>}
           {studentGeneratedText && <div className="whitespace-pre-line bg-amber-50 border border-orange-200 rounded-2xl p-5 text-sm leading-relaxed">{studentGeneratedText}</div>}
           {displayContent.flashcardItems && displayContent.flashcardItems.length > 0 ? (
             <div>
               {/* Counter & Controls */}
               <div className="flex items-center justify-between text-xs text-stone-500 mb-2">
-                <span>
-                  Card {currentFlashcardIndex + 1} of {displayContent.flashcardItems.length}
+                <span><WebsiteText original={"Card "} />{currentFlashcardIndex + 1}<WebsiteText original={" of "} />{displayContent.flashcardItems.length}
                 </span>
-                <span className="bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full font-bold">
-                  Click card to flip
-                </span>
+                <span className="bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full font-bold"><WebsiteText original={"Click card to flip"} /></span>
               </div>
 
               {/* Flashcard Body */}
@@ -569,7 +578,7 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
                     className="cursor-pointer min-h-[220px] sm:min-h-[260px] bg-gradient-to-br from-amber-50 to-orange-100/60 border-2 border-orange-300 hover:border-orange-500 rounded-3xl p-6 sm:p-8 flex flex-col justify-between shadow-lg transition-all transform hover:-translate-y-0.5 select-none relative"
                   >
                     <div className="flex items-center justify-between text-xs text-orange-800 font-bold uppercase tracking-wider">
-                      <span>{isFlipped ? 'Answer / Solution' : 'Question / Recall Prompt'}</span>
+                      <span>{isFlipped ? websiteText("Answer / Solution") : websiteText("Question / Recall Prompt")}</span>
                       <RotateCw className="w-4 h-4 text-orange-600" />
                     </div>
 
@@ -584,12 +593,12 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
                         </h3>
                       )}
                       {!isFlipped && card.hint && (
-                        <p className="text-xs text-stone-500 italic mt-3">Hint: {card.hint}</p>
+                        <p className="text-xs text-stone-500 italic mt-3"><WebsiteText original={"Hint: "} />{card.hint}</p>
                       )}
                     </div>
 
                     <div className="text-center text-[11px] text-stone-400">
-                      {isFlipped ? 'Tap to see question again' : 'Tap to reveal answer'}
+                      {isFlipped ? websiteText("Tap to see question again") : websiteText("Tap to reveal answer")}
                     </div>
                   </div>
                 );
@@ -605,8 +614,7 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
                   }}
                   className="px-4 py-2 bg-stone-100 disabled:opacity-40 text-stone-700 font-semibold rounded-xl text-xs flex items-center gap-1"
                 >
-                  <ChevronLeft className="w-4 h-4" /> Previous
-                </button>
+                  <ChevronLeft className="w-4 h-4" /><WebsiteText original={" Previous"} /></button>
 
                 <div className="flex items-center gap-2">
                   <button
@@ -620,8 +628,7 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
                     }}
                     className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-sm flex items-center gap-1"
                   >
-                    <Check className="w-3.5 h-3.5" /> Got It
-                  </button>
+                    <Check className="w-3.5 h-3.5" /><WebsiteText original={" Got It"} /></button>
                   <button
                     onClick={() => {
                       const id = displayContent.flashcardItems![currentFlashcardIndex].id;
@@ -632,9 +639,7 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
                       }
                     }}
                     className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl text-xs shadow-sm"
-                  >
-                    Needs Review
-                  </button>
+                  ><WebsiteText original={"Needs Review"} /></button>
                 </div>
 
                 <button
@@ -646,15 +651,12 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
                     );
                   }}
                   className="px-4 py-2 bg-stone-100 disabled:opacity-40 text-stone-700 font-semibold rounded-xl text-xs flex items-center gap-1"
-                >
-                  Next <ChevronRight className="w-4 h-4" />
+                ><WebsiteText original={"Next "} /><ChevronRight className="w-4 h-4" />
                 </button>
               </div>
             </div>
           ) : (
-            <div className="p-8 text-center text-stone-500 bg-stone-50 rounded-2xl border border-stone-200">
-              No verified flashcards have been published for this selection yet.
-            </div>
+            <div className="p-8 text-center text-stone-500 bg-stone-50 rounded-2xl border border-stone-200"><WebsiteText original={"No verified flashcards have been published for this selection yet."} /></div>
           )}
         </div>
       )}
@@ -662,7 +664,7 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
       {/* Module 6: Previous Year Questions (PYQs) */}
       {activeModule === 'pyqs' && (
         <div className="space-y-4">
-          {!(displayContent.pyqItems?.length) && <div className="p-8 text-center text-stone-500 bg-stone-50 rounded-2xl border border-stone-200">No verified previous-year questions have been published for this selection yet.</div>}
+          {!(displayContent.pyqItems?.length) && <div className="p-8 text-center text-stone-500 bg-stone-50 rounded-2xl border border-stone-200"><WebsiteText original={"No verified previous-year questions have been published for this selection yet."} /></div>}
           {(displayContent.pyqItems || []).map((item, idx) => (
             <div
               key={item.id}
@@ -674,7 +676,7 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
                     {item.year}
                   </span>
                   <span className="text-xs font-bold text-stone-700">
-                    [{item.marks} {item.marks === 1 ? 'Mark' : 'Marks'}]
+                    [{item.marks} {item.marks === 1 ? websiteText("Mark") : websiteText("Marks")}]
                   </span>
                 </div>
                 {item.repeatedFrequency && (
@@ -684,14 +686,11 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
                 )}
               </div>
 
-              <h4 className="font-bold text-stone-900 text-sm sm:text-base leading-snug">
-                Q{idx + 1}. {language === 'hi' && item.questionHindi ? item.questionHindi : item.question}
+              <h4 className="font-bold text-stone-900 text-sm sm:text-base leading-snug"><WebsiteText original={"Q"} />{idx + 1}. {language === 'hi' && item.questionHindi ? item.questionHindi : item.question}
               </h4>
 
               <div className="mt-3 bg-amber-50/50 border border-orange-200/60 rounded-xl p-3.5 text-xs sm:text-sm text-stone-800 whitespace-pre-line leading-relaxed font-sans">
-                <span className="font-bold text-orange-900 block mb-1 text-xs uppercase tracking-wide">
-                  Model Solution & Marking Points:
-                </span>
+                <span className="font-bold text-orange-900 block mb-1 text-xs uppercase tracking-wide"><WebsiteText original={"Model Solution & Marking Points:"} /></span>
                 {language === 'hi' && item.solutionHindi ? item.solutionHindi : item.solution}
               </div>
             </div>
@@ -702,12 +701,12 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
       {/* Module 7 & 8: Competency-Based Questions (CBQs) & Case-Based Studies */}
       {(activeModule === 'cbqs' || activeModule === 'case_studies') && (
         <div className="space-y-5">
-          <div className="flex flex-wrap gap-2 justify-end"><button onClick={generateWithTeacher} disabled={studentGenerating} className="px-3 py-2 rounded-xl bg-orange-600 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5"><WandSparkles className="w-4 h-4"/>{studentGenerating ? 'Generating…' : 'Generate with Sankatmochansaarthi'}</button></div>
+          <div className="flex flex-wrap gap-2 justify-end"><button onClick={generateWithTeacher} disabled={studentGenerating} className="px-3 py-2 rounded-xl bg-orange-600 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5"><WandSparkles className="w-4 h-4"/>{studentGenerating ? websiteText("Generating…") : websiteText("Generate with Sankatmochansaarthi")}</button></div>
           {studentGenerationError && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs">{studentGenerationError}</div>}
           {studentGeneratedText && <div className="whitespace-pre-line bg-teal-50 border border-teal-200 rounded-2xl p-5 text-sm leading-relaxed">{studentGeneratedText}</div>}
           {studentGeneratedText && studentProvenance.length > 0 && (
             <div className="bg-white border border-stone-200 rounded-2xl p-4 text-xs text-stone-600">
-              <div className="font-bold text-stone-800 mb-2">Verified sources used</div>
+              <div className="font-bold text-stone-800 mb-2"><WebsiteText original={"Verified sources used"} /></div>
               {studentProvenance.map((source, idx) => (
                 <div key={idx} className="mb-1 break-all">
                   {source.source_url ? <a className="text-blue-700 underline" href={source.source_url} target="_blank" rel="noreferrer">{source.source || source.source_url}</a> : <span>{source.source || 'Sankatmochansaarthi Internal Knowledge Base'}</span>}
@@ -719,9 +718,7 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
           {displayContent.caseStudyItem ? (
             <div className="bg-gradient-to-br from-teal-50/40 via-amber-50/20 to-orange-50/30 border border-teal-200 rounded-2xl p-5 shadow-xs">
               <div className="flex items-center gap-2 mb-2">
-                <span className="bg-teal-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-                  Case Study Passage
-                </span>
+                <span className="bg-teal-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full"><WebsiteText original={"Case Study Passage"} /></span>
                 <h3 className="font-bold text-sm sm:text-base text-stone-900">
                   {displayContent.caseStudyItem.title}
                 </h3>
@@ -753,7 +750,7 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
                       ))}
                     </div>
                     <div className="mt-2.5 pt-2 border-t border-stone-100 text-[11px] text-teal-800">
-                      <span className="font-bold">Correct Key: </span> Option {String.fromCharCode(65 + q.correctIndex)} — {q.explanation}
+                      <span className="font-bold"><WebsiteText original={"Correct Key: "} /></span><WebsiteText original={" Option "} />{String.fromCharCode(65 + q.correctIndex)} — {q.explanation}
                     </div>
                   </div>
                 ))}
@@ -761,8 +758,8 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
             </div>
           ) : (
             <div className="bg-amber-50 border border-orange-200 p-5 rounded-2xl text-xs sm:text-sm text-stone-700">
-              <h4 className="font-bold text-orange-900 mb-1">{activeModule === 'cbqs' ? 'Competency-Based Questions' : 'Case-Based Study'}</h4>
-              <p>No verified {activeModule === 'cbqs' ? 'competency-based questions' : 'case-based study'} have been published for this selection yet.</p>
+              <h4 className="font-bold text-orange-900 mb-1">{activeModule === 'cbqs' ? websiteText("Competency-Based Questions") : websiteText("Case-Based Study")}</h4>
+              <p><WebsiteText original={"No verified "} />{activeModule === 'cbqs' ? websiteText("competency-based questions") : websiteText("case-based study")}<WebsiteText original={" have been published for this selection yet."} /></p>
             </div>
           )}
         </div>
@@ -771,11 +768,11 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
       {/* Module 9: Test Yourself (Interactive Objective Testing Engine) */}
       {activeModule === 'test_yourself' && (
         <div className="space-y-5">
-          <div className="flex flex-wrap gap-2 justify-end"><button onClick={generateWithTeacher} disabled={studentGenerating} className="px-3 py-2 rounded-xl bg-orange-600 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5"><WandSparkles className="w-4 h-4"/>{studentGenerating ? 'Generating…' : 'Generate Test with Sankatmochansaarthi'}</button></div>
+          <div className="flex flex-wrap gap-2 justify-end"><button onClick={generateWithTeacher} disabled={studentGenerating} className="px-3 py-2 rounded-xl bg-orange-600 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5"><WandSparkles className="w-4 h-4"/>{studentGenerating ? websiteText("Generating…") : websiteText("Generate Test with Sankatmochansaarthi")}</button></div>
           {studentGenerationError && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs">{studentGenerationError}</div>}
           {studentGeneratedText && <div className="whitespace-pre-line bg-stone-50 border border-stone-200 rounded-2xl p-5 text-sm leading-relaxed">{studentGeneratedText}</div>}
           {!activeTest && (
-            <div className="p-8 text-center text-stone-500 bg-stone-50 rounded-2xl border border-stone-200">No published test is available for this subject/chapter selection yet.</div>
+            <div className="p-8 text-center text-stone-500 bg-stone-50 rounded-2xl border border-stone-200"><WebsiteText original={"No published test is available for this subject/chapter selection yet."} /></div>
           )}
           {activeTest && !testStarted && !testSubmitted && (
             <div className="bg-gradient-to-br from-amber-50 via-orange-50 to-white border-2 border-orange-300 rounded-3xl p-6 sm:p-8 text-center max-w-2xl mx-auto shadow-md">
@@ -783,25 +780,23 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
               <h3 className="text-xl sm:text-2xl font-black text-stone-900 font-cinzel">
                 {activeTest?.title || 'Interactive Assessment Test'}
               </h3>
-              <p className="text-xs sm:text-sm text-stone-600 mt-2 max-w-lg mx-auto">
-                Test your knowledge under timed exam conditions. Instant automatic evaluation, question-by-question explanations, and automatic addition of any wrong answers to your personal <strong>Mistake Book</strong>!
+              <p className="text-xs sm:text-sm text-stone-600 mt-2 max-w-lg mx-auto"><WebsiteText original={"Test your knowledge under timed exam conditions. Instant automatic evaluation, question-by-question explanations, and automatic addition of any wrong answers to your personal "} /><strong><WebsiteText original={"Mistake Book"} /></strong>!
               </p>
 
               <div className="grid grid-cols-3 gap-3 my-6 text-xs max-w-md mx-auto">
                 <div className="bg-white border border-orange-200 p-3 rounded-2xl shadow-xs">
-                  <span className="text-stone-400 block text-[10px] uppercase font-bold">Questions</span>
+                  <span className="text-stone-400 block text-[10px] uppercase font-bold"><WebsiteText original={"Questions"} /></span>
                   <span className="text-lg font-black text-stone-800">
                     {activeTest?.questions.length || 5}
                   </span>
                 </div>
                 <div className="bg-white border border-orange-200 p-3 rounded-2xl shadow-xs">
-                  <span className="text-stone-400 block text-[10px] uppercase font-bold">Duration</span>
+                  <span className="text-stone-400 block text-[10px] uppercase font-bold"><WebsiteText original={"Duration"} /></span>
                   <span className="text-lg font-black text-orange-600">
-                    {activeTest?.durationMinutes || 15} Mins
-                  </span>
+                    {activeTest?.durationMinutes || 15}<WebsiteText original={" Mins"} /></span>
                 </div>
                 <div className="bg-white border border-orange-200 p-3 rounded-2xl shadow-xs">
-                  <span className="text-stone-400 block text-[10px] uppercase font-bold">Marks</span>
+                  <span className="text-stone-400 block text-[10px] uppercase font-bold"><WebsiteText original={"Marks"} /></span>
                   <span className="text-lg font-black text-stone-800">
                     {activeTest?.totalMarks || 10}
                   </span>
@@ -812,7 +807,7 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
                 onClick={handleStartTest}
                 className="py-3 px-8 bg-gradient-to-r from-orange-600 via-red-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white font-extrabold text-sm sm:text-base rounded-2xl shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5"
               >
-                {language === 'hi' ? 'परीक्षा प्रारंभ करें' : 'Start Test Now'}
+                {language === 'hi' ? websiteText("परीक्षा प्रारंभ करें") : websiteText("Start Test Now")}
               </button>
             </div>
           )}
@@ -824,9 +819,8 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
               <div className="bg-stone-900 text-white px-4 py-2.5 rounded-2xl flex items-center justify-between shadow-md">
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-amber-300 font-bold uppercase font-cinzel">
-                    {activeTest.testType} Test
-                  </span>
-                  <span className="text-stone-400 text-xs">| Question {currentQuestionIndex + 1} of {activeTest.questions.length}</span>
+                    {activeTest.testType}<WebsiteText original={" Test"} /></span>
+                  <span className="text-stone-400 text-xs"><WebsiteText original={"| Question "} />{currentQuestionIndex + 1}<WebsiteText original={" of "} />{activeTest.questions.length}</span>
                 </div>
 
                 <div className="flex items-center gap-1.5 bg-red-900/60 border border-red-500/40 px-2.5 py-1 rounded-xl text-xs font-mono font-bold text-red-200">
@@ -846,11 +840,10 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
                 return (
                   <div className="bg-white border-2 border-orange-200 rounded-3xl p-6 shadow-md">
                     <div className="flex items-start justify-between gap-3 mb-4">
-                      <h4 className="font-bold text-stone-900 text-base sm:text-lg leading-snug">
-                        Q{currentQuestionIndex + 1}. {language === 'hi' && q.questionHindi ? q.questionHindi : q.questionText}
+                      <h4 className="font-bold text-stone-900 text-base sm:text-lg leading-snug"><WebsiteText original={"Q"} />{currentQuestionIndex + 1}. {language === 'hi' && q.questionHindi ? q.questionHindi : q.questionText}
                       </h4>
                       <span className="bg-orange-100 text-orange-900 text-xs font-bold px-2 py-0.5 rounded-full shrink-0">
-                        {q.marks} {q.marks === 1 ? 'Mark' : 'Marks'}
+                        {q.marks} {q.marks === 1 ? websiteText("Mark") : websiteText("Marks")}
                       </span>
                     </div>
 
@@ -863,15 +856,15 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
                             onClick={() => handleSelectOption(currentQuestionIndex, optIdx)}
                             className={`w-full text-left p-3.5 rounded-xl border text-xs sm:text-sm font-medium flex items-center gap-3 transition-all ${
                               isChosen
-                                ? 'bg-orange-500 text-white border-orange-600 shadow-md font-bold'
-                                : 'bg-stone-50 hover:bg-orange-50/60 text-stone-800 border-stone-200'
+                                ? "bg-orange-500 text-white border-orange-600 shadow-md font-bold"
+                                : "bg-stone-50 hover:bg-orange-50/60 text-stone-800 border-stone-200"
                             }`}
                           >
                             <span
                               className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${
                                 isChosen
-                                  ? 'bg-white text-orange-600'
-                                  : 'bg-white border border-stone-300 text-stone-600'
+                                  ? "bg-white text-orange-600"
+                                  : "bg-white border border-stone-300 text-stone-600"
                               }`}
                             >
                               {String.fromCharCode(65 + optIdx)}
@@ -892,23 +885,20 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
                   onClick={() => setCurrentQuestionIndex((prev) => prev - 1)}
                   className="px-4 py-2 bg-stone-100 disabled:opacity-40 text-stone-700 font-semibold rounded-xl text-xs flex items-center gap-1"
                 >
-                  <ChevronLeft className="w-4 h-4" /> Previous
-                </button>
+                  <ChevronLeft className="w-4 h-4" /><WebsiteText original={" Previous"} /></button>
 
                 {currentQuestionIndex < activeTest.questions.length - 1 ? (
                   <button
                     onClick={() => setCurrentQuestionIndex((prev) => prev + 1)}
                     className="px-5 py-2.5 bg-gradient-to-r from-orange-500 to-amber-600 text-white font-bold rounded-xl text-xs flex items-center gap-1 shadow-sm"
-                  >
-                    Next Question <ChevronRight className="w-4 h-4" />
+                  ><WebsiteText original={"Next Question "} /><ChevronRight className="w-4 h-4" />
                   </button>
                 ) : (
                   <button
                     onClick={handleAutoSubmit}
                     className="px-6 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-700 text-white font-extrabold rounded-xl text-xs shadow-md flex items-center gap-1.5"
                   >
-                    <Check className="w-4 h-4" /> Submit Test
-                  </button>
+                    <Check className="w-4 h-4" /><WebsiteText original={" Submit Test"} /></button>
                 )}
               </div>
             </div>
@@ -923,15 +913,11 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
                   <Award className="w-36 h-36" />
                 </div>
 
-                <span className="text-xs font-bold uppercase tracking-wider text-amber-200 bg-white/20 px-3 py-1 rounded-full">
-                  Test Evaluation Report Card
-                </span>
+                <span className="text-xs font-bold uppercase tracking-wider text-amber-200 bg-white/20 px-3 py-1 rounded-full"><WebsiteText original={"Test Evaluation Report Card"} /></span>
 
-                <h3 className="text-2xl sm:text-3xl font-black font-cinzel mt-3">
-                  Score: {submittedScorecard.score} / {submittedScorecard.totalMarks}
+                <h3 className="text-2xl sm:text-3xl font-black font-cinzel mt-3"><WebsiteText original={"Score: "} />{submittedScorecard.score} / {submittedScorecard.totalMarks}
                 </h3>
-                <p className="text-amber-100 font-bold text-sm sm:text-base mt-1">
-                  Percentage: {submittedScorecard.percentage}% • Accuracy: {submittedScorecard.accuracy}%
+                <p className="text-amber-100 font-bold text-sm sm:text-base mt-1"><WebsiteText original={"Percentage: "} />{submittedScorecard.percentage}<WebsiteText original={"% • Accuracy: "} />{submittedScorecard.accuracy}%
                 </p>
 
                 <p className="text-xs sm:text-sm text-white/95 mt-3 max-w-lg mx-auto bg-black/20 p-3 rounded-2xl border border-white/20 italic font-serif">
@@ -940,11 +926,11 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
 
                 <div className="grid grid-cols-2 gap-3 max-w-md mx-auto mt-5 text-xs">
                   <div className="bg-white/20 p-2.5 rounded-xl">
-                    <span className="block font-bold text-amber-200">Strengths</span>
+                    <span className="block font-bold text-amber-200"><WebsiteText original={"Strengths"} /></span>
                     <span>{submittedScorecard.strengths.join(', ')}</span>
                   </div>
                   <div className="bg-white/20 p-2.5 rounded-xl">
-                    <span className="block font-bold text-amber-200">Focus Areas</span>
+                    <span className="block font-bold text-amber-200"><WebsiteText original={"Focus Areas"} /></span>
                     <span>{submittedScorecard.weaknesses.join(', ')}</span>
                   </div>
                 </div>
@@ -953,37 +939,33 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
                   <button
                     onClick={handleStartTest}
                     className="px-5 py-2 bg-white text-orange-900 font-bold rounded-xl text-xs shadow-md hover:bg-amber-50 transition-colors"
-                  >
-                    Retry Test
-                  </button>
+                  ><WebsiteText original={"Retry Test"} /></button>
                 </div>
               </div>
 
               {/* Question by Question Detailed Review */}
               <div className="space-y-4">
-                <h4 className="font-extrabold text-base text-stone-900 font-cinzel">
-                  Detailed Question Analysis & Explanations:
-                </h4>
+                <h4 className="font-extrabold text-base text-stone-900 font-cinzel"><WebsiteText original={"Detailed Question Analysis & Explanations:"} /></h4>
 
                 {submittedScorecard.answers.map((ans, idx) => (
                   <div
                     key={idx}
                     className={`p-4 rounded-2xl border ${
                       ans.isCorrect
-                        ? 'bg-emerald-50/50 border-emerald-200'
-                        : 'bg-red-50/50 border-red-200'
+                        ? "bg-emerald-50/50 border-emerald-200"
+                        : "bg-red-50/50 border-red-200"
                     }`}
                   >
                     <div className="flex items-center justify-between gap-2 mb-2">
-                      <span className="text-xs font-bold text-stone-700">Question {idx + 1}</span>
+                      <span className="text-xs font-bold text-stone-700"><WebsiteText original={"Question "} />{idx + 1}</span>
                       <span
                         className={`text-xs font-bold px-2 py-0.5 rounded-full ${
                           ans.isCorrect
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : 'bg-red-100 text-red-800'
+                            ? "bg-emerald-100 text-emerald-800"
+                            : "bg-red-100 text-red-800"
                         }`}
                       >
-                        {ans.isCorrect ? 'Correct (+1)' : 'Saved to Mistake Book'}
+                        {ans.isCorrect ? websiteText("Correct (+1)") : websiteText("Saved to Mistake Book")}
                       </span>
                     </div>
 
@@ -992,24 +974,21 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
                     </p>
 
                     <div className="text-xs space-y-1 text-stone-700">
-                      <div>
-                        Your Answer:{' '}
+                      <div><WebsiteText original={"Your Answer:"} />{' '}
                         <span className="font-bold">
                           {ans.selectedOption >= 0
                             ? `Option ${String.fromCharCode(65 + ans.selectedOption)}`
-                            : 'Not Attempted'}
+                            : websiteText("Not Attempted")}
                         </span>
                       </div>
-                      <div>
-                        Correct Answer:{' '}
-                        <span className="font-bold text-emerald-700">
-                          Option {String.fromCharCode(65 + ans.correctOption)}
+                      <div><WebsiteText original={"Correct Answer:"} />{' '}
+                        <span className="font-bold text-emerald-700"><WebsiteText original={"Option "} />{String.fromCharCode(65 + ans.correctOption)}
                         </span>
                       </div>
                     </div>
 
                     <div className="mt-2.5 pt-2 border-t border-stone-200/60 text-xs text-stone-600 bg-white p-2.5 rounded-xl">
-                      <span className="font-bold text-orange-900">Explanation: </span>
+                      <span className="font-bold text-orange-900"><WebsiteText original={"Explanation: "} /></span>
                       {ans.explanation}
                     </div>
                   </div>

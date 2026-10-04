@@ -1,3 +1,9 @@
+import { useWebsite } from '../context/WebsiteContext';
+import { activeOptions } from '../services/websiteConfig';
+import { subjectsForSelection } from '../services/adminValidation';
+import { WebsiteSettingsManager } from './WebsiteSettingsManager';
+import { CurriculumManager } from './CurriculumManager';
+import { ManagedRecords } from './ManagedRecords';
 import React, { useEffect, useMemo, useState } from 'react';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { collection, doc, onSnapshot, setDoc } from 'firebase/firestore';
@@ -41,6 +47,7 @@ import {
 } from 'lucide-react';
 
 export const AdminPanel: React.FC = () => {
+  const { config } = useWebsite();
   const {
     learningContents,
     youtubeVideos,
@@ -49,12 +56,10 @@ export const AdminPanel: React.FC = () => {
     testResults,
     addNewLearningContent,
     updateContentApproval,
-    deleteLearningContent,
     addNewVideo,
     addNewTest,
     addNewNotice,
     babaImageUrl,
-    setBabaImageUrl,
     selectedBoard,
     selectedClass,
     selectedStream,
@@ -62,7 +67,6 @@ export const AdminPanel: React.FC = () => {
     availableSubjects,
     curriculumSubjects,
     saveCurriculumSubject,
-    deleteCurriculumSubject,
     language
   } = useCurriculum();
 
@@ -71,6 +75,16 @@ export const AdminPanel: React.FC = () => {
   const [adminTab, setAdminTab] = useState<
     'content' | 'videos' | 'tests' | 'notices' | 'students' | 'enquiries' | 'settings'
   >('content');
+
+  const [adminOperationError, setAdminOperationError] = useState('');
+  const adminSubmit = (action: (e: React.FormEvent) => Promise<void>) => async (e: React.FormEvent) => {
+    e.preventDefault(); setAdminOperationError('');
+    try { await action(e); } catch { setAdminOperationError('Changes were not saved. Check administrator access, connectivity and the form details, then try again.'); }
+  };
+  const approveContent = async (id: string, approved: boolean, published: boolean) => {
+    setAdminOperationError('');
+    try { await updateContentApproval(id,approved,published); } catch { setAdminOperationError('Approval was not saved. Restore deleted items in the manager first.'); }
+  };
 
   // New Content Form State
   const [showContentForm, setShowContentForm] = useState(false);
@@ -92,18 +106,7 @@ export const AdminPanel: React.FC = () => {
   const [contentGenerating, setContentGenerating] = useState(false);
   const [contentError, setContentError] = useState('');
   const [showCurriculumManager, setShowCurriculumManager] = useState(false);
-  const [curriculumClass, setCurriculumClass] = useState<ClassGrade>('Class 9');
-  const [curriculumStream, setCurriculumStream] = useState<StreamType>('General');
-  const [newSubjectName, setNewSubjectName] = useState('');
-  const [newChapterName, setNewChapterName] = useState('');
-
-  const formSubjects = useMemo(() => curriculumSubjects.filter(s => {
-    if (!s.classes.includes(contentClass)) return false;
-    if (contentClass === 'Class 11' || contentClass === 'Class 12') {
-      return s.stream === 'General' || s.stream === contentStream;
-    }
-    return true;
-  }), [curriculumSubjects, contentClass, contentStream]);
+  const formSubjects = useMemo(() => subjectsForSelection(curriculumSubjects,contentBoard,contentClass,contentStream), [curriculumSubjects,contentBoard,contentClass,contentStream]);
   const formSubject = formSubjects.find(s => s.id === contentSubjectId) || formSubjects[0] || null;
   const formChapter = formSubject?.chapters.find(ch => ch.id === contentChapterId) || formSubject?.chapters[0] || null;
 
@@ -120,13 +123,14 @@ export const AdminPanel: React.FC = () => {
   const [videoChapterId, setVideoChapterId] = useState('');
   const [videoTopic, setVideoTopic] = useState('');
   const [videoSubtopic, setVideoSubtopic] = useState('');
-  const videoSubjects = curriculumSubjects.filter(s => s.classes.includes(videoClass) && (videoClass === 'Class 9' || videoClass === 'Class 10' || s.stream === 'General' || s.stream === videoStream));
+  const videoSubjects = subjectsForSelection(curriculumSubjects,videoBoard,videoClass,videoStream);
   const videoSubject = videoSubjects.find(s => s.id === videoSubjectId) || videoSubjects[0] || null;
   const videoChapter = videoSubject?.chapters.find(ch => ch.id === videoChapterId) || videoSubject?.chapters[0] || null;
 
   // New Assessment Test Form State
   const [showTestForm, setShowTestForm] = useState(false);
   const [testTitle, setTestTitle] = useState('');
+  const [testBoard, setTestBoard] = useState<BoardType>(selectedBoard);
   const [testClass, setTestClass] = useState<ClassGrade>(selectedClass);
   const [testStream, setTestStream] = useState<StreamType>(selectedStream);
   const [testSubjectId, setTestSubjectId] = useState('');
@@ -135,16 +139,29 @@ export const AdminPanel: React.FC = () => {
   const [testOptionsText, setTestOptionsText] = useState('');
   const [testCorrectIndex, setTestCorrectIndex] = useState(0);
   const [testExplanation, setTestExplanation] = useState('');
-  const testSubjects = curriculumSubjects.filter(s => s.classes.includes(testClass) && (testClass === 'Class 9' || testClass === 'Class 10' || s.stream === 'General' || s.stream === testStream));
+  const testSubjects = subjectsForSelection(curriculumSubjects,testBoard,testClass,testStream);
   const testSubject = testSubjects.find(s => s.id === testSubjectId) || testSubjects[0] || null;
   const testChapter = testSubject?.chapters.find(ch => ch.id === testChapterId) || testSubject?.chapters[0] || null;
+
+  useEffect(() => {
+    const boards=activeOptions(config.boards), classes=activeOptions(config.classes), streams=activeOptions(config.streams);
+    if(!boards.some(x=>x.id===contentBoard))setContentBoard(boards[0].id);
+    if(!boards.some(x=>x.id===videoBoard))setVideoBoard(boards[0].id);
+    if(!boards.some(x=>x.id===testBoard))setTestBoard(boards[0].id);
+    if(!classes.some(x=>x.id===contentClass))setContentClass(classes[0].id);
+    if(!classes.some(x=>x.id===videoClass))setVideoClass(classes[0].id);
+    if(!classes.some(x=>x.id===testClass))setTestClass(classes[0].id);
+    if(!streams.some(x=>x.id===contentStream))setContentStream(streams[0].id);
+    if(!streams.some(x=>x.id===videoStream))setVideoStream(streams[0].id);
+    if(!streams.some(x=>x.id===testStream))setTestStream(streams[0].id);
+  }, [config, contentBoard, videoBoard, testBoard, contentClass, videoClass, testClass, contentStream, videoStream, testStream]);
 
   const handleCreateTest = async (e: React.FormEvent) => {
     e.preventDefault();
     const options = testOptionsText.split('\n').map(x => x.trim()).filter(Boolean);
     if (!testTitle.trim() || !testSubject || !testChapter || !testQuestionText.trim() || options.length < 2 || testCorrectIndex >= options.length) return;
     await addNewTest({
-      title: testTitle.trim(), testType: 'chapter', board: 'CBSE', classGrade: testClass, stream: testStream,
+      title: testTitle.trim(), testType: 'chapter', board: testBoard, classGrade: testClass, stream: testStream,
       subjectId: testSubject.id, chapterId: testChapter.id, durationMinutes: 15, totalMarks: 1, passingMarks: 1,
       questions: [{ id: 'q-' + Date.now(), questionText: testQuestionText.trim(), options, correctIndex: testCorrectIndex, explanation: testExplanation.trim() || 'Review the correct option.', marks: 1 }],
       approved: true, published: true, createdAt: new Date().toISOString()
@@ -160,10 +177,6 @@ export const AdminPanel: React.FC = () => {
   const [noticeHindiMessage, setNoticeHindiMessage] = useState('');
   const [noticeCategory, setNoticeCategory] = useState<'motivational' | 'academic' | 'urgent'>('motivational');
   const [noticeQuote, setNoticeQuote] = useState('');
-
-  // Custom photo setting
-  const [newPhotoUrl, setNewPhotoUrl] = useState(babaImageUrl);
-  const [photoSaved, setPhotoSaved] = useState(false);
 
   // Admin inbox is authoritative from Firestore; localStorage is only an offline fallback.
   const [enquiriesList, setEnquiriesList] = useState<ContactEnquiry[]>([]);
@@ -191,62 +204,12 @@ export const AdminPanel: React.FC = () => {
     return () => { unsubUsers(); unsubResults(); };
   }, []);
 
-  const managerSubjects = curriculumSubjects.filter(s => s.classes.includes(curriculumClass) && (curriculumClass === 'Class 9' || curriculumClass === 'Class 10' || s.stream === 'General' || s.stream === curriculumStream));
-  const addCurriculumSubject = async () => {
-    const name = newSubjectName.trim(); if (!name) return;
-    const id = ('admin-' + curriculumClass + '-' + name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 120);
-    await saveCurriculumSubject({ id, name, hindiName: name, stream: curriculumClass === 'Class 11' || curriculumClass === 'Class 12' ? curriculumStream : 'General', classes: [curriculumClass], icon: 'BookOpen', chapters: [] });
-    setNewSubjectName('');
-  };
-  const addCurriculumChapter = async (subject: any) => {
-    const title = newChapterName.trim(); if (!title) return;
-    const n = subject.chapters.length + 1;
-    await saveCurriculumSubject({ ...subject, chapters: [...subject.chapters, { id: (subject.id + '-ch-' + Date.now()).slice(0,128), title, hindiTitle: title, chapterNumber: n, topics: [] }] });
-    setNewChapterName('');
-  };
-  const renameCurriculumSubject = async (subject: any) => {
-    const name = window.prompt('New subject name', subject.name); if (!name?.trim()) return;
-    await saveCurriculumSubject({ ...subject, name: name.trim(), hindiName: name.trim() });
-  };
-  const renameCurriculumChapter = async (subject: any, chapter: any) => {
-    const title = window.prompt('New chapter name', chapter.title); if (!title?.trim()) return;
-    await saveCurriculumSubject({ ...subject, chapters: subject.chapters.map((ch: any) => ch.id === chapter.id ? { ...ch, title: title.trim(), hindiTitle: title.trim() } : ch) });
-  };
-  const removeCurriculumChapter = async (subject: any, chapterId: string) => {
-    if (!window.confirm('Delete this chapter?')) return;
-    await saveCurriculumSubject({ ...subject, chapters: subject.chapters.filter((ch: any) => ch.id !== chapterId).map((ch: any, i: number) => ({...ch, chapterNumber:i+1})) });
-  };
-
-  const normalizeTeacherSubject = (name: string) => {
-    const n = name.toLowerCase();
-    if (n.includes('mathematics')) return 'Mathematics';
-    if (n.includes('science') && !n.includes('social')) return 'Science';
-    if (n.includes('physics')) return 'Physics';
-    if (n.includes('chemistry')) return 'Chemistry';
-    if (n.includes('biology')) return 'Biology';
-    if (n.includes('social science')) return 'Social Science';
-    if (n.includes('history')) return 'History';
-    if (n.includes('geography')) return 'Geography';
-    if (n.includes('political')) return 'Political Science';
-    if (n.includes('economics')) return 'Economics';
-    if (n.includes('sociology')) return 'Sociology';
-    if (n.includes('psychology')) return 'Psychology';
-    if (n.includes('accountancy')) return 'Accountancy';
-    if (n.includes('business studies')) return 'Business Studies';
-    if (n.includes('computer science')) return 'Computer Science';
-    if (n.includes('informatics')) return 'Informatics Practices';
-    if (n.includes('english')) return 'English';
-    if (n.includes('hindi')) return 'Hindi';
-    if (n.includes('sanskrit')) return 'Sanskrit';
-    if (n.includes('physical education')) return 'Physical Education';
-    return name.replace(/\s*\([^)]*\)/g, '').replace(/\s*[—-].*$/, '').trim();
-  };
-
-  const classRoman = (grade: ClassGrade) => ({ 'Class 9': 'IX', 'Class 10': 'X', 'Class 11': 'XI', 'Class 12': 'XII' }[grade]);
+  const classRoman = (grade: ClassGrade) => (({ 'Class 9': 'IX', 'Class 10': 'X', 'Class 11': 'XI', 'Class 12': 'XII' } as Record<string, string>)[grade]);
 
   const handleGenerateDetailedNotes = async () => {
     setContentError('');
     if (!formSubject || !formChapter) { setContentError('Select Subject and Chapter first.'); return; }
+    if (!['Class 9', 'Class 10', 'Class 11', 'Class 12'].includes(contentClass)) { setContentError('AI generation supports Classes IX–XII. Publish material manually for other classes.'); return; }
     if (contentBoard !== 'CBSE') { setContentError('Teacher Agent generation currently supports CBSE only.'); return; }
     if (!user) { setContentError('Admin login is required.'); return; }
     const apiBase = (import.meta.env.VITE_SAARTHI_API_URL || '').replace(/\/$/, '');
@@ -261,7 +224,7 @@ export const AdminPanel: React.FC = () => {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           board: 'CBSE', class_level: classRoman(contentClass),
-          subject: normalizeTeacherSubject(formSubject.name),
+          subject: formSubject.teacherSubject || formSubject.name,
           language: language === 'hi' ? 'HINDI' : 'ENGLISH',
           asset_type: 'DETAILED_NOTES', topic_id: topicId,
           knowledge: {
@@ -379,7 +342,7 @@ export const AdminPanel: React.FC = () => {
       channelTitle: videoChannel.trim(),
       duration: videoDuration.trim() || '30:00',
       views: '1K views',
-      thumbnail: `https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=640&auto=format&fit=crop`,
+      thumbnail: `https://img.youtube.com/vi/${cleanId}/hqdefault.jpg`,
       board: videoBoard,
       classGrade: videoClass,
       stream: videoStream,
@@ -428,14 +391,6 @@ export const AdminPanel: React.FC = () => {
     setShowNoticeForm(false);
   };
 
-  const handleSavePhotoSettings = () => {
-    if (newPhotoUrl.trim()) {
-      setBabaImageUrl(newPhotoUrl.trim());
-      setPhotoSaved(true);
-      setTimeout(() => setPhotoSaved(false), 2000);
-    }
-  };
-
   const handleResolveEnquiry = async (enquiryId: string) => {
     const updated = enquiriesList.map((enq) =>
       enq.id === enquiryId ? { ...enq, status: 'resolved' as const } : enq
@@ -451,6 +406,7 @@ export const AdminPanel: React.FC = () => {
 
   return (
     <div className="flex-1 bg-white rounded-2xl border-2 border-red-500/80 shadow-md p-4 sm:p-6 flex flex-col gap-6 min-w-0">
+      {adminOperationError && <p role="alert" className="border border-red-300 bg-red-50 rounded-xl p-3 text-sm">{adminOperationError}</p>}
       {/* Admin Header */}
       <div className="border-b border-orange-200 pb-4 flex flex-wrap items-center justify-between gap-3 bg-gradient-to-r from-red-50 via-orange-50 to-amber-50 p-4 rounded-2xl border border-red-200">
         <div className="flex items-center gap-3">
@@ -557,13 +513,14 @@ export const AdminPanel: React.FC = () => {
           }`}
         >
           <ImageIcon className="w-3.5 h-3.5" />
-          <span>Baba Ji Photo Settings</span>
+          <span>Website Manager</span>
         </button>
       </div>
 
       {/* Admin Tab 1: Content Manager */}
       {adminTab === 'content' && (
         <div className="space-y-4">
+          <ManagedRecords collection="learning_contents" />
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-stone-900 uppercase tracking-wider font-cinzel">
               Curriculum Content Repository (Add / Edit / Approve / Publish)
@@ -578,21 +535,7 @@ export const AdminPanel: React.FC = () => {
           </div>
 
           <div className="flex justify-end"><button type="button" onClick={() => setShowCurriculumManager(!showCurriculumManager)} className="px-3 py-2 bg-stone-800 text-white rounded-xl text-xs font-bold">{showCurriculumManager ? 'Close Curriculum Manager' : 'Manage Subjects & Chapters'}</button></div>
-          {showCurriculumManager && (
-            <div className="bg-stone-50 border rounded-2xl p-4 space-y-3">
-              <h4 className="font-bold text-sm">Curriculum Manager — Add / Rename / Delete Subjects & Chapters</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                <select value={curriculumClass} onChange={e=>setCurriculumClass(e.target.value as ClassGrade)} className="border rounded-lg p-2 text-xs"><option>Class 9</option><option>Class 10</option><option>Class 11</option><option>Class 12</option></select>
-                <select value={curriculumStream} onChange={e=>setCurriculumStream(e.target.value as StreamType)} className="border rounded-lg p-2 text-xs"><option>General</option><option>Science</option><option>Commerce</option><option>Humanities</option></select>
-                <div className="flex gap-1"><input value={newSubjectName} onChange={e=>setNewSubjectName(e.target.value)} placeholder="New subject name" className="border rounded-lg p-2 text-xs flex-1"/><button type="button" onClick={addCurriculumSubject} className="bg-orange-600 text-white px-3 rounded-lg text-xs">Add</button></div>
-              </div>
-              {managerSubjects.map(subject => <div key={subject.id} className="bg-white border rounded-xl p-3">
-                <div className="flex flex-wrap justify-between gap-2"><b className="text-xs">{subject.name}</b><div className="flex gap-2"><button type="button" onClick={()=>renameCurriculumSubject(subject)} className="text-xs text-blue-700">Rename</button><button type="button" onClick={()=>{if(window.confirm('Delete this subject and its chapter list?')) deleteCurriculumSubject(subject.id)}} className="text-xs text-red-700">Delete</button></div></div>
-                <div className="mt-2 space-y-1">{subject.chapters.map(ch=><div key={ch.id} className="flex justify-between text-xs border-t pt-1"><span>{ch.chapterNumber}. {ch.title}</span><span className="flex gap-2"><button type="button" onClick={()=>renameCurriculumChapter(subject,ch)} className="text-blue-700">Edit</button><button type="button" onClick={()=>removeCurriculumChapter(subject,ch.id)} className="text-red-700">Delete</button></span></div>)}</div>
-                <div className="flex gap-1 mt-2"><input value={newChapterName} onChange={e=>setNewChapterName(e.target.value)} placeholder="Type chapter name, then Add to this subject" className="border rounded-lg p-2 text-xs flex-1"/><button type="button" onClick={()=>addCurriculumChapter(subject)} className="bg-emerald-700 text-white px-3 rounded-lg text-xs">Add Chapter</button></div>
-              </div>)}
-            </div>
-          )}
+          {showCurriculumManager && <CurriculumManager />}
 
           {showContentForm && (
             <form onSubmit={handleCreateContent} className="bg-amber-50/60 border border-orange-200 p-4 rounded-2xl space-y-3">
@@ -626,9 +569,9 @@ export const AdminPanel: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                <div><label className="block text-[11px] font-semibold mb-1">Board *</label><select value={contentBoard} onChange={e => setContentBoard(e.target.value as BoardType)} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white"><option value="CBSE">CBSE</option><option value="ICSE_ISC">ICSE / ISC</option><option value="UP_BOARD">UP Board</option><option value="BIHAR_BOARD">Bihar Board</option><option value="STATE_BOARD">State Board</option></select></div>
-                <div><label className="block text-[11px] font-semibold mb-1">Class *</label><select value={contentClass} onChange={e => { setContentClass(e.target.value as ClassGrade); setContentSubjectId(''); setContentChapterId(''); setContentTopicId(''); setContentTopicTitle(''); }} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white"><option>Class 9</option><option>Class 10</option><option>Class 11</option><option>Class 12</option></select></div>
-                <div><label className="block text-[11px] font-semibold mb-1">Stream</label><select value={contentStream} onChange={e => setContentStream(e.target.value as StreamType)} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white"><option>General</option><option>Science</option><option>Commerce</option><option>Humanities</option></select></div>
+                <div><label className="block text-[11px] font-semibold mb-1">Board *</label><select value={contentBoard} onChange={e => setContentBoard(e.target.value as BoardType)} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white">{activeOptions(config.boards).map(x=><option key={x.id} value={x.id}>{x.label}</option>)}</select></div>
+                <div><label className="block text-[11px] font-semibold mb-1">Class *</label><select value={contentClass} onChange={e => { setContentClass(e.target.value as ClassGrade); setContentSubjectId(''); setContentChapterId(''); setContentTopicId(''); setContentTopicTitle(''); }} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white">{activeOptions(config.classes).map(x=><option key={x.id} value={x.id}>{x.label}</option>)}</select></div>
+                <div><label className="block text-[11px] font-semibold mb-1">Stream</label><select value={contentStream} onChange={e => setContentStream(e.target.value as StreamType)} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white">{activeOptions(config.streams).map(x=><option key={x.id} value={x.id}>{x.label}</option>)}</select></div>
                 <div><label className="block text-[11px] font-semibold mb-1">Subject *</label><select value={formSubject?.id || ''} onChange={e => { setContentSubjectId(e.target.value); setContentChapterId(''); setContentTopicId(''); }} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white">{formSubjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></div>
                 <div><label className="block text-[11px] font-semibold mb-1">Chapter *</label><select value={formChapter?.id || ''} onChange={e => { setContentChapterId(e.target.value); setContentTopicId(''); }} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white">{formSubject?.chapters.map(ch => <option key={ch.id} value={ch.id}>{ch.chapterNumber}. {ch.title}</option>)}</select></div>
                 <div><label className="block text-[11px] font-semibold mb-1">Topic (write yourself)</label><input value={contentTopicTitle} onChange={e => setContentTopicTitle(e.target.value)} placeholder="Type topic name" className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white outline-none" /></div>
@@ -644,14 +587,7 @@ export const AdminPanel: React.FC = () => {
                   onChange={(e) => setContentType(e.target.value as any)}
                   className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white outline-none"
                 >
-                  <option value="detailed_notes">Detailed Notes</option>
-                  <option value="revision_notes">Revision Notes</option>
-                  <option value="formulae">Definitions & Formulae</option>
-                  <option value="mindmaps">Mind Maps</option>
-                  <option value="flashcards">Flashcards</option>
-                  <option value="pyqs">Previous Year Questions</option>
-                  <option value="cbqs">Competency Questions</option>
-                  <option value="case_studies">Case Study</option>
+                  {activeOptions(config.modules).filter(x=>!['test_yourself','recommended_videos'].includes(x.id)).map(x=><option key={x.id} value={x.id}>{x.label}</option>)}
                 </select>
               </div>
 
@@ -722,7 +658,7 @@ export const AdminPanel: React.FC = () => {
 
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => updateContentApproval(c.id, !c.approved, !c.published)}
+                    onClick={() => approveContent(c.id, !c.approved, !c.approved)}
                     className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors ${
                       c.approved
                         ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
@@ -732,13 +668,7 @@ export const AdminPanel: React.FC = () => {
                     {c.approved ? 'Approved ✓' : 'Approve & Publish'}
                   </button>
 
-                  <button
-                    onClick={() => deleteLearningContent(c.id)}
-                    className="p-1.5 text-stone-400 hover:text-red-600 rounded-lg hover:bg-red-50"
-                    title="Delete"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+
                 </div>
               </div>
             ))}
@@ -749,6 +679,7 @@ export const AdminPanel: React.FC = () => {
       {/* Admin Tab 2: Videos */}
       {adminTab === 'videos' && (
         <div className="space-y-4">
+          <ManagedRecords collection="youtube_videos" />
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-stone-900 uppercase tracking-wider font-cinzel">
               Saarthi Recommended Videos
@@ -763,7 +694,7 @@ export const AdminPanel: React.FC = () => {
           </div>
 
           {showVideoForm && (
-            <form onSubmit={handleCreateVideo} className="bg-red-50/50 border border-red-200 p-4 rounded-2xl space-y-3">
+            <form onSubmit={adminSubmit(handleCreateVideo)} className="bg-red-50/50 border border-red-200 p-4 rounded-2xl space-y-3">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[11px] font-semibold text-stone-700 mb-1">
@@ -794,9 +725,9 @@ export const AdminPanel: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                <div><label className="block text-[11px] font-semibold mb-1">Board *</label><select value={videoBoard} onChange={e=>setVideoBoard(e.target.value as BoardType)} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white"><option value="CBSE">CBSE</option><option value="ICSE_ISC">ICSE / ISC</option><option value="UP_BOARD">UP Board</option><option value="BIHAR_BOARD">Bihar Board</option><option value="STATE_BOARD">State Board</option></select></div>
-                <div><label className="block text-[11px] font-semibold mb-1">Class *</label><select value={videoClass} onChange={e=>{setVideoClass(e.target.value as ClassGrade);setVideoSubjectId('');setVideoChapterId('')}} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white"><option>Class 9</option><option>Class 10</option><option>Class 11</option><option>Class 12</option></select></div>
-                <div><label className="block text-[11px] font-semibold mb-1">Stream</label><select value={videoStream} onChange={e=>{setVideoStream(e.target.value as StreamType);setVideoSubjectId('');setVideoChapterId('')}} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white"><option>General</option><option>Science</option><option>Commerce</option><option>Humanities</option></select></div>
+                <div><label className="block text-[11px] font-semibold mb-1">Board *</label><select value={videoBoard} onChange={e=>setVideoBoard(e.target.value as BoardType)} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white">{activeOptions(config.boards).map(x=><option key={x.id} value={x.id}>{x.label}</option>)}</select></div>
+                <div><label className="block text-[11px] font-semibold mb-1">Class *</label><select value={videoClass} onChange={e=>{setVideoClass(e.target.value as ClassGrade);setVideoSubjectId('');setVideoChapterId('')}} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white">{activeOptions(config.classes).map(x=><option key={x.id} value={x.id}>{x.label}</option>)}</select></div>
+                <div><label className="block text-[11px] font-semibold mb-1">Stream</label><select value={videoStream} onChange={e=>{setVideoStream(e.target.value as StreamType);setVideoSubjectId('');setVideoChapterId('')}} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white">{activeOptions(config.streams).map(x=><option key={x.id} value={x.id}>{x.label}</option>)}</select></div>
                 <div><label className="block text-[11px] font-semibold mb-1">Subject *</label><select value={videoSubject?.id || ''} onChange={e=>{setVideoSubjectId(e.target.value);setVideoChapterId('')}} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white">{videoSubjects.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></div>
                 <div><label className="block text-[11px] font-semibold mb-1">Chapter *</label><select value={videoChapter?.id || ''} onChange={e=>setVideoChapterId(e.target.value)} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white">{videoSubject?.chapters.map(ch=><option key={ch.id} value={ch.id}>{ch.chapterNumber}. {ch.title}</option>)}</select></div>
                 <div><label className="block text-[11px] font-semibold mb-1">Topic (write yourself)</label><input value={videoTopic} onChange={e=>setVideoTopic(e.target.value)} placeholder="Type topic name" className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white"/></div>
@@ -867,15 +798,17 @@ export const AdminPanel: React.FC = () => {
 
       {adminTab === 'tests' && (
         <div className="space-y-4">
+          <ManagedRecords collection="tests" />
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-stone-900 uppercase tracking-wider font-cinzel">Assessment Test Bank ({evaluationTests.length})</h3>
             <button onClick={() => setShowTestForm(!showTestForm)} className="px-3.5 py-1.5 bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center gap-1"><Plus className="w-3.5 h-3.5"/>{showTestForm ? 'Cancel' : 'Create Test'}</button>
           </div>
-          {showTestForm && <form onSubmit={handleCreateTest} className="bg-emerald-50 border border-emerald-200 p-4 rounded-2xl space-y-3">
+          {showTestForm && <form onSubmit={adminSubmit(handleCreateTest)} className="bg-emerald-50 border border-emerald-200 p-4 rounded-2xl space-y-3">
             <input required value={testTitle} onChange={e=>setTestTitle(e.target.value)} placeholder="Test title" className="w-full px-3 py-2 text-xs border rounded-xl bg-white"/>
+            <label className="block text-xs">Board<select value={testBoard} onChange={e=>{setTestBoard(e.target.value);setTestSubjectId('');setTestChapterId('')}} className="w-full border rounded-xl p-2">{activeOptions(config.boards).map(x=><option key={x.id} value={x.id}>{x.label}</option>)}</select></label>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              <select value={testClass} onChange={e=>{setTestClass(e.target.value as ClassGrade);setTestSubjectId('');setTestChapterId('')}} className="px-2 py-2 text-xs border rounded-xl bg-white">{(['Class 9','Class 10','Class 11','Class 12'] as ClassGrade[]).map(x=><option key={x}>{x}</option>)}</select>
-              <select value={testStream} onChange={e=>{setTestStream(e.target.value as StreamType);setTestSubjectId('');setTestChapterId('')}} className="px-2 py-2 text-xs border rounded-xl bg-white">{(['General','Science','Commerce','Humanities'] as StreamType[]).map(x=><option key={x}>{x}</option>)}</select>
+              <select value={testClass} onChange={e=>{setTestClass(e.target.value as ClassGrade);setTestSubjectId('');setTestChapterId('')}} className="px-2 py-2 text-xs border rounded-xl bg-white">{activeOptions(config.classes).map(x=><option key={x.id} value={x.id}>{x.label}</option>)}</select>
+              <select value={testStream} onChange={e=>{setTestStream(e.target.value as StreamType);setTestSubjectId('');setTestChapterId('')}} className="px-2 py-2 text-xs border rounded-xl bg-white">{activeOptions(config.streams).map(x=><option key={x.id} value={x.id}>{x.label}</option>)}</select>
               <select value={testSubject?.id || ''} onChange={e=>{setTestSubjectId(e.target.value);setTestChapterId('')}} className="px-2 py-2 text-xs border rounded-xl bg-white">{testSubjects.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select>
               <select value={testChapter?.id || ''} onChange={e=>setTestChapterId(e.target.value)} className="px-2 py-2 text-xs border rounded-xl bg-white">{testSubject?.chapters.map(ch=><option key={ch.id} value={ch.id}>{ch.chapterNumber}. {ch.title}</option>)}</select>
             </div>
@@ -891,6 +824,7 @@ export const AdminPanel: React.FC = () => {
       {/* Admin Tab 3: Notices */}
       {adminTab === 'notices' && (
         <div className="space-y-4">
+          <ManagedRecords collection="notices" />
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-stone-900 uppercase tracking-wider font-cinzel">
               Motivational Circulars & Notice Board
@@ -905,7 +839,7 @@ export const AdminPanel: React.FC = () => {
           </div>
 
           {showNoticeForm && (
-            <form onSubmit={handleCreateNotice} className="bg-amber-50/60 border border-amber-200 p-4 rounded-2xl space-y-3">
+            <form onSubmit={adminSubmit(handleCreateNotice)} className="bg-amber-50/60 border border-amber-200 p-4 rounded-2xl space-y-3">
               <div>
                 <label className="block text-[11px] font-semibold text-stone-700 mb-1">
                   Notice Title *
@@ -1083,110 +1017,9 @@ export const AdminPanel: React.FC = () => {
         </div>
       )}
 
-      {/* Admin Tab 6: Baba Neem Karoli Ji Photo Settings */}
-      {adminTab === 'settings' && (
-        <div className="bg-amber-50/50 border border-orange-200 p-5 rounded-2xl space-y-4 max-w-xl">
-          <div className="flex items-center gap-3">
-            <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-orange-400 p-0.5 bg-white shadow-md">
-              <img
-                src={babaImageUrl}
-                alt="Baba Neem Karoli Ji"
-                className="w-full h-full object-cover object-top rounded-full bg-amber-900"
-              />
-            </div>
-            <div>
-              <h3 className="font-bold text-base text-stone-900 font-cinzel">
-                Revered Baba Neem Karoli Ji’s Photo Configuration
-              </h3>
-              <p className="text-xs text-stone-600">
-                Official sacred darshan photo of Maharaj-ji. It updates automatically at the top of every page across the platform.
-              </p>
-            </div>
-          </div>
+      {/* Admin Tab 6: Shared Website Manager */}
+      {adminTab === 'settings' && <WebsiteSettingsManager />}
 
-          {/* Quick Presets of Authentic Original Photographs */}
-          <div className="space-y-1.5">
-            <label className="block text-xs font-bold text-stone-700">
-              Authentic Original Photo Presets:
-            </label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  const url = 'https://upload.wikimedia.org/wikipedia/commons/e/ea/Shri_Neem_Karoli_Baba.png';
-                  setNewPhotoUrl(url);
-                  setBabaImageUrl(url);
-                  setPhotoSaved(true);
-                  setTimeout(() => setPhotoSaved(false), 2000);
-                }}
-                className="p-2 text-left bg-white border border-orange-300 rounded-xl hover:border-orange-500 hover:bg-orange-50/50 transition-all flex items-center gap-2"
-              >
-                <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 border border-orange-400">
-                  <img
-                    src="https://upload.wikimedia.org/wikipedia/commons/e/ea/Shri_Neem_Karoli_Baba.png"
-                    alt=""
-                    className="w-full h-full object-cover object-top"
-                  />
-                </div>
-                <div className="text-[11px] leading-tight font-semibold text-stone-800">
-                  <span>मूल पावन स्वरूप (कंबल वाले बाबा)</span>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  const url = 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/Neem_Karoli_Baba%2C_Samadhi_Mandir%2C_Vrindavan.JPG/640px-Neem_Karoli_Baba%2C_Samadhi_Mandir%2C_Vrindavan.JPG';
-                  setNewPhotoUrl(url);
-                  setBabaImageUrl(url);
-                  setPhotoSaved(true);
-                  setTimeout(() => setPhotoSaved(false), 2000);
-                }}
-                className="p-2 text-left bg-white border border-orange-300 rounded-xl hover:border-orange-500 hover:bg-orange-50/50 transition-all flex items-center gap-2"
-              >
-                <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 border border-orange-400">
-                  <img
-                    src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/Neem_Karoli_Baba%2C_Samadhi_Mandir%2C_Vrindavan.JPG/640px-Neem_Karoli_Baba%2C_Samadhi_Mandir%2C_Vrindavan.JPG"
-                    alt=""
-                    className="w-full h-full object-cover object-top"
-                  />
-                </div>
-                <div className="text-[11px] leading-tight font-semibold text-stone-800">
-                  <span>समाधि मंदिर वृन्दावन दर्शन</span>
-                </div>
-              </button>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-stone-700 mb-1">
-              Custom Image URL:
-            </label>
-            <input
-              type="text"
-              value={newPhotoUrl}
-              onChange={(e) => setNewPhotoUrl(e.target.value)}
-              placeholder="https://..."
-              className="w-full px-3 py-2 text-xs border border-stone-300 rounded-xl bg-white outline-none focus:ring-2 focus:ring-orange-500 font-mono"
-            />
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleSavePhotoSettings}
-              className="px-4 py-2 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 text-white font-bold rounded-xl text-xs shadow-sm flex items-center gap-1.5"
-            >
-              <Save className="w-3.5 h-3.5" />
-              <span>Save & Update Everywhere</span>
-            </button>
-            {photoSaved && (
-              <span className="text-xs text-emerald-700 font-bold flex items-center gap-1">
-                <Check className="w-4 h-4" /> Updated successfully!
-              </span>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 };

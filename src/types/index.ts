@@ -2,11 +2,11 @@ export type UserRole = 'student' | 'admin';
 
 export type Language = 'en' | 'hi';
 
-export type BoardType = 'CBSE' | 'ICSE_ISC' | 'UP_BOARD' | 'BIHAR_BOARD' | 'STATE_BOARD';
+export type BoardType = 'CBSE' | 'ICSE_ISC' | 'UP_BOARD' | 'BIHAR_BOARD' | 'STATE_BOARD' | (string & {});
 
-export type ClassGrade = 'Class 9' | 'Class 10' | 'Class 11' | 'Class 12';
+export type ClassGrade = 'Class 9' | 'Class 10' | 'Class 11' | 'Class 12' | (string & {});
 
-export type StreamType = 'General' | 'Science' | 'Commerce' | 'Humanities';
+export type StreamType = 'General' | 'Science' | 'Commerce' | 'Humanities' | (string & {});
 
 export interface UserProfile {
   uid: string;
@@ -34,7 +34,8 @@ export type ContentModuleType =
   | 'cbqs'
   | 'case_studies'
   | 'recommended_videos'
-  | 'test_yourself';
+  | 'test_yourself'
+  | (string & {});
 
 export interface FlashcardItem {
   id: string;
@@ -274,6 +275,10 @@ export interface ContactEnquiry {
 }
 
 export interface SubjectMeta {
+  teacherSubject?: string;
+  revision?: number;
+  board?: BoardType;
+  deleted?: boolean;
   id: string;
   name: string;
   hindiName: string;
@@ -285,6 +290,7 @@ export interface SubjectMeta {
 }
 
 export interface ChapterMeta {
+  deleted?: boolean;
   id: string;
   title: string;
   hindiTitle: string;
@@ -293,6 +299,7 @@ export interface ChapterMeta {
 }
 
 export interface TopicMeta {
+  deleted?: boolean;
   id: string;
   title: string;
   hindiTitle: string;
