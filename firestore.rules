@@ -45,9 +45,11 @@ service cloud.firestore {
     match /users/{userId}/saved_materials/{materialId} {
       allow read: if isOwner(userId) && request.auth.token.firebase.sign_in_provider != 'anonymous';
       allow create, update: if isOwner(userId) && request.auth.token.firebase.sign_in_provider != 'anonymous' && isValidId(materialId) &&
-        incoming().keys().hasOnly(['id', 'title', 'body', 'curriculum', 'savedAt']) && incoming().id == materialId &&
+        incoming().keys().hasOnly(['id', 'title', 'body', 'curriculum', 'savedAt', 'contentId']) && incoming().id == materialId &&
         incoming().title is string && incoming().title.size() > 0 && incoming().title.size() <= 300 &&
-        incoming().body is string && incoming().body.size() > 0 && incoming().body.size() <= 200000 &&
+        incoming().body is string && incoming().body.size() <= 200000 &&
+        (incoming().body.size() > 0 || ('contentId' in incoming() && isValidId(incoming().contentId))) &&
+        (!('contentId' in incoming()) || isValidId(incoming().contentId)) &&
         incoming().curriculum is string && incoming().curriculum.size() <= 1000 &&
         incoming().savedAt is string && incoming().savedAt.size() <= 40;
       allow delete: if false;

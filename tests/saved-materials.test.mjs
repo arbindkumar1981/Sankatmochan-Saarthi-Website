@@ -16,6 +16,14 @@ test('empty and oversized dashboard materials are rejected before writing', () =
   assert.throws(() => prepareSavedMaterial({ ...material(), body: 'x'.repeat(200001) }));
   assert.throws(() => prepareSavedMaterial({ ...material(), id: '../other-user' }));
 });
+
+test('saved PDFs keep a bounded content reference and never retain a public file link', () => {
+  const clean = prepareSavedMaterial({ ...material(), body: '', contentId: 'published-content-1', attachmentUrl: 'https://example.org/secret.pdf' });
+  assert.equal(clean.contentId, 'published-content-1');
+  assert.equal(clean.body, '');
+  assert.equal(clean.attachmentUrl, undefined);
+  assert.throws(() => prepareSavedMaterial({ ...material(), contentId: '../original-word' }));
+});
 test('published notes with old IDs match only the same subject and chapter names', () => {
   const record = { subjectId: 'old-science', subjectName: 'Science', chapterId: 'old-ch1', chapterTitle: 'Chemical Reactions and Equations' };
   assert.ok(matchesMaterialSelection(record, { id: 'new-science', name: 'Science' }, { id: 'new-ch1', title: record.chapterTitle }));
