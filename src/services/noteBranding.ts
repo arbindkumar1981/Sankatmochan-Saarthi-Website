@@ -31,8 +31,18 @@ export async function brandPdf(source: Uint8Array, branding: BrandingImages): Pr
 }
 
 export async function loadBrandingImages(logoUrl: string, name: string): Promise<BrandingImages> {
+  let temporaryUrl: string | undefined;
+  // Admin-managed images use the same private Storage rules as uploaded notes.
+  // Read them with the signed-in Firebase session before drawing on a canvas.
+  if (logoUrl.startsWith('https://firebasestorage.googleapis.com/')) {
+    const { getBlob, ref } = await import('firebase/storage');
+    const { storage } = await import('./firebase');
+    temporaryUrl = URL.createObjectURL(await getBlob(ref(storage, logoUrl), 5 * 1024 * 1024));
+  }
   const image = new Image(); image.crossOrigin = 'anonymous';
-  await new Promise<void>((resolve, reject) => { image.onload = () => resolve(); image.onerror = () => reject(new Error('Unable to load the website logo. Check the logo settings before uploading.')); image.src = logoUrl; });
+  try {
+    await new Promise<void>((resolve, reject) => { image.onload = () => resolve(); image.onerror = () => reject(new Error('Unable to load the website logo. Check the logo settings before uploading.')); image.src = temporaryUrl || logoUrl; });
+  } finally { if (temporaryUrl) URL.revokeObjectURL(temporaryUrl); }
   const canvas = document.createElement('canvas'); canvas.width = 1000; canvas.height = Math.max(1, Math.round(1000 * image.naturalHeight / image.naturalWidth));
   const context = canvas.getContext('2d'); if (!context) throw new Error('Document branding is unavailable in this browser.');
   context.drawImage(image, 0, 0, canvas.width, canvas.height);
