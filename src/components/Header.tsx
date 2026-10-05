@@ -115,42 +115,47 @@ export const Header: React.FC = () => {
 
           <div className="h-4 w-px bg-orange-200" />
 
-          {/* Topic Select: chapter/full chapter or an available topic */}
-          <div className="flex items-center gap-1 text-xs">
-            <span className="text-stone-500 font-medium"><WebsiteText original={"Topic:"} /></span>
+          {/* Keep chapter and topic identities separate, including repeated topic IDs. */}
+          <div className="flex min-w-0 items-center gap-1 text-xs">
+            <label htmlFor="header-chapter" className="text-stone-500 font-medium"><WebsiteText original={"Chapter:"} /></label>
             <select
-              value={selectedTopic?.id || (selectedChapter ? `chapter:${selectedChapter.id}` : '')}
-              onChange={(e) => {
-                const value = e.target.value;
-                if (value.startsWith('chapter:')) {
-                  const chapterId = value.slice('chapter:'.length);
-                  const chapter = selectedSubject?.chapters.find(ch => ch.id === chapterId) || null;
-                  setSelectedChapter(chapter);
-                  setSelectedTopic(null);
-                  return;
-                }
-                const match = selectedSubject?.chapters
-                  .flatMap(ch => ch.topics.map(topic => ({ ch, topic })))
-                  .find(item => item.topic.id === value);
-                if (match) {
-                  setSelectedChapter(match.ch);
-                  setSelectedTopic(match.topic);
-                }
+              id="header-chapter"
+              value={selectedChapter?.id || ''}
+              onChange={e => {
+                setSelectedChapter(selectedSubject?.chapters.find(ch => ch.id === e.target.value) || null);
+                setSelectedTopic(null);
               }}
-              disabled={!selectedSubject || selectedSubject.chapters.length === 0}
-              className="max-w-[180px] bg-transparent font-bold text-orange-900 outline-none cursor-pointer disabled:opacity-50"
+              disabled={!selectedSubject?.chapters.length}
+              title={selectedChapter ? (language === 'hi' ? selectedChapter.hindiTitle || selectedChapter.title : selectedChapter.title) : ''}
+              className="max-w-[260px] min-w-0 bg-transparent font-bold text-orange-900 outline-none cursor-pointer disabled:opacity-50"
             >
-              {!selectedSubject?.chapters.length && <option value=""><WebsiteText original={"No topics"} /></option>}
-              {selectedSubject?.chapters.map(ch => (
-                <React.Fragment key={ch.id}>
-                  <option value={`chapter:${ch.id}`}>{ch.title}<WebsiteText original={" — Full Chapter"} /></option>
-                  {ch.topics.map(topic => (
-                    <option key={topic.id} value={topic.id}>{ch.title} — {topic.title}</option>
-                  ))}
-                </React.Fragment>
-              ))}
+              {!selectedSubject?.chapters.length && <option value=""><WebsiteText original={"Select"} /></option>}
+              {selectedSubject?.chapters.map(ch => <option key={ch.id} value={ch.id}>{ch.chapterNumber}. {language === 'hi' ? ch.hindiTitle || ch.title : ch.title}</option>)}
             </select>
           </div>
+
+          <div className="h-4 w-px bg-orange-200" />
+
+          <div className="flex min-w-0 items-center gap-1 text-xs">
+            <label htmlFor="header-topic" className="text-stone-500 font-medium"><WebsiteText original={"Topic:"} /></label>
+            <select
+              id="header-topic"
+              value={selectedTopic?.id || ''}
+              onChange={(e) => {
+                setSelectedTopic(selectedChapter?.topics.find(topic => topic.id === e.target.value) || null);
+              }}
+              disabled={!selectedChapter}
+              title={selectedTopic ? (language === 'hi' ? selectedTopic.hindiTitle || selectedTopic.title : selectedTopic.title) : websiteText('Full Chapter Scope')}
+              className="max-w-[300px] min-w-0 bg-transparent font-bold text-orange-900 outline-none cursor-pointer disabled:opacity-50"
+            >
+              <option value=""><WebsiteText original={"Full Chapter Scope"} /></option>
+              {selectedChapter?.topics.map(topic => <option key={topic.id} value={topic.id}>{language === 'hi' ? topic.hindiTitle || topic.title : topic.title}</option>)}
+            </select>
+          </div>
+          {selectedChapter && <p className="w-full break-words border-t border-orange-100 pt-1 text-xs text-orange-900" aria-live="polite">
+            <WebsiteText original={"Chapter:"} /> {language === 'hi' ? selectedChapter.hindiTitle || selectedChapter.title : selectedChapter.title}
+            {' · '}<WebsiteText original={"Topic:"} /> {selectedTopic ? (language === 'hi' ? selectedTopic.hindiTitle || selectedTopic.title : selectedTopic.title) : websiteText('Full Chapter Scope')}
+          </p>}
         </div>
 
         {/* Right Actions: Language Switcher + Student Sign In / Admin Login together */}
