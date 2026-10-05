@@ -35,9 +35,21 @@ export async function loadBrandingImages(logoUrl: string, name: string): Promise
   // Admin-managed images use the same private Storage rules as uploaded notes.
   // Read them with the signed-in Firebase session before drawing on a canvas.
   if (logoUrl.startsWith('https://firebasestorage.googleapis.com/')) {
-    const { getBlob, ref } = await import('firebase/storage');
-    const { storage } = await import('./firebase');
-    temporaryUrl = URL.createObjectURL(await getBlob(ref(storage, logoUrl), 5 * 1024 * 1024));
+    const { auth, storage } = await import('./firebase');
+    const url = new URL(logoUrl);
+    const parts = url.pathname.match(/^\/v0\/b\/([^/]+)\/o\/(.+)$/);
+    if (!parts || decodeURIComponent(parts[1]) !== storage.app.options.storageBucket || !auth.currentUser || auth.currentUser.isAnonymous) throw new Error('Administrator login and an uploaded website logo are required.');
+    const api = import.meta.env.VITE_SAARTHI_API_URL;
+    if (!api) throw new Error('Logo branding is unavailable.');
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
+    try {
+      const response = await fetch(`${api.replace(/\/$/, '')}/v1/materials/branding-logo?path=${encodeURIComponent(decodeURIComponent(parts[2]))}`, { headers: { Authorization: `Bearer ${await auth.currentUser.getIdToken()}` }, signal: controller.signal, cache: 'no-store' });
+      if (!response.ok) { const error = await response.json().catch(() => ({})); throw new Error(error.detail || 'Unable to load the website logo.'); }
+      const blob = await response.blob();
+      if (blob.size > 5 * 1024 * 1024) throw new Error('Use a logo smaller than 5 MB.');
+      temporaryUrl = URL.createObjectURL(blob);
+    } finally { clearTimeout(timeout); }
   }
   const image = new Image(); image.crossOrigin = 'anonymous';
   try {
