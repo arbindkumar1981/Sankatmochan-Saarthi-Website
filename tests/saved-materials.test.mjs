@@ -30,3 +30,11 @@ test('published notes with old IDs match only the same subject and chapter names
   assert.equal(matchesMaterialSelection(record, { id: 'new-physics', name: 'Physics' }, { id: 'new-ch1', title: record.chapterTitle }), false);
   assert.equal(matchesMaterialSelection(record, { id: 'new-science', name: 'Science' }, { id: 'new-ch2', title: 'Electricity' }), false);
 });
+
+test('legacy bilingual labels match their exact English subject and chapter only', () => {
+  const record = { subjectId: 'c10-science', subjectName: 'Science (विज्ञान)', chapterId: 'old-life', chapterTitle: 'Life Processes (जैव प्रक्रम)' };
+  assert.ok(matchesMaterialSelection(record, { id: 'c10-science', name: 'Science' }, { id: 'life', title: 'Life Processes' }));
+  assert.equal(matchesMaterialSelection(record, { id: 'c10-science', name: 'Science' }, { id: 'other', title: 'Heredity' }), false);
+  assert.equal(matchesMaterialSelection(record, { id: 'physics', name: 'Physics' }, { id: 'life', title: 'Life Processes' }), false);
+  assert.equal(matchesMaterialSelection({ ...record, chapterTitle: 'Life Processes (Advanced)' }, { id: 'c10-science', name: 'Science' }, { id: 'life', title: 'Life Processes' }), false);
+});
