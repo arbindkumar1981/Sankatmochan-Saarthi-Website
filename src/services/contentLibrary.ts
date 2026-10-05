@@ -11,6 +11,7 @@ import {
   where
 } from 'firebase/firestore';
 import { db } from './firebase';
+import { contentDocumentId } from './contentDocumentId';
 import {
   BoardType,
   ClassGrade,
@@ -104,10 +105,11 @@ export const saveCanonicalContent = async (
   if (existing) return existing;
 
   // Deterministic document id gives concurrent writers one idempotent target.
-  const ref = doc(db, 'learning_contents', canonicalKey);
+  const documentId = await contentDocumentId(canonicalKey);
+  const ref = doc(db, 'learning_contents', documentId);
   const item: LearningContent = {
     ...content,
-    id: canonicalKey,
+    id: documentId,
     canonicalKey,
     curriculumVersion: identity.curriculumVersion,
     language: identity.language,

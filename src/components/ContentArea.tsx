@@ -2,7 +2,7 @@ import { DEFAULT_WEBSITE_CONFIG } from '../services/websiteConfig';
 import { optionLabel } from '../services/websiteConfig';
 import { useWebsite } from '../context/WebsiteContext';
 import { WebsiteText } from '../context/WebsiteContext';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { parseGeneratedQuestions } from '../services/testAssessment';
 import { useCurriculum } from '../context/CurriculumContext';
 import { useAuth } from '../context/AuthContext';
@@ -46,6 +46,8 @@ import {
   Play,
   ExternalLink
 } from 'lucide-react';
+
+const StudyPdfReader = lazy(() => import('./StudyPdfReader').then(module => ({ default: module.StudyPdfReader })));
 
 export const ContentArea: React.FC = () => {
   const { config, text: websiteText } = useWebsite();
@@ -182,12 +184,13 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
     if (!user || user.isAnonymous) { openAuthModal('student'); return; }
     const structured = matchedContent ? [matchedContent.flashcardItems, matchedContent.formulaItems, matchedContent.pyqItems, matchedContent.caseStudyItem, matchedContent.mindmapNodes].filter(Boolean).map(value => JSON.stringify(value, null, 2)).join('\n\n') : '';
     const body = studentGeneratedText || (language === 'hi' ? matchedContent?.bodyHindi || matchedContent?.bodyText : matchedContent?.bodyText) || structured;
-    if (!body) { setStudentGenerationError('This material has no readable notes to save yet.'); return; }
+    const contentId = !studentGeneratedText && matchedContent?.attachmentType === 'application/pdf' && matchedContent.storagePath ? matchedContent.id : undefined;
+    if (!body && !contentId) { setStudentGenerationError('This material has no readable notes to save yet.'); return; }
     try {
       const key = `${selectedBoard}:${selectedClass}:${selectedSubject?.id}:${selectedChapter?.id}:${selectedTopic?.id || ''}:${activeModule}:${language}`;
       const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(key));
       const id = Array.from(new Uint8Array(hash)).map(byte => byte.toString(16).padStart(2, '0')).join('');
-      const material = prepareSavedMaterial({ id, title: `${selectedSubject?.name || 'Saarthi'}: ${selectedChapter?.title || 'Notes'} — ${activeModule.replaceAll('_', ' ')}`, body, curriculum: [selectedBoard, selectedClass, selectedSubject?.name || '', selectedChapter?.title || ''].join(' · '), savedAt: new Date().toISOString() });
+      const material = prepareSavedMaterial({ id, title: contentId ? matchedContent!.title : `${selectedSubject?.name || 'Saarthi'}: ${selectedChapter?.title || 'Notes'} — ${activeModule.replaceAll('_', ' ')}`, body: contentId ? '' : body, ...(contentId ? { contentId } : {}), curriculum: [selectedBoard, selectedClass, selectedSubject?.name || '', selectedChapter?.title || ''].join(' · '), savedAt: new Date().toISOString() });
       await setDoc(doc(db, 'users', user.uid, 'saved_materials', id), material);
       setStudentGenerationError('Saved to My Dashboard — Saved Materials.');
     } catch (error) {
@@ -448,7 +451,7 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
         {hasPublishedModuleContent && <button className="border rounded-xl px-3 py-2 text-sm" onClick={downloadGeneratedNotes}>Save to My Dashboard</button>}
         {studentGenerationError && <p role="alert">{studentGenerationError}</p>}
       </section>}
-      {matchedContent?.attachmentUrl && <p className="border rounded-xl p-3 text-sm">{matchedContent.attachmentName || 'Study file'} — file downloads are disabled. This attachment needs a protected reading version from Admin.</p>}
+      {matchedContent?.storagePath && matchedContent.attachmentType === 'application/pdf' ? <Suspense fallback={<p role="status">Opening PDF reader…</p>}><StudyPdfReader key={matchedContent.id} contentId={matchedContent.id} /></Suspense> : matchedContent?.attachmentUrl && <p className="border rounded-xl p-3 text-sm">{matchedContent.attachmentName || 'Study file'} — ask Admin to replace this file with a branded PDF.</p>}
       {hasPublishedModuleContent && !customModule && <button className="border rounded-xl px-3 py-2 text-sm mb-3" onClick={downloadGeneratedNotes}>Save to My Dashboard</button>}
 
       {/* Module 1 & 2: Detailed Notes & Revision Notes */}

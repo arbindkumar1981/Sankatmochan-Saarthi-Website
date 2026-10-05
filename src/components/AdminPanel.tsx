@@ -103,6 +103,7 @@ export const AdminPanel: React.FC = () => {
   const [contentSubtopic, setContentSubtopic] = useState('');
   const [contentFile, setContentFile] = useState<File | null>(null);
   const [contentSaving, setContentSaving] = useState(false);
+  const [contentUploadStatus, setContentUploadStatus] = useState('');
   const [contentGenerating, setContentGenerating] = useState(false);
   const [contentError, setContentError] = useState('');
   const [showCurriculumManager, setShowCurriculumManager] = useState(false);
@@ -267,12 +268,12 @@ export const AdminPanel: React.FC = () => {
       }
     }
 
-    setContentSaving(true);
+    setContentSaving(true); setContentUploadStatus('Preparing material…');
     try {
       let attachment: Awaited<ReturnType<typeof uploadBrandedStudyFile>> | undefined;
       if (contentFile) {
         if (!profile?.uid) throw new Error('Administrator login is required.');
-        attachment = await uploadBrandedStudyFile(contentFile, profile.uid, config);
+        attachment = await uploadBrandedStudyFile(contentFile, profile.uid, config, setContentUploadStatus);
       }
 
       const topic = contentTopicTitle.trim();
@@ -610,7 +611,7 @@ export const AdminPanel: React.FC = () => {
                   <span>{contentFile ? contentFile.name : 'Choose PDF, Word (.docx), PNG/JPG/WEBP or TXT'}</span>
                   <input type="file" className="hidden" accept=".pdf,.docx,.png,.jpg,.jpeg,.webp,.txt" onChange={e => setContentFile(e.target.files?.[0] || null)} />
                 </label>
-                <p className="text-[10px] text-stone-500 mt-1">Logo and watermark are added automatically. Original files are preserved. Up to 50 MB; TXT up to 1 MB.</p>
+                <p className="text-[10px] text-stone-500 mt-1">Word (.docx) becomes a PDF with logo and watermark. Students read the PDF in their dashboard; the original stays private. Word up to 12 MB; PDF/images up to 50 MB; TXT up to 1 MB.</p>
               </div>
               {contentError && <p className="text-xs font-semibold text-red-700 bg-red-50 border border-red-200 rounded-lg p-2">{contentError}</p>}
 
@@ -619,7 +620,7 @@ export const AdminPanel: React.FC = () => {
                 disabled={contentSaving}
                 className="px-4 py-2 bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white font-bold rounded-xl text-xs shadow-sm"
               >
-                {contentSaving ? 'Uploading & Saving...' : 'Save & Publish to Curriculum'}
+                {contentSaving ? contentUploadStatus || 'Uploading & Saving...' : 'Save & Publish to Curriculum'}
               </button>
             </form>
           )}

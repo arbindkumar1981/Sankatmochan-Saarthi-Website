@@ -73,9 +73,9 @@ export function ManagedRecords({ collection }: { collection: ManagedCollection }
     try {
       if (!user || user.isAnonymous || !isAdmin) throw new Error('Administrator login is required.');
       if (!/\.(pdf|doc|docx|ppt|pptx|png|jpg|jpeg|webp|txt)$/i.test(file.name) || file.size > 50 * 1024 * 1024) throw new Error('Choose a supported study file up to 50 MB.');
-      const attachment = await uploadBrandedStudyFile(file, user.uid, config);
+      const attachment = await uploadBrandedStudyFile(file, user.uid, config, setMessage);
       setDraft({ ...draft, ...attachment });
-      setMessage('Logo and watermark added. Original preserved. Save replacement to apply it.');
+      setMessage('Branded PDF ready for students. Original preserved privately. Save replacement to apply it.');
     } catch (error) { setMessage(error instanceof Error ? error.message : 'Upload failed.'); }
     finally { setBusy(false); }
   };
