@@ -112,6 +112,9 @@ export interface LearningContent {
   attachmentType?: string;
   attachmentSize?: number;
   storagePath?: string;
+  originalStoragePath?: string;
+  brandingVersion?: number;
+  brandedWith?: string;
   title: string;
   hindiTitle?: string;
   bodyText: string;

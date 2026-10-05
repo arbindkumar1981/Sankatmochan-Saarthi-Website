@@ -9,6 +9,7 @@ export function ProtectedMaterial({ children }: { children: React.ReactNode }) {
   const watermark = `${config.name} · Personal study · ${user.uid.slice(-8)}`;
   return <section className="protected-material relative w-full min-w-0 select-none" onCopy={e => e.preventDefault()} onCut={e => e.preventDefault()} onContextMenu={e => e.preventDefault()}>
     <div className="pointer-events-none absolute inset-0 z-10 overflow-hidden flex flex-col justify-around" aria-hidden="true">{Array.from({ length: 8 }, (_, index) => <span key={index} className="text-center text-stone-500/20 text-lg -rotate-12 break-words">{watermark}</span>)}</div>
+    <img src={config.logoUrl} alt={`${config.name} logo`} className="w-44 max-w-full h-auto mb-3" />
     <p className="text-xs text-stone-500 mb-2">{watermark}</p>{children}
   </section>;
 }
