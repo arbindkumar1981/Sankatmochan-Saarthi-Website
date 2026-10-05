@@ -24,6 +24,7 @@ import {
 } from '../data/defaultCurriculum';
 import { db, handleFirestoreError, OperationType } from '../services/firebase';
 import { saveCanonicalContent } from '../services/contentLibrary';
+import { withUploadedTopics } from '../services/uploadedTopics';
 import { mapLegacyTest } from '../services/testAssessment';
 import { LEGACY_SUBJECTS } from '../data/defaultCurriculum';
 import {
@@ -130,6 +131,7 @@ export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const curriculumSubjects = useMemo(() => allCurriculumSubjects.filter(s => !s.deleted), [allCurriculumSubjects]);
   const [deletedAssetIds, setDeletedAssetIds] = useState<Set<string>>(new Set());
   const [hiddenAssetIds, setHiddenAssetIds] = useState<Set<string>>(new Set());
+  const [learningContents, setLearningContents] = useState<LearningContent[]>(INITIAL_LEARNING_CONTENTS);
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'curriculum_nodes'), snap => {
       const documents = snap.docs.map(d => ({ id: d.id, data: d.data() }));
@@ -153,7 +155,7 @@ export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setCurriculumSubjects(prev => prev.some(s => s.id === subject.id) ? prev.map(s => s.id === subject.id ? saved : s) : [...prev, saved]);
   };
   // Filter subjects for the chosen class and stream
-  const availableSubjects = useMemo(() => subjectsForSelection(curriculumSubjects, selectedBoard, selectedClass, selectedStream), [curriculumSubjects, selectedBoard, selectedClass, selectedStream]);
+  const availableSubjects = useMemo(() => withUploadedTopics(subjectsForSelection(curriculumSubjects, selectedBoard, selectedClass, selectedStream), learningContents, selectedBoard, selectedClass, hiddenAssetIds), [curriculumSubjects, selectedBoard, selectedClass, selectedStream, learningContents, hiddenAssetIds]);
 
   const [selectedSubject, setSelectedSubject] = useState<SubjectMeta | null>(() => {
     return availableSubjects.find(s => s.id === 'c10-science') || availableSubjects[0] || null;
@@ -184,7 +186,7 @@ export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setSelectedSubject(null);
     setSelectedChapter(null);
     setSelectedTopic(null);
-  }, [selectedBoard, selectedClass, selectedStream, allCurriculumSubjects, selectedSubject?.id]);
+  }, [availableSubjects, selectedSubject?.id]);
 
   // When selectedSubject changes, reset selected chapter to its first chapter
   useEffect(() => {
@@ -212,7 +214,6 @@ export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   }, [config, selectedBoard, selectedClass, selectedStream, activeModule, activeTab]);
 
   // Content States
-  const [learningContents, setLearningContents] = useState<LearningContent[]>(INITIAL_LEARNING_CONTENTS);
   const [youtubeVideos, setYoutubeVideos] = useState<YouTubeVideoItem[]>(INITIAL_YOUTUBE_VIDEOS);
   const [evaluationTests, setEvaluationTests] = useState<EvaluationTest[]>(INITIAL_TESTS);
   const [notices, setNotices] = useState<NoticeItem[]>(INITIAL_NOTICES);

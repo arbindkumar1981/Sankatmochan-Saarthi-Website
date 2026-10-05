@@ -17,6 +17,7 @@ import confetti from 'canvas-confetti';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { prepareSavedMaterial, matchesMaterialSelection } from '../services/savedMaterials';
+import { matchesUploadedTopic } from '../services/uploadedTopics';
 import {
   FileText,
   BookmarkCheck,
@@ -74,7 +75,7 @@ export const ContentArea: React.FC = () => {
     if (c.contentType !== activeModule) return false;
     if (!selectedSubject || !matchesMaterialSelection(c, selectedSubject, selectedChapter || undefined)) return false;
     if (selectedTopic) {
-      const topicMatches = c.topicId === selectedTopic.id || (c.topicTitle || '').trim().toLowerCase() === selectedTopic.title.trim().toLowerCase();
+      const topicMatches = matchesUploadedTopic(c, selectedTopic);
       if (!topicMatches) return false;
     }
     return true;
