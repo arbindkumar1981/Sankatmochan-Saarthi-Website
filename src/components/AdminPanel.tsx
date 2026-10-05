@@ -5,9 +5,9 @@ import { WebsiteSettingsManager } from './WebsiteSettingsManager';
 import { CurriculumManager } from './CurriculumManager';
 import { ManagedRecords } from './ManagedRecords';
 import React, { useEffect, useMemo, useState } from 'react';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { uploadBrandedStudyFile } from '../services/studyFileUpload';
 import { collection, doc, onSnapshot, setDoc } from 'firebase/firestore';
-import { db, storage } from '../services/firebase';
+import { db } from '../services/firebase';
 import { useCurriculum } from '../context/CurriculumContext';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -254,11 +254,11 @@ export const AdminPanel: React.FC = () => {
       return;
     }
 
-    const allowedExtensions = ['pdf','doc','docx','ppt','pptx','png','jpg','jpeg','webp','txt'];
+    const allowedExtensions = ['pdf','docx','png','jpg','jpeg','webp','txt'];
     if (contentFile) {
       const ext = contentFile.name.split('.').pop()?.toLowerCase() || '';
       if (!allowedExtensions.includes(ext)) {
-        setContentError('Unsupported file. Use PDF, DOC/DOCX, PPT/PPTX, PNG/JPG/WEBP or TXT.');
+        setContentError('Use PDF, Word (.docx), images or TXT. Export older Word/PowerPoint files as PDF.');
         return;
       }
       if (contentFile.size > 50 * 1024 * 1024) {
@@ -269,14 +269,10 @@ export const AdminPanel: React.FC = () => {
 
     setContentSaving(true);
     try {
-      let attachmentUrl: string | undefined;
-      let storagePath: string | undefined;
+      let attachment: Awaited<ReturnType<typeof uploadBrandedStudyFile>> | undefined;
       if (contentFile) {
-        const safeName = contentFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-        storagePath = `learning-materials/${profile?.uid || 'admin'}/${Date.now()}-${safeName}`;
-        const storageRef = ref(storage, storagePath);
-        await uploadBytes(storageRef, contentFile, { contentType: contentFile.type || 'application/octet-stream' });
-        attachmentUrl = await getDownloadURL(storageRef);
+        if (!profile?.uid) throw new Error('Administrator login is required.');
+        attachment = await uploadBrandedStudyFile(contentFile, profile.uid, config);
       }
 
       const topic = contentTopicTitle.trim();
@@ -296,11 +292,7 @@ export const AdminPanel: React.FC = () => {
         hindiTitle: contentHindiTitle.trim() || undefined,
         bodyText: contentBody.trim(),
         bodyHindi: contentHindiBody.trim() || undefined,
-        attachmentUrl,
-        attachmentName: contentFile?.name,
-        attachmentType: contentFile?.type,
-        attachmentSize: contentFile?.size,
-        storagePath,
+        ...attachment,
         version: 1,
         approved: true,
         published: true,
@@ -615,10 +607,10 @@ export const AdminPanel: React.FC = () => {
                 <label className="block text-[11px] font-semibold text-stone-700 mb-2">Upload Study Document (optional when text is entered)</label>
                 <label className="cursor-pointer flex items-center gap-2 text-xs font-bold text-orange-700">
                   <Upload className="w-4 h-4" />
-                  <span>{contentFile ? contentFile.name : 'Choose PDF, DOC/DOCX, PPT/PPTX, PNG/JPG/WEBP or TXT'}</span>
-                  <input type="file" className="hidden" accept=".pdf,.doc,.docx,.ppt,.pptx,.png,.jpg,.jpeg,.webp,.txt" onChange={e => setContentFile(e.target.files?.[0] || null)} />
+                  <span>{contentFile ? contentFile.name : 'Choose PDF, Word (.docx), PNG/JPG/WEBP or TXT'}</span>
+                  <input type="file" className="hidden" accept=".pdf,.docx,.png,.jpg,.jpeg,.webp,.txt" onChange={e => setContentFile(e.target.files?.[0] || null)} />
                 </label>
-                <p className="text-[10px] text-stone-500 mt-1">Maximum file size: 50 MB. Files are stored securely in Firebase Storage.</p>
+                <p className="text-[10px] text-stone-500 mt-1">Logo and watermark are added automatically. Original files are preserved. Up to 50 MB; TXT up to 1 MB.</p>
               </div>
               {contentError && <p className="text-xs font-semibold text-red-700 bg-red-50 border border-red-200 rounded-lg p-2">{contentError}</p>}
 

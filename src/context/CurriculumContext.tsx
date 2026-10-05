@@ -453,6 +453,7 @@ export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       });
     } catch (err) {
       handleFirestoreError(err, OperationType.CREATE, 'learning_contents/canonical');
+      throw err;
     }
   };
 

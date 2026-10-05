@@ -3,8 +3,8 @@ import { doc, runTransaction } from 'firebase/firestore';
 import { useCurriculum } from '../context/CurriculumContext';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../services/firebase';
-import { storage } from '../services/firebase';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { uploadBrandedStudyFile } from '../services/studyFileUpload';
+import { useWebsite } from '../context/WebsiteContext';
 import { validateAdminRecord, archiveRecord, restoreRecord, assetVisibility, assetMarker, type ManagedCollection } from '../services/adminValidation';
 
 const style = 'w-full min-w-0 border rounded-lg p-2 text-sm bg-white';
@@ -37,6 +37,7 @@ function Fields({ value, onChange, label }: { value: any; onChange: (next: any) 
 }
 
 export function ManagedRecords({ collection }: { collection: ManagedCollection }) {
+  const { config } = useWebsite();
   const { learningContents, youtubeVideos, evaluationTests, notices, deletedAssetIds } = useCurriculum();
   const { user, isAdmin } = useAuth();
   const rows: any[] = ({ learning_contents: learningContents, youtube_videos: youtubeVideos, tests: evaluationTests, notices })[collection];
@@ -72,11 +73,9 @@ export function ManagedRecords({ collection }: { collection: ManagedCollection }
     try {
       if (!user || user.isAnonymous || !isAdmin) throw new Error('Administrator login is required.');
       if (!/\.(pdf|doc|docx|ppt|pptx|png|jpg|jpeg|webp|txt)$/i.test(file.name) || file.size > 50 * 1024 * 1024) throw new Error('Choose a supported study file up to 50 MB.');
-      const storagePath = `learning-materials/${user.uid}/${crypto.randomUUID()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
-      const fileRef = ref(storage, storagePath);
-      await uploadBytes(fileRef, file, { contentType: file.type || 'application/octet-stream' });
-      setDraft({ ...draft, storagePath, attachmentUrl: await getDownloadURL(fileRef), attachmentName: file.name, attachmentType: file.type, attachmentSize: file.size });
-      setMessage('File uploaded. Save replacement to apply it.');
+      const attachment = await uploadBrandedStudyFile(file, user.uid, config);
+      setDraft({ ...draft, ...attachment });
+      setMessage('Logo and watermark added. Original preserved. Save replacement to apply it.');
     } catch (error) { setMessage(error instanceof Error ? error.message : 'Upload failed.'); }
     finally { setBusy(false); }
   };
@@ -87,7 +86,7 @@ export function ManagedRecords({ collection }: { collection: ManagedCollection }
       const deleted = item.deleted || deletedAssetIds.has(`${collection}/${item.id}`);
       return <div key={item.id} className="flex flex-wrap justify-between gap-2 border rounded-xl p-3"><div className="text-sm"><b>{item.title}</b><div className="text-xs text-stone-500">{item.classGrade} · {item.subjectId}{deleted ? ' · Deleted' : ''}</div></div><div className="flex gap-2"><button className={button} disabled={busy || deleted} onClick={() => setDraft(structuredClone(item))}>Replace / Edit</button><button className={button} disabled={busy} onClick={() => { if (deleted) persist(restoreRecord(collection, item), false); else if (window.confirm('Delete this item from the website? It can be restored; student results are preserved.')) persist(item, true); }}>{deleted ? 'Restore' : 'Delete'}</button></div></div>;
     })}
-    {draft && <div className="bg-orange-50 border rounded-xl p-4 space-y-3"><h4 className="font-bold">Replace {draft.title}</h4><p className="text-xs">Curriculum identity stays fixed to preserve saved content and results. Use Add New Content for a different selection.</p>{collection === 'learning_contents' && <label className="block text-sm">Upload replacement study file<input className={style} type="file" accept=".pdf,.doc,.docx,.ppt,.pptx,.png,.jpg,.jpeg,.webp,.txt" disabled={busy} onChange={e=>{uploadAttachment(e.target.files?.[0]);e.currentTarget.value='';}}/></label>}{editable[collection].filter(key => draft[key] !== undefined || ['hindiTitle', 'bodyHindi', 'hindiMessage', 'blessingQuote'].includes(key)).map(key => <Fields key={key} value={draft[key]} label={labels[key] || key} onChange={next => setDraft({ ...draft, [key]: next })} />)}<div className="flex gap-2"><button className={`${button} bg-orange-600 text-white`} disabled={busy} onClick={() => persist(draft, false)}>Save replacement</button><button className={button} disabled={busy} onClick={() => setDraft(null)}>Cancel</button></div></div>}
+    {draft && <div className="bg-orange-50 border rounded-xl p-4 space-y-3"><h4 className="font-bold">Replace {draft.title}</h4><p className="text-xs">Curriculum identity stays fixed to preserve saved content and results. Use Add New Content for a different selection.</p>{collection === 'learning_contents' && <label className="block text-sm">Upload replacement study file<input className={style} type="file" accept=".pdf,.docx,.png,.jpg,.jpeg,.webp,.txt" disabled={busy} onChange={e=>{uploadAttachment(e.target.files?.[0]);e.currentTarget.value='';}}/></label>}{editable[collection].filter(key => draft[key] !== undefined || ['hindiTitle', 'bodyHindi', 'hindiMessage', 'blessingQuote'].includes(key)).map(key => <Fields key={key} value={draft[key]} label={labels[key] || key} onChange={next => setDraft({ ...draft, [key]: next })} />)}<div className="flex gap-2"><button className={`${button} bg-orange-600 text-white`} disabled={busy} onClick={() => persist(draft, false)}>Save replacement</button><button className={button} disabled={busy} onClick={() => setDraft(null)}>Cancel</button></div></div>}
     {message && <p role="status" className="text-sm border rounded-lg p-3">{message}</p>}
   </section>;
 }
