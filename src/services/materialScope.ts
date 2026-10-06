@@ -1,3 +1,16 @@
+import type { SubjectMeta } from '../types';
+
+// Catalogue entries supply choices even before a material has been uploaded.
+export function catalogueMaterialScopes(subjects: SubjectMeta[]): Record<string, unknown>[] {
+  return subjects.filter(subject => !subject.deleted).flatMap(subject => subject.classes.flatMap(classGrade => {
+    const base = { board: subject.board || 'CBSE', classGrade, stream: subject.stream, subjectId: subject.id };
+    return [base, ...subject.chapters.filter(chapter => !chapter.deleted).flatMap(chapter => {
+      const chapterScope = { ...base, chapterId: chapter.id };
+      return [chapterScope, ...chapter.topics.filter(topic => !topic.deleted).map(topic => ({ ...chapterScope, topicTitle: topic.title }))];
+    })];
+  }));
+}
+
 export type MaterialScope = { board: string; classGrade: string; stream: string; subjectId: string; chapterId: string; topicTitle: string; subtopicTitle: string; contentType: string };
 export const EMPTY_MATERIAL_SCOPE: MaterialScope = { board: '', classGrade: '', stream: '', subjectId: '', chapterId: '', topicTitle: '', subtopicTitle: '', contentType: '' };
 export const MATERIAL_SCOPE_KEYS = Object.keys(EMPTY_MATERIAL_SCOPE) as (keyof MaterialScope)[];
