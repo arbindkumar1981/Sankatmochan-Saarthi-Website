@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useCurriculum } from '../context/CurriculumContext';
 import { useWebsite } from '../context/WebsiteContext';
-import type { SubjectMeta, ChapterMeta, TopicMeta } from '../types';
+import type { SubjectMeta, ChapterMeta, TopicMeta, ClassGrade } from '../types';
 import { editableUploadedSubject } from '../services/uploadedTopics';
 
 const input = 'border rounded-lg p-2 text-sm w-full min-w-0 bg-white';
@@ -18,11 +18,13 @@ export function CurriculumManager() {
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const [search, setSearch] = useState('');
+  const [adminClass, setAdminClass] = useState<ClassGrade>(selectedClass);
+  const classSubjects = allCurriculumSubjects.filter(subject => subject.classes.includes(adminClass));
   const change = (patch: Partial<SubjectMeta>) => setDraft(prev => prev ? { ...prev, ...patch } : null);
   const chapter = draft?.chapters.find(ch => ch.id === chapterId) || draft?.chapters[0];
   const changeChapter = (patch: Partial<ChapterMeta>) => { if (chapter && draft) change({ chapters: draft.chapters.map(ch => ch.id === chapter.id ? { ...ch, ...patch } : ch) }); };
   const changeTopic = (topicId: string, patch: Partial<TopicMeta>) => { if (chapter) changeChapter({ topics: chapter.topics.map(topic => topic.id === topicId ? { ...topic, ...patch } : topic) }); };
-  const addSubject = () => { setDraft({ id: newId('subject'), name: 'New subject', hindiName: '', board: selectedBoard, classes: [selectedClass], stream: selectedStream, icon: 'BookOpen', chapters: [] }); setSection('subjects'); setChapterId(''); setMessage(''); };
+  const addSubject = () => { setDraft({ id: newId('subject'), name: 'New subject', hindiName: '', board: selectedBoard, classes: [adminClass], stream: selectedStream, icon: 'BookOpen', chapters: [] }); setSection('subjects'); setChapterId(''); setMessage(''); };
   const addChapter = () => { if (!draft) return; const id = newId('chapter'); change({ chapters: [...draft.chapters, { id, title: 'New chapter', hindiTitle: '', chapterNumber: Math.max(0, ...draft.chapters.map(ch => ch.chapterNumber)) + 1, topics: [] }] }); setChapterId(id); setSection('chapters'); };
   const addTopic = () => { if (!chapter) return; changeChapter({ topics: [...chapter.topics, { id: newId('topic'), title: 'New topic', hindiTitle: '', order: Math.max(0, ...chapter.topics.map(t => t.order)) + 1 }] }); setSection('topics'); };
   const submit = async () => {
@@ -37,11 +39,13 @@ export function CurriculumManager() {
     <p className="text-sm text-stone-600">Add, edit or replace names, remove from the student menu, and restore. Uploaded-note topics are included. Save applies your changes.</p>
     <fieldset disabled={busy} className="space-y-4">
       <div className="flex flex-wrap gap-2">{(['subjects', 'chapters', 'topics'] as const).map(key => <button className={`${button} ${section === key ? 'bg-orange-100' : ''}`} key={key} aria-pressed={section === key} onClick={() => setSection(key)}>{key.charAt(0).toUpperCase() + key.slice(1)}</button>)}</div>
-      <div className="grid sm:grid-cols-2 gap-3">
+      <p className="text-sm font-semibold">Class → Subject → Chapter → Topic</p>
+      <div className="grid sm:grid-cols-3 gap-3">
+        <label className="text-sm">Class<select aria-label="Choose curriculum class" className={input} value={adminClass} onChange={e => { const grade = e.target.value as ClassGrade; setAdminClass(grade); setSearch(''); const subject = allCurriculumSubjects.find(s => s.classes.includes(grade) && !s.deleted) || allCurriculumSubjects.find(s => s.classes.includes(grade)); setDraft(subject ? load(subject) : null); setChapterId(subject?.chapters[0]?.id || ''); setMessage(''); }}>{config.classes.map(x => <option key={x.id} value={x.id}>{x.label}{x.deleted ? ' (Removed)' : ''}</option>)}</select></label>
         <label className="text-sm">Find subject<input aria-label="Find curriculum subject" className={input} placeholder="Search by subject, class or stream" value={search} onChange={e => setSearch(e.target.value)} /></label>
         <label className="text-sm">Subject<select aria-label="Choose curriculum subject" className={input} value={draft?.id || ''} onChange={e => { const subject = allCurriculumSubjects.find(x => x.id === e.target.value); setDraft(subject ? load(subject) : null); setChapterId(subject?.chapters[0]?.id || ''); setMessage(''); }}>
-          {!allCurriculumSubjects.some(s => s.id === draft?.id) && <option value={draft?.id || ''}>{draft?.name || 'Choose subject'}</option>}
-          {allCurriculumSubjects.filter(x => x.id === draft?.id || `${x.name} ${x.classes.join(' ')} ${x.stream} ${x.board || 'CBSE'}`.toLowerCase().includes(search.toLowerCase())).map(x => <option key={x.id} value={x.id}>{x.board || 'CBSE'} · {x.classes.join(', ')} · {x.stream} · {x.name}{x.deleted ? ' (Removed)' : ''}</option>)}
+          {!classSubjects.some(s => s.id === draft?.id) && <option value={draft?.id || ''}>{draft?.name || 'Choose subject / Add subject'}</option>}
+          {classSubjects.filter(x => x.id === draft?.id || `${x.name} ${x.stream} ${x.board || 'CBSE'}`.toLowerCase().includes(search.toLowerCase())).map(x => <option key={x.id} value={x.id}>{x.board || 'CBSE'} · {x.stream} · {x.name}{x.deleted ? ' (Removed)' : ''}</option>)}
         </select></label>
       </div>
       <div className="flex flex-wrap gap-2">
