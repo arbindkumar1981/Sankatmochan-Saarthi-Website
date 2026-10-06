@@ -2,11 +2,18 @@ import type { BoardType, ClassGrade, LearningContent, SubjectMeta, TopicMeta } f
 import { matchesMaterialSelection } from './savedMaterials';
 
 const normalized = (title: string) => title.trim().normalize('NFKC').toLocaleLowerCase();
+const materialTopicId = (id: string) => {
+  const candidate = `material-${id}`;
+  if (/^[a-zA-Z0-9_-]{1,128}$/.test(candidate)) return candidate;
+  let hash = 2166136261;
+  for (const character of id) hash = Math.imul(hash ^ character.charCodeAt(0), 16777619);
+  return `material-${id.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 100)}-${(hash >>> 0).toString(16)}`;
+};
 
 export function uploadedTopic(content: LearningContent): TopicMeta | null {
   const title = (content.topicTitle || (content.storagePath || content.attachmentUrl ? content.title : '')).trim();
   if (!title) return null;
-  return { id: content.topicId || `material-${content.id}`, title, hindiTitle: content.topicTitle ? content.topicTitle : content.hindiTitle || title, order: 0 };
+  return { id: content.topicId || materialTopicId(content.id), title, hindiTitle: content.topicTitle ? content.topicTitle : content.hindiTitle || title, order: 0 };
 }
 
 export function withUploadedTopics(subjects: SubjectMeta[], contents: (LearningContent & { deleted?: boolean })[], board: BoardType, grade: ClassGrade, hidden: Set<string>, savedSubjects: SubjectMeta[] = subjects): SubjectMeta[] {
@@ -27,7 +34,7 @@ export function withUploadedTopics(subjects: SubjectMeta[], contents: (LearningC
         existing.materialIds = [...new Set([...(existing.materialIds || []), content.id])];
         continue;
       }
-      if (usedIds.has(topic.id)) topic.id = `material-${content.id}`;
+      if (usedIds.has(topic.id)) topic.id = materialTopicId(content.id);
       usedIds.add(topic.id);
       topics.push({ ...topic, materialIds: [content.id], order: topics.length + 1 });
     }
