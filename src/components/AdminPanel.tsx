@@ -498,7 +498,25 @@ export const AdminPanel: React.FC = () => {
                 <div><label className="block text-[11px] font-semibold mb-1">Stream</label><select value={contentStream} onChange={e => { setContentStream(e.target.value as StreamType); setContentSubjectId(''); setContentChapterId(''); setContentTopicId(''); setContentTopicTitle(''); setContentSubtopic(''); }} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white">{activeOptions(config.streams).map(x=><option key={x.id} value={x.id}>{x.label}</option>)}</select></div>
                 <div><label className="block text-[11px] font-semibold mb-1">Subject *</label><select value={formSubject?.id || ''} onChange={e => { setContentSubjectId(e.target.value); setContentChapterId(''); setContentTopicId(''); setContentTopicTitle(''); setContentSubtopic(''); }} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white">{formSubjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></div>
                 <div><label className="block text-[11px] font-semibold mb-1">Chapter *</label><select value={formChapter?.id || ''} onChange={e => { setContentChapterId(e.target.value); setContentTopicId(''); setContentTopicTitle(''); setContentSubtopic(''); }} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white">{formSubject?.chapters.map(ch => <option key={ch.id} value={ch.id}>{ch.chapterNumber}. {ch.title}</option>)}</select></div>
-                <div><label className="block text-[11px] font-semibold mb-1">Topic (choose or add)</label><input aria-label="Upload topic" list="upload-topic-choices" value={contentTopicTitle} onChange={e => { setContentTopicTitle(e.target.value); setContentSubtopic(''); }} placeholder="Choose an existing topic or type a new name" className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white outline-none" /><datalist id="upload-topic-choices">{uploadTopicChoices.map(title => <option key={title} value={title} />)}</datalist></div>
+                <div>
+                  <label className="block text-[11px] font-semibold mb-1">Topic *</label>
+                  <select
+                    aria-label="Upload topic"
+                    value={uploadTopicChoices.includes(contentTopicTitle) ? contentTopicTitle : ''}
+                    onChange={e => { setContentTopicTitle(e.target.value); setContentSubtopic(''); }}
+                    className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white outline-none"
+                  >
+                    <option value="">Select topic</option>
+                    {uploadTopicChoices.map(title => <option key={title} value={title}>{title}</option>)}
+                  </select>
+                  <input
+                    aria-label="Add new upload topic"
+                    value={uploadTopicChoices.includes(contentTopicTitle) ? '' : contentTopicTitle}
+                    onChange={e => { setContentTopicTitle(e.target.value); setContentSubtopic(''); }}
+                    placeholder="Or type a new topic"
+                    className="w-full mt-1.5 px-3 py-1.5 text-xs border rounded-xl bg-white outline-none"
+                  />
+                </div>
               </div>
               <div><label className="block text-[11px] font-semibold mb-1">Sub-topic</label><input aria-label="Upload subtopic" list="upload-subtopic-choices" value={contentSubtopic} onChange={e => setContentSubtopic(e.target.value)} placeholder="Choose an existing subtopic or type a new name" className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white outline-none" /><datalist id="upload-subtopic-choices">{uploadSubtopicChoices.map(title => <option key={title} value={title} />)}</datalist></div>
 
