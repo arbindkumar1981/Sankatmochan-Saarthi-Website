@@ -52,6 +52,7 @@ export function CurriculumManager() {
         <button className={button} onClick={addSubject}>Add subject</button>
         <button className={button} disabled={!draft || draft.deleted} onClick={addChapter}>Add chapter</button>
         <button className={button} disabled={!chapter || chapter.deleted || draft?.deleted} onClick={addTopic}>Add topic</button>
+        {draft && <button className={button} onClick={() => setSection('subjects')}>Edit subject</button>}
         {draft && <button className={button} onClick={() => change({ deleted: !draft.deleted })}>{draft.deleted ? 'Restore subject' : 'Remove subject'}</button>}
       </div>
       {draft && <>
@@ -70,12 +71,12 @@ export function CurriculumManager() {
         {section !== 'subjects' && <div className="space-y-3">
           <label>Chapter<select aria-label="Choose curriculum chapter" className={input} value={chapter?.id || ''} onChange={e => setChapterId(e.target.value)}>{!draft.chapters.length && <option value="">Add a chapter first</option>}{draft.chapters.map(ch => <option key={ch.id} value={ch.id}>{ch.chapterNumber}. {ch.title}{ch.deleted ? ' (Removed)' : ''}</option>)}</select></label>
           {chapter && <>
-            <div className="flex flex-wrap items-center justify-between gap-2"><h4 className="font-bold">{section === 'chapters' ? 'Edit / Replace chapter' : `Topics in ${chapter.title}`}</h4><button className={button} onClick={() => changeChapter({ deleted: !chapter.deleted })}>{chapter.deleted ? 'Restore chapter' : 'Remove chapter'}</button></div>
+            <div className="flex flex-wrap items-center justify-between gap-2"><h4 className="font-bold">{section === 'chapters' ? 'Edit / Replace chapter' : `Topics in ${chapter.title}`}</h4><div className="flex gap-2"><button className={button} onClick={() => setSection('chapters')}>Edit chapter</button><button className={button} onClick={() => changeChapter({ deleted: !chapter.deleted })}>{chapter.deleted ? 'Restore chapter' : 'Remove chapter'}</button></div></div>
             {section === 'chapters' && <div className="grid sm:grid-cols-2 gap-3"><label>Chapter title<input className={input} maxLength={300} value={chapter.title} onChange={e => changeChapter({ title: e.target.value })} /></label><label>Hindi chapter title<input className={input} maxLength={300} value={chapter.hindiTitle} onChange={e => changeChapter({ hindiTitle: e.target.value })} /></label><label>Chapter number<input className={input} type="number" min={1} value={chapter.chapterNumber} onChange={e => changeChapter({ chapterNumber: Number(e.target.value) })} /></label></div>}
             {section === 'topics' && <>
               {!chapter.topics.length && <p className="text-sm text-stone-500">No topics yet. Use Add topic above.</p>}
               {chapter.topics.map(topic => <article key={topic.id} className={`border rounded-xl p-3 space-y-2 ${topic.deleted ? 'bg-stone-100' : ''}`}>
-                <div className="flex flex-wrap justify-between gap-2"><h5 className="font-semibold">{topic.title}{topic.deleted ? ' — Removed' : ''}</h5><button className={button} onClick={() => changeTopic(topic.id, { deleted: !topic.deleted })}>{topic.deleted ? 'Restore topic' : 'Remove topic'}</button></div>
+                <div className="flex flex-wrap justify-between gap-2"><h5 className="font-semibold">{topic.title}{topic.deleted ? ' — Removed' : ''}</h5><div className="flex gap-2"><button className={button} onClick={e => e.currentTarget.closest('article')?.querySelector<HTMLInputElement>('input')?.focus()}>Edit topic</button><button className={button} onClick={() => changeTopic(topic.id, { deleted: !topic.deleted })}>{topic.deleted ? 'Restore topic' : 'Remove topic'}</button></div></div>
                 <p className="text-xs text-stone-500">Edit / Replace topic{topic.materialIds?.length ? ' · Linked to uploaded notes' : ''}</p>
                 <div className="grid sm:grid-cols-2 gap-2"><label>Topic name<input aria-label={`Topic name ${topic.id}`} className={input} maxLength={300} value={topic.title} onChange={e => changeTopic(topic.id, { title: e.target.value })} /></label><label>Hindi topic name<input className={input} maxLength={300} value={topic.hindiTitle} onChange={e => changeTopic(topic.id, { hindiTitle: e.target.value })} /></label></div>
               </article>)}
