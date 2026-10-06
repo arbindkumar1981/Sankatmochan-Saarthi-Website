@@ -422,7 +422,7 @@ export const AdminPanel: React.FC = () => {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3" aria-label="Admin control panel">
         {([
           ['settings', 'Website & Navigation', 'Names, icons, pages, logo and menu order', ImageIcon],
-          ['curriculum', 'Curriculum', 'Subjects, chapters and topics', BookOpen],
+          ['curriculum', 'Subjects, Chapters & Topics', 'Add, edit, replace, remove and restore', BookOpen],
           ['content', 'Learning Materials', 'Upload, publish, replace and restore', FileText],
           ['videos', 'Videos', 'YouTube lectures and links', Youtube],
           ['tests', 'Assessments', 'Tests, questions and evaluation', CheckSquare],

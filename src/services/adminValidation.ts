@@ -18,6 +18,7 @@ export function validateSubject(subject: SubjectMeta): SubjectMeta {
     for (const topic of chapter.topics) {
       identity(topic.id);
       if (!topic.title?.trim() || topic.title.length > 300 || typeof topic.hindiTitle !== 'string' || !Number.isInteger(topic.order) || topic.order < 1) throw new Error('Invalid topic.');
+      if (topic.materialIds !== undefined && (!Array.isArray(topic.materialIds) || topic.materialIds.length > 1000 || new Set(topic.materialIds).size !== topic.materialIds.length || topic.materialIds.some(id => typeof id !== 'string' || !/^[a-zA-Z0-9_-]{1,128}$/.test(id)))) throw new Error('Invalid linked material identities.');
     }
   }
   if (new TextEncoder().encode(JSON.stringify(subject)).length > 700000) throw new Error('Subject is too large.');
