@@ -73,3 +73,13 @@ test('uploaded topic identities stay unique across chapters and multi-class subj
   assert.notEqual(editable.chapters[0].topics[0].id, editable.chapters[1].topics[0].id);
   assert.deepEqual(editable.chapters[1].topics[0].materialIds, ['note-2']);
 });
+
+test('long legacy upload identities remain bounded, stable and linked to the correct material',()=>{
+ const first=note({id:'x'.repeat(120)+'a',topicId:undefined,topicTitle:undefined,storagePath:'private',title:'Legacy notes'});
+ const second={...first,id:'x'.repeat(120)+'b',title:'Other legacy notes'};
+ const added=topics([first,second]);
+ assert.equal(added.length,2);assert.notEqual(added[0].id,added[1].id);
+ for(const topic of added)assert.match(topic.id,/^[a-zA-Z0-9_-]{1,128}$/);
+ assert.equal(topics([first])[0].id,added[0].id);
+ assert.equal(matchesUploadedTopic(first,added[0]),true);
+});
