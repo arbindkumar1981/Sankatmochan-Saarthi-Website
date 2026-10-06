@@ -155,7 +155,7 @@ export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setCurriculumSubjects(prev => prev.some(s => s.id === subject.id) ? prev.map(s => s.id === subject.id ? saved : s) : [...prev, saved]);
   };
   // Filter subjects for the chosen class and stream
-  const availableSubjects = useMemo(() => withUploadedTopics(subjectsForSelection(curriculumSubjects, selectedBoard, selectedClass, selectedStream), learningContents, selectedBoard, selectedClass, hiddenAssetIds), [curriculumSubjects, selectedBoard, selectedClass, selectedStream, learningContents, hiddenAssetIds]);
+  const availableSubjects = useMemo(() => withUploadedTopics(subjectsForSelection(curriculumSubjects, selectedBoard, selectedClass, selectedStream), learningContents, selectedBoard, selectedClass, hiddenAssetIds, curriculumSubjects), [curriculumSubjects, selectedBoard, selectedClass, selectedStream, learningContents, hiddenAssetIds]);
 
   const [selectedSubject, setSelectedSubject] = useState<SubjectMeta | null>(() => {
     return availableSubjects.find(s => s.id === 'c10-science') || availableSubjects[0] || null;

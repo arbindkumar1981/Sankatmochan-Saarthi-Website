@@ -304,6 +304,7 @@ export interface ChapterMeta {
 
 export interface TopicMeta {
   deleted?: boolean;
+  materialIds?: string[];
   id: string;
   title: string;
   hindiTitle: string;
