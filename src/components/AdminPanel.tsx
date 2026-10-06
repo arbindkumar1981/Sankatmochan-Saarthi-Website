@@ -50,6 +50,7 @@ export const AdminPanel: React.FC = () => {
   const { config } = useWebsite();
   const {
     learningContents,
+    deletedAssetIds,
     youtubeVideos,
     evaluationTests,
     notices,
@@ -110,6 +111,9 @@ export const AdminPanel: React.FC = () => {
   const formSubjects = useMemo(() => subjectsForSelection(curriculumSubjects,contentBoard,contentClass,contentStream), [curriculumSubjects,contentBoard,contentClass,contentStream]);
   const formSubject = formSubjects.find(s => s.id === contentSubjectId) || formSubjects[0] || null;
   const formChapter = formSubject?.chapters.find(ch => ch.id === contentChapterId) || formSubject?.chapters[0] || null;
+
+  const uploadTopicChoices = [...new Set([...(formChapter?.topics.map(t => t.title) || []), ...learningContents.filter(c => c.board === contentBoard && c.classGrade === contentClass && c.subjectId === formSubject?.id && c.chapterId === formChapter?.id && c.status !== 'ARCHIVED' && !deletedAssetIds.has(`learning_contents/${c.id}`)).map(c => c.topicTitle || '').filter(Boolean)])];
+  const uploadSubtopicChoices = [...new Set(learningContents.filter(c => c.board === contentBoard && c.classGrade === contentClass && c.subjectId === formSubject?.id && c.chapterId === formChapter?.id && c.topicTitle === contentTopicTitle && c.status !== 'ARCHIVED' && !deletedAssetIds.has(`learning_contents/${c.id}`)).map(c => c.subtopicTitle || '').filter(Boolean))];
 
   // New Video Form State
   const [showVideoForm, setShowVideoForm] = useState(false);
@@ -286,7 +290,7 @@ export const AdminPanel: React.FC = () => {
         subjectName: formSubject.name,
         chapterId: formChapter.id,
         chapterTitle: formChapter.title,
-        topicId: topic ? `topic-${topic.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 70) || 'custom'}` : undefined,
+        topicId: formChapter.topics.find(t => t.title === topic)?.id || (topic ? `topic-${topic.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 70) || 'custom'}` : undefined),
         topicTitle: topic || undefined,
         subtopicTitle: contentSubtopic.trim() || undefined,
         title: contentTitle.trim(),
@@ -435,7 +439,14 @@ export const AdminPanel: React.FC = () => {
       {/* Admin Tab 1: Content Manager */}
       {adminTab === 'content' && (
         <div className="space-y-4">
-          <ManagedRecords collection="learning_contents" />
+          <ManagedRecords collection="learning_contents" onScopeChange={scope => {
+            if (scope.board) setContentBoard(scope.board);
+            if (scope.classGrade) setContentClass(scope.classGrade);
+            if (scope.stream) setContentStream(scope.stream);
+            setContentSubjectId(scope.subjectId); setContentChapterId(scope.chapterId);
+            setContentTopicId(''); setContentTopicTitle(scope.topicTitle); setContentSubtopic(scope.subtopicTitle);
+            if (scope.contentType) setContentType(scope.contentType);
+          }} />
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-stone-900 uppercase tracking-wider font-cinzel">
               Curriculum Content Repository (Add / Edit / Approve / Publish)
@@ -482,14 +493,14 @@ export const AdminPanel: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                <div><label className="block text-[11px] font-semibold mb-1">Board *</label><select value={contentBoard} onChange={e => setContentBoard(e.target.value as BoardType)} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white">{activeOptions(config.boards).map(x=><option key={x.id} value={x.id}>{x.label}</option>)}</select></div>
-                <div><label className="block text-[11px] font-semibold mb-1">Class *</label><select value={contentClass} onChange={e => { setContentClass(e.target.value as ClassGrade); setContentSubjectId(''); setContentChapterId(''); setContentTopicId(''); setContentTopicTitle(''); }} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white">{activeOptions(config.classes).map(x=><option key={x.id} value={x.id}>{x.label}</option>)}</select></div>
-                <div><label className="block text-[11px] font-semibold mb-1">Stream</label><select value={contentStream} onChange={e => setContentStream(e.target.value as StreamType)} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white">{activeOptions(config.streams).map(x=><option key={x.id} value={x.id}>{x.label}</option>)}</select></div>
-                <div><label className="block text-[11px] font-semibold mb-1">Subject *</label><select value={formSubject?.id || ''} onChange={e => { setContentSubjectId(e.target.value); setContentChapterId(''); setContentTopicId(''); }} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white">{formSubjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></div>
-                <div><label className="block text-[11px] font-semibold mb-1">Chapter *</label><select value={formChapter?.id || ''} onChange={e => { setContentChapterId(e.target.value); setContentTopicId(''); }} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white">{formSubject?.chapters.map(ch => <option key={ch.id} value={ch.id}>{ch.chapterNumber}. {ch.title}</option>)}</select></div>
-                <div><label className="block text-[11px] font-semibold mb-1">Topic (write yourself)</label><input value={contentTopicTitle} onChange={e => setContentTopicTitle(e.target.value)} placeholder="Type topic name" className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white outline-none" /></div>
+                <div><label className="block text-[11px] font-semibold mb-1">Board *</label><select value={contentBoard} onChange={e => { setContentBoard(e.target.value as BoardType); setContentSubjectId(''); setContentChapterId(''); setContentTopicId(''); setContentTopicTitle(''); setContentSubtopic(''); }} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white">{activeOptions(config.boards).map(x=><option key={x.id} value={x.id}>{x.label}</option>)}</select></div>
+                <div><label className="block text-[11px] font-semibold mb-1">Class *</label><select value={contentClass} onChange={e => { setContentClass(e.target.value as ClassGrade); setContentSubjectId(''); setContentChapterId(''); setContentTopicId(''); setContentTopicTitle(''); setContentSubtopic(''); }} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white">{activeOptions(config.classes).map(x=><option key={x.id} value={x.id}>{x.label}</option>)}</select></div>
+                <div><label className="block text-[11px] font-semibold mb-1">Stream</label><select value={contentStream} onChange={e => { setContentStream(e.target.value as StreamType); setContentSubjectId(''); setContentChapterId(''); setContentTopicId(''); setContentTopicTitle(''); setContentSubtopic(''); }} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white">{activeOptions(config.streams).map(x=><option key={x.id} value={x.id}>{x.label}</option>)}</select></div>
+                <div><label className="block text-[11px] font-semibold mb-1">Subject *</label><select value={formSubject?.id || ''} onChange={e => { setContentSubjectId(e.target.value); setContentChapterId(''); setContentTopicId(''); setContentTopicTitle(''); setContentSubtopic(''); }} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white">{formSubjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></div>
+                <div><label className="block text-[11px] font-semibold mb-1">Chapter *</label><select value={formChapter?.id || ''} onChange={e => { setContentChapterId(e.target.value); setContentTopicId(''); setContentTopicTitle(''); setContentSubtopic(''); }} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white">{formSubject?.chapters.map(ch => <option key={ch.id} value={ch.id}>{ch.chapterNumber}. {ch.title}</option>)}</select></div>
+                <div><label className="block text-[11px] font-semibold mb-1">Topic (choose or add)</label><input aria-label="Upload topic" list="upload-topic-choices" value={contentTopicTitle} onChange={e => { setContentTopicTitle(e.target.value); setContentSubtopic(''); }} placeholder="Choose an existing topic or type a new name" className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white outline-none" /><datalist id="upload-topic-choices">{uploadTopicChoices.map(title => <option key={title} value={title} />)}</datalist></div>
               </div>
-              <div><label className="block text-[11px] font-semibold mb-1">Sub-topic</label><input value={contentSubtopic} onChange={e => setContentSubtopic(e.target.value)} placeholder="Enter sub-topic name (optional)" className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white outline-none" /></div>
+              <div><label className="block text-[11px] font-semibold mb-1">Sub-topic</label><input aria-label="Upload subtopic" list="upload-subtopic-choices" value={contentSubtopic} onChange={e => setContentSubtopic(e.target.value)} placeholder="Choose an existing subtopic or type a new name" className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white outline-none" /><datalist id="upload-subtopic-choices">{uploadSubtopicChoices.map(title => <option key={title} value={title} />)}</datalist></div>
 
               <div>
                 <label className="block text-[11px] font-semibold text-stone-700 mb-1">
