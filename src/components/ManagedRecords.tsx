@@ -6,7 +6,7 @@ import { db } from '../services/firebase';
 import { uploadBrandedStudyFile } from '../services/studyFileUpload';
 import { useWebsite } from '../context/WebsiteContext';
 import { validateAdminRecord, archiveRecord, restoreRecord, assetVisibility, assetMarker, type ManagedCollection } from '../services/adminValidation';
-import { EMPTY_MATERIAL_SCOPE, MATERIAL_SCOPE_KEYS, changeMaterialScope, matchesMaterialScope, materialScopeOptions, type MaterialScope } from '../services/materialScope';
+import { catalogueMaterialScopes, EMPTY_MATERIAL_SCOPE, MATERIAL_SCOPE_KEYS, changeMaterialScope, matchesMaterialScope, materialScopeOptions, type MaterialScope } from '../services/materialScope';
 
 const scopeLabels = { board: 'Board', classGrade: 'Class', stream: 'Stream', subjectId: 'Subject', chapterId: 'Chapter', topicTitle: 'Topic', subtopicTitle: 'Subtopic', contentType: 'Learning module' };
 
@@ -44,6 +44,7 @@ export function ManagedRecords({ collection, onScopeChange }: { collection: Mana
   const { learningContents, youtubeVideos, evaluationTests, notices, deletedAssetIds, allCurriculumSubjects } = useCurriculum();
   const { user, isAdmin } = useAuth();
   const rows: any[] = ({ learning_contents: learningContents, youtube_videos: youtubeVideos, tests: evaluationTests, notices })[collection];
+  const scopeRecords = [...rows, ...catalogueMaterialScopes(allCurriculumSubjects), ...config.boards.filter(x=>!x.deleted).flatMap(board=>config.classes.filter(x=>!x.deleted).flatMap(grade=>config.streams.filter(x=>!x.deleted).map(stream=>({board:board.id,classGrade:grade.id,stream:stream.id})))), ...config.modules.filter(module => !module.deleted).map(module => ({ contentType: module.id }))];
   const [draft, setDraft] = useState<Record<string, any> | null>(null);
   const [search, setSearch] = useState('');
   const [scope, setScope] = useState(EMPTY_MATERIAL_SCOPE);
@@ -87,7 +88,7 @@ export function ManagedRecords({ collection, onScopeChange }: { collection: Mana
     <h4 className="font-bold">Edit / Remove / Restore existing items</h4>
     {collection === 'learning_contents' && <div className="space-y-3">
       <p className="text-sm">Board → Class → Stream → Subject → Chapter → Topic → Subtopic → Learning module. Removed materials remain in their original selection for Restore.</p>
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">{MATERIAL_SCOPE_KEYS.map(key => <label key={key} className="text-sm">{scopeLabels[key]}<select aria-label={`Filter materials by ${scopeLabels[key]}`} className={style} value={scope[key]} onChange={e => { const next = changeMaterialScope(scope, key, e.target.value); setScope(next); onScopeChange?.(next); setDraft(null); }}><option value="">All — {scopeLabels[key]}</option>{materialScopeOptions(rows,scope,key).map(value => {
+      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">{MATERIAL_SCOPE_KEYS.map(key => <label key={key} className="text-sm">{scopeLabels[key]}<select aria-label={`Filter materials by ${scopeLabels[key]}`} className={style} value={scope[key]} onChange={e => { const next = changeMaterialScope(scope, key, e.target.value); setScope(next); onScopeChange?.(next); setDraft(null); }}><option value="">All — {scopeLabels[key]}</option>{materialScopeOptions(key === 'contentType' ? config.modules.filter(module => !module.deleted).map(module => ({ contentType: module.id })) : scopeRecords, key === 'contentType' ? EMPTY_MATERIAL_SCOPE : scope,key).map(value => {
         const label = key === 'subjectId' ? allCurriculumSubjects.find(s=>s.id===value)?.name || rows.find(r=>r.subjectId===value)?.subjectName || value : key === 'chapterId' ? allCurriculumSubjects.flatMap(s=>s.chapters).find(ch=>ch.id===value)?.title || rows.find(r=>r.chapterId===value)?.chapterTitle || value : key === 'contentType' ? config.modules.find(m=>m.id===value)?.label || value : value;
         return <option key={value} value={value}>{label}</option>;
       })}</select></label>)}</div>

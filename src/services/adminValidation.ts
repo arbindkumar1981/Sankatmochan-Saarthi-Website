@@ -3,9 +3,9 @@ import type { SubjectMeta, BoardType, ClassGrade, StreamType } from '../types';
 export function validateSubject(subject: SubjectMeta): SubjectMeta {
   const ids = new Set<string>();
   const identity = (id: string) => {
-    // Earlier bundled catalogue IDs contain "class 11" / "class 12".
+    // Earlier bundled catalogue IDs contain "class 9" through "class 12".
     // Keep those identities editable without permitting arbitrary spaced IDs.
-    const legacyCatalogueId = typeof id === 'string' && id.length <= 128 && /^cbse-class (11|12)-[a-z0-9_-]+$/.test(id);
+    const legacyCatalogueId = typeof id === 'string' && id.length <= 128 && /^cbse-class (9|10|11|12)-[a-z0-9_-]+$/.test(id);
     if (typeof id !== 'string' || (!/^[a-zA-Z0-9_-]{1,128}$/.test(id) && !legacyCatalogueId) || ids.has(id)) throw new Error('Invalid or duplicate curriculum identity.');
     ids.add(id);
   };
