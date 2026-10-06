@@ -1,9 +1,10 @@
 import type { BoardType, ClassGrade, StreamType } from '../types';
+import { validateMenuAppearance, PROTECTED_NAVIGATION, type NavigationIcon } from './navigationAppearance';
 
-export interface WebsiteOption { id: string; label: string; hindiLabel: string; deleted?: boolean }
+export interface WebsiteOption { id: string; label: string; hindiLabel: string; deleted?: boolean; icon?: NavigationIcon; subtitle?: string; hindiSubtitle?: string }
 export interface WebsiteCopy { replacement: string; deleted?: boolean }
 export interface WebsiteQuote { id: string; en: string; hi: string; deleted?: boolean }
-export interface WebsitePage { id: string; title: string; hindiTitle: string; body: string; hindiBody: string; deleted?: boolean }
+export interface WebsitePage { id: string; title: string; hindiTitle: string; body: string; hindiBody: string; deleted?: boolean; icon?: NavigationIcon }
 export interface WebsiteConfig {
   name: string;
   logoUrl: string;
@@ -41,9 +42,10 @@ export const DEFAULT_WEBSITE_CONFIG: WebsiteConfig = {
   classes: [9, 10, 11, 12].map((n, i) => ({ id: `Class ${n}`, label: `Class ${['IX', 'X', 'XI', 'XII'][i]}`, hindiLabel: `कक्षा ${n}` })),
   streams: ['General', 'Science', 'Commerce', 'Humanities'].map(id => ({ id, label: id, hindiLabel: id })),
   navigation: [
+    ['materials', 'My Dashboard — Saved Materials', 'मेरी अध्ययन सामग्री'],
     ['learning', 'Learning Hub', 'अध्ययन कक्ष (Curriculum)'], ['youtube', 'Learn with YouTube', 'यूट्यूब से सीखें'],
     ['notices', 'Notice Board', 'प्रेरणादायक सूचना पट्ट'], ['evaluation', 'Evaluation Hub', 'मूल्यांकन एवं रिपोर्ट'],
-    ['about', 'About Us', 'हमारे विषय में'], ['contact', 'Contact Us', 'संपर्क करें']
+    ['about', 'About Us', 'हमारे विषय में'], ['contact', 'Contact Us', 'संपर्क करें'], ['admin', 'Admin Control Panel', 'प्रशासक नियंत्रण कक्ष']
   ].map(([id, label, hindiLabel]) => ({ id, label, hindiLabel })),
   modules: [
     ['recommended_videos', 'Recommended Videos', 'अनुशंसित वीडियो'], ['detailed_notes', 'Detailed Notes', 'विस्तृत नोट्स'],
@@ -72,6 +74,8 @@ export function validateWebsiteConfig(value: WebsiteConfig): WebsiteConfig {
     for (const item of list) {
       if (!item || typeof item.id !== 'string' || !/^[a-zA-Z0-9 _-]{1,128}$/.test(item.id) || ids.has(item.id)) throw new Error(`Duplicate or invalid ${key} identity.`);
       ids.add(item.id);
+      validateMenuAppearance(item);
+      if (key === 'navigation' && PROTECTED_NAVIGATION.includes(item.id) && item.deleted) throw new Error('Dashboard and Admin access must remain available.');
       if (typeof item.label !== 'string' || !item.label.trim() || item.label.length > 160 || typeof item.hindiLabel !== 'string' || item.hindiLabel.length > 160 || (item.deleted !== undefined && typeof item.deleted !== 'boolean')) throw new Error(`Invalid ${key} label.`);
     }
     if (['boards', 'classes', 'streams', 'modules'].includes(key) && !list.some(x => !x.deleted)) throw new Error(`Keep at least one ${key} option.`);
@@ -85,7 +89,10 @@ export function validateWebsiteConfig(value: WebsiteConfig): WebsiteConfig {
     if (new Set(rows.map(x => x.id)).size !== rows.length || rows.some(x => !/^[a-zA-Z0-9_-]{1,128}$/.test(x.id))) throw new Error('Invalid or duplicate item identity.');
   }
   for (const q of value.quotes) if (typeof q.en !== 'string' || typeof q.hi !== 'string' || q.en.length > 2000 || q.hi.length > 2000) throw new Error('Invalid quote.');
-  for (const p of value.pages) if (typeof p.title !== 'string' || !p.title.trim() || p.title.length > 160 || typeof p.hindiTitle !== 'string' || p.hindiTitle.length > 160 || typeof p.body !== 'string' || p.body.length > 20000 || typeof p.hindiBody !== 'string' || p.hindiBody.length > 20000) throw new Error('Invalid page.');
+  for (const p of value.pages) {
+    validateMenuAppearance(p);
+    if (typeof p.title !== 'string' || !p.title.trim() || p.title.length > 160 || typeof p.hindiTitle !== 'string' || p.hindiTitle.length > 160 || typeof p.body !== 'string' || p.body.length > 20000 || typeof p.hindiBody !== 'string' || p.hindiBody.length > 20000 || (p.deleted !== undefined && typeof p.deleted !== 'boolean')) throw new Error('Invalid page.');
+  }
   if (!value.navigation.some(x => !x.deleted) && !value.pages.some(x => !x.deleted)) throw new Error('Keep at least one visible page or menu item.');
   if (!value.copy || typeof value.copy !== 'object' || Array.isArray(value.copy) || Object.keys(value.copy).length > 1200) throw new Error('Invalid website text.');
   for (const [key, item] of Object.entries(value.copy)) if (key.length > 5000 || !item || typeof item.replacement !== 'string' || item.replacement.length > 5000 || (item.deleted !== undefined && typeof item.deleted !== 'boolean')) throw new Error('Invalid text replacement.');
@@ -103,5 +110,8 @@ export function optionLabel(options: WebsiteOption[], id: string, language = 'en
   return item ? (language === 'hi' ? item.hindiLabel || item.label : item.label) : id;
 }
 export const activeOptions = (options: WebsiteOption[]) => options.filter(x => !x.deleted);
+export function managedNavigation(options: WebsiteOption[]): WebsiteOption[] {
+  return [...(options.some(x => x.id === 'materials') ? [] : DEFAULT_WEBSITE_CONFIG.navigation.filter(x => x.id === 'materials')), ...options, ...(options.some(x => x.id === 'admin') ? [] : DEFAULT_WEBSITE_CONFIG.navigation.filter(x => x.id === 'admin'))];
+}
 export const supportedTeacherClass = (grade: ClassGrade) => ['Class 9', 'Class 10', 'Class 11', 'Class 12'].includes(grade);
 export type CurriculumIdentity = BoardType | ClassGrade | StreamType;

@@ -3,6 +3,7 @@ import { WebsiteText } from '../context/WebsiteContext';
 import React from 'react';
 import { useWebsite } from '../context/WebsiteContext';
 import { useCurriculum } from '../context/CurriculumContext';
+import { MenuIcon } from './MenuIcon';
 import { ContentModuleType, SubjectMeta, ChapterMeta, TopicMeta } from '../types';
 import {
   FileText,
@@ -268,8 +269,7 @@ export const LearningSidebar: React.FC = () => {
           {language === 'hi' ? websiteText("शिक्षण मॉड्यूल (Learning Modules)") : websiteText("Learning Modules")}
         </label>
         <div className="space-y-1">
-          {config.modules.filter(option => !option.deleted).map(option => { const builtIn = modules.find(mod => mod.id === option.id); return { id: option.id, icon: FileText, color: 'text-orange-600 bg-orange-50', tag: undefined, ...builtIn, label: option.label, hindiLabel: option.hindiLabel || option.label }; }).map((mod) => {
-            const Icon = mod.icon;
+          {config.modules.filter(option => !option.deleted).map(option => { const builtIn = modules.find(mod => mod.id === option.id); return { id: option.id, icon: FileText, color: 'text-orange-600 bg-orange-50', tag: undefined, ...builtIn, menuIcon: option.icon, label: option.label, hindiLabel: option.hindiLabel || option.label }; }).map((mod) => {
             const isModActive = activeModule === mod.id;
             return (
               <button
@@ -287,7 +287,7 @@ export const LearningSidebar: React.FC = () => {
                       isModActive ? "bg-white/20 text-white" : mod.color
                     }`}
                   >
-                    <Icon className="w-3.5 h-3.5" />
+                    <MenuIcon icon={mod.menuIcon} itemId={mod.id} fallback="file" className="w-3.5 h-3.5" />
                   </div>
                   <span className="truncate">
                     {websiteText(language === 'hi' ? mod.hindiLabel : mod.label)}
