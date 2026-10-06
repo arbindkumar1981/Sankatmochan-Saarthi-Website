@@ -5,6 +5,7 @@ import { WEBSITE_TEXT_CATALOGUE } from '../data/websiteTextCatalogue';
 import { useAuth } from '../context/AuthContext';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../services/firebase';
+import { NavigationManager } from './NavigationManager';
 
 const field = 'w-full min-w-0 border rounded-lg p-2 text-sm bg-white';
 const button = 'border rounded-lg px-3 py-2 text-xs font-semibold hover:bg-orange-50 disabled:opacity-50';
@@ -18,7 +19,7 @@ export function WebsiteSettingsManager() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [search, setSearch] = useState('');
-  const [section, setSection] = useState('branding');
+  const [section, setSection] = useState('menus');
   const update = (patch: Partial<WebsiteConfig>) => setDraft(prev => ({ ...prev, ...patch }));
   const submit = async () => {
     setBusy(true); setMessage('');
@@ -38,7 +39,7 @@ export function WebsiteSettingsManager() {
     } catch (error) { setMessage(error instanceof Error ? error.message : 'Upload failed.'); }
     finally { setBusy(false); }
   };
-  const lists = ['boards', 'classes', 'streams', 'navigation', 'modules'] as const;
+  const lists = ['boards', 'classes', 'streams'] as const;
   const listEditor = (key: typeof lists[number]) => {
     const rows = draft[key];
     const singular = key === 'classes' ? 'class' : key.slice(0, -1);
@@ -50,16 +51,15 @@ export function WebsiteSettingsManager() {
         <label className="text-xs">Hindi name<input aria-label={`${key} ${row.id} Hindi name`} className={field} value={row.hindiLabel} onChange={e => change(row.id, { hindiLabel: e.target.value })} /></label>
         <div className="flex flex-wrap items-center gap-2"><button className={button} onClick={() => change(row.id, { deleted: !row.deleted })}>{row.deleted ? 'Restore / Add back' : 'Delete'}</button></div>
       </div>)}
-      {key !== 'navigation' && <button className={button} onClick={() => update({ [key]: [...rows, { id: id(singular), label: `New ${singular}`, hindiLabel: '' }] })}>Add {singular}</button>}
+      <button className={button} onClick={() => update({ [key]: [...rows, { id: id(singular), label: `New ${singular}`, hindiLabel: '' }] })}>Add {singular}</button>
       {key === 'classes' && <p className="text-xs text-stone-600">New classes can hold admin-published material. AI teaching currently supports Classes IX–XII.</p>}
       {key === 'boards' && <p className="text-xs text-stone-600">Add subjects for a new board in Curriculum Manager. AI generation currently supports CBSE.</p>}
-      {key === 'navigation' && <p className="text-xs">Use Pages to add a new menu page. Admin access stays available.</p>}
-      {key === 'modules' && <p className="text-xs">Add a learning resource module for admin-published notes and files. Existing interactive tools keep their scoring and AI behavior.</p>}
     </div>;
   };
   return <section className="space-y-4">
-    <h3 className="text-lg font-bold">Website Manager — Add / Delete / Replace / Restore</h3>
-    <div className="flex flex-wrap gap-2">{['branding', ...lists, 'quotes', 'pages', 'text'].map(key => <button key={key} className={`${button} ${section === key ? 'bg-orange-100' : ''}`} onClick={() => setSection(key)}>{key.charAt(0).toUpperCase() + key.slice(1)}</button>)}</div>
+    <h3 className="text-lg font-bold">Website & Menu Controls</h3>
+    <div className="flex flex-wrap gap-2">{[['menus', 'Navigation & Icons'], ['branding', 'Name, Logo & Banner'], ['boards', 'Boards'], ['classes', 'Classes'], ['streams', 'Streams'], ['quotes', 'Quotes'], ['text', 'Website Text']].map(([key,label]) => <button key={key} className={`${button} ${section === key ? 'bg-orange-100' : ''}`} aria-pressed={section === key} onClick={() => setSection(key)}>{label}</button>)}</div>
+    {section === 'menus' && <fieldset disabled={busy}><NavigationManager draft={draft} update={update} /></fieldset>}
     {section === 'branding' && <div className="space-y-3">
       <label className="block text-sm">Website name<input className={field} value={draft.name} maxLength={120} onChange={e => update({ name: e.target.value })} /></label>
       {(['logoUrl', 'babaImageUrl'] as const).map(key => <div key={key} className="border rounded-xl p-3 space-y-2">
@@ -77,10 +77,6 @@ export function WebsiteSettingsManager() {
       <label>Hindi quote<textarea className={field} value={q.hi} onChange={e => update({ quotes: draft.quotes.map(x => x.id === q.id ? { ...x, hi: e.target.value } : x) })} /></label>
       <button className={button} onClick={() => update({ quotes: draft.quotes.map(x => x.id === q.id ? { ...x, deleted: !x.deleted } : x) })}>{q.deleted ? 'Restore' : 'Delete'}</button>
     </div>)}<button className={button} onClick={() => update({ quotes: [...draft.quotes, { id: id('quote'), en: '', hi: '' }] })}>Add quote</button></div>}
-    {section === 'pages' && <div className="space-y-3">{draft.pages.map(page => <div key={page.id} className="border rounded-xl p-3 space-y-2">
-      {(['title', 'hindiTitle', 'body', 'hindiBody'] as const).map(key => <label className="block" key={key}>{key}<textarea className={field} value={page[key]} onChange={e => update({ pages: draft.pages.map(x => x.id === page.id ? { ...x, [key]: e.target.value } : x) })} /></label>)}
-      <button className={button} onClick={() => update({ pages: draft.pages.map(x => x.id === page.id ? { ...x, deleted: !x.deleted } : x) })}>{page.deleted ? 'Restore' : 'Delete page'}</button>
-    </div>)}<button className={button} onClick={() => update({ pages: [...draft.pages, { id: id('page'), title: 'New page', hindiTitle: '', body: '', hindiBody: '' }] })}>Add page</button></div>}
     {section === 'text' && <div className="space-y-3">
       <p className="text-sm">Edit headings, instructions, contact details, About text, footer and button labels. Student names, scores and live learning content use their own managers.</p>
       <input aria-label="Find website text" className={field} placeholder="Search website text" value={search} onChange={e => setSearch(e.target.value)} />

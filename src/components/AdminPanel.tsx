@@ -73,8 +73,8 @@ export const AdminPanel: React.FC = () => {
   const { profile, user } = useAuth();
 
   const [adminTab, setAdminTab] = useState<
-    'content' | 'videos' | 'tests' | 'notices' | 'students' | 'enquiries' | 'settings'
-  >('content');
+    'content' | 'videos' | 'tests' | 'notices' | 'students' | 'enquiries' | 'settings' | 'curriculum'
+  >('settings');
 
   const [adminOperationError, setAdminOperationError] = useState('');
   const adminSubmit = (action: (e: React.FormEvent) => Promise<void>) => async (e: React.FormEvent) => {
@@ -106,7 +106,7 @@ export const AdminPanel: React.FC = () => {
   const [contentUploadStatus, setContentUploadStatus] = useState('');
   const [contentGenerating, setContentGenerating] = useState(false);
   const [contentError, setContentError] = useState('');
-  const [showCurriculumManager, setShowCurriculumManager] = useState(false);
+
   const formSubjects = useMemo(() => subjectsForSelection(curriculumSubjects,contentBoard,contentClass,contentStream), [curriculumSubjects,contentBoard,contentClass,contentStream]);
   const formSubject = formSubjects.find(s => s.id === contentSubjectId) || formSubjects[0] || null;
   const formChapter = formSubject?.chapters.find(ch => ch.id === contentChapterId) || formSubject?.chapters[0] || null;
@@ -408,7 +408,7 @@ export const AdminPanel: React.FC = () => {
           </div>
           <div>
             <h2 className="text-lg sm:text-xl font-black text-stone-900 font-cinzel">
-              Centralized Administration & Curriculum Control
+              Admin Control Panel
             </h2>
             <p className="text-xs text-red-900 font-medium">
               Logged in as: <span className="font-bold">{profile?.displayName || 'Principal A. Kumar'}</span> ({profile?.email})
@@ -416,100 +416,22 @@ export const AdminPanel: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] bg-red-100 text-red-800 font-bold px-2 py-0.5 rounded-full border border-red-200">
-            Secure RBAC Mode
-          </span>
-        </div>
       </div>
 
-      {/* Admin Sub Navigation Tabs */}
-      <div className="flex flex-wrap items-center gap-1.5 bg-stone-100 p-1.5 rounded-xl text-xs font-bold">
-        <button
-          onClick={() => setAdminTab('content')}
-          className={`px-3 py-2 rounded-lg transition-all flex items-center gap-1.5 ${
-            adminTab === 'content'
-              ? 'bg-orange-600 text-white shadow-xs'
-              : 'text-stone-700 hover:text-orange-600'
-          }`}
-        >
-          <FileText className="w-3.5 h-3.5" />
-          <span>Learning Materials ({learningContents.length})</span>
-        </button>
-
-        <button
-          onClick={() => setAdminTab('videos')}
-          className={`px-3 py-2 rounded-lg transition-all flex items-center gap-1.5 ${
-            adminTab === 'videos'
-              ? 'bg-red-600 text-white shadow-xs'
-              : 'text-stone-700 hover:text-red-600'
-          }`}
-        >
-          <Youtube className="w-3.5 h-3.5" />
-          <span>YouTube Lectures ({youtubeVideos.length})</span>
-        </button>
-
-        <button
-          onClick={() => setAdminTab('tests')}
-          className={`px-3 py-2 rounded-lg transition-all flex items-center gap-1.5 ${
-            adminTab === 'tests'
-              ? 'bg-emerald-600 text-white shadow-xs'
-              : 'text-stone-700 hover:text-emerald-600'
-          }`}
-        >
-          <CheckSquare className="w-3.5 h-3.5" />
-          <span>Assessment Tests ({evaluationTests.length})</span>
-        </button>
-
-        <button
-          onClick={() => setAdminTab('notices')}
-          className={`px-3 py-2 rounded-lg transition-all flex items-center gap-1.5 ${
-            adminTab === 'notices'
-              ? 'bg-amber-600 text-white shadow-xs'
-              : 'text-stone-700 hover:text-amber-600'
-          }`}
-        >
-          <BellRing className="w-3.5 h-3.5" />
-          <span>Notice Board ({notices.length})</span>
-        </button>
-
-        <button
-          onClick={() => setAdminTab('students')}
-          className={`px-3 py-2 rounded-lg transition-all flex items-center gap-1.5 ${
-            adminTab === 'students'
-              ? 'bg-stone-800 text-white shadow-xs'
-              : 'text-stone-700 hover:text-stone-900'
-          }`}
-        >
-          <Users className="w-3.5 h-3.5" />
-          <span>Student Records</span>
-        </button>
-
-        <button
-          onClick={() => setAdminTab('enquiries')}
-          className={`px-3 py-2 rounded-lg transition-all flex items-center gap-1.5 ${
-            adminTab === 'enquiries'
-              ? 'bg-blue-600 text-white shadow-xs'
-              : 'text-stone-700 hover:text-blue-600'
-          }`}
-        >
-          <Inbox className="w-3.5 h-3.5" />
-          <span>Enquiries Desk</span>
-        </button>
-
-        <button
-          onClick={() => setAdminTab('settings')}
-          className={`px-3 py-2 rounded-lg transition-all flex items-center gap-1.5 ${
-            adminTab === 'settings'
-              ? 'bg-purple-600 text-white shadow-xs'
-              : 'text-stone-700 hover:text-purple-600'
-          }`}
-        >
-          <ImageIcon className="w-3.5 h-3.5" />
-          <span>Website Manager</span>
-        </button>
+      {/* One organized control panel; only the selected manager is opened. */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3" aria-label="Admin control panel">
+        {([
+          ['settings', 'Website & Navigation', 'Names, icons, pages, logo and menu order', ImageIcon],
+          ['curriculum', 'Curriculum', 'Subjects, chapters and topics', BookOpen],
+          ['content', 'Learning Materials', 'Upload, publish, replace and restore', FileText],
+          ['videos', 'Videos', 'YouTube lectures and links', Youtube],
+          ['tests', 'Assessments', 'Tests, questions and evaluation', CheckSquare],
+          ['notices', 'Notices', 'Student notices and announcements', BellRing],
+          ['students', 'Students', 'Student records and learning progress', Users],
+          ['enquiries', 'Enquiries', 'Questions and contact requests', Inbox]
+        ] as const).map(([key, label, description, Icon]) => <button key={key} aria-pressed={adminTab === key} onClick={() => setAdminTab(key)} className={`flex flex-col gap-2 border rounded-xl p-3 text-left ${adminTab === key ? 'bg-orange-50 border-orange-500 text-orange-900' : 'bg-white border-stone-200 text-stone-700 hover:bg-orange-50'}`}><Icon className="w-5 h-5" /><span className="font-bold text-sm">{label}</span><span className="text-xs text-stone-500">{description}</span></button>)}
       </div>
-
+      {adminTab === 'curriculum' && <CurriculumManager />}
       {/* Admin Tab 1: Content Manager */}
       {adminTab === 'content' && (
         <div className="space-y-4">
@@ -527,8 +449,6 @@ export const AdminPanel: React.FC = () => {
             </button>
           </div>
 
-          <div className="flex justify-end"><button type="button" onClick={() => setShowCurriculumManager(!showCurriculumManager)} className="px-3 py-2 bg-stone-800 text-white rounded-xl text-xs font-bold">{showCurriculumManager ? 'Close Curriculum Manager' : 'Subjects — Add / Edit / Delete'}</button></div>
-          {showCurriculumManager && <CurriculumManager />}
 
           {showContentForm && (
             <form onSubmit={handleCreateContent} className="bg-amber-50/60 border border-orange-200 p-4 rounded-2xl space-y-3">
@@ -626,7 +546,7 @@ export const AdminPanel: React.FC = () => {
           )}
 
           {/* List of existing contents */}
-          <div className="space-y-2">
+          <details className="space-y-2"><summary className="cursor-pointer text-sm font-semibold">Publication status & approval</summary>
             {learningContents.map((c) => (
               <div
                 key={c.id}
@@ -665,7 +585,7 @@ export const AdminPanel: React.FC = () => {
                 </div>
               </div>
             ))}
-          </div>
+          </details>
         </div>
       )}
 

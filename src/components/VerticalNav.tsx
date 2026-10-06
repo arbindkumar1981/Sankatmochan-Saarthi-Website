@@ -3,6 +3,8 @@ import React from 'react';
 import { useWebsite } from '../context/WebsiteContext';
 import { useCurriculum, MainTabType } from '../context/CurriculumContext';
 import { useAuth } from '../context/AuthContext';
+import { managedNavigation } from '../services/websiteConfig';
+import { MenuIcon } from './MenuIcon';
 import {
   BookOpen,
   Youtube,
@@ -22,6 +24,7 @@ export const VerticalNav: React.FC = () => {
   const { config } = useWebsite();
 
   const navItems = [
+    { id: 'materials' as MainTabType, label: 'My Dashboard — Saved Materials', sub: '', icon: BookOpen, accent: 'from-orange-500 to-amber-500' },
     {
       id: 'learning' as MainTabType,
       label: language === 'hi' ? 'अध्ययन कक्ष (Curriculum)' : 'Learning Hub',
@@ -81,15 +84,13 @@ export const VerticalNav: React.FC = () => {
 
   return (
     <nav className="w-full lg:w-64 bg-white rounded-2xl border border-orange-200/90 shadow-sm p-2.5 sm:p-3 flex flex-row lg:flex-col gap-1.5 overflow-x-auto lg:overflow-visible shrink-0 scrollbar-none">
-      <button className="px-3 py-3 text-left border rounded-xl font-bold text-orange-900" onClick={() => setActiveTab('materials')}>My Dashboard — Saved Materials</button>
       <div className="hidden lg:block px-3 py-2 border-b border-orange-100 mb-1">
         <span className="text-[11px] font-extrabold uppercase tracking-wider text-orange-900/70 font-cinzel">
           {language === 'hi' ? websiteText("मार्गदर्शन मेनू") : websiteText("Guidance Navigation")}
         </span>
       </div>
 
-      {[...navItems.filter(item => item.id === 'admin' || config.navigation.some(x => x.id === item.id && !x.deleted)).map(item => { const option = config.navigation.find(x => x.id === item.id); return option ? { ...item, label: language === 'hi' ? option.hindiLabel || option.label : option.label } : item; }), ...config.pages.filter(p => !p.deleted).map(p => ({ id: `page:${p.id}` as MainTabType, label: language === 'hi' ? p.hindiTitle || p.title : p.title, sub: '', icon: Info, accent: 'from-orange-600 to-amber-700', badge: undefined, count: undefined }))].map((item) => {
-        const Icon = item.icon;
+      {[...managedNavigation(config.navigation).filter(option => !option.deleted && (option.id !== 'admin' || isAdmin)).flatMap(option => { const item = navItems.find(x => x.id === option.id); return item ? [{ ...item, menuIcon: option.icon, label: language === 'hi' ? option.hindiLabel || option.label : option.label, sub: language === 'hi' ? option.hindiSubtitle ?? option.subtitle ?? item.sub : option.subtitle ?? item.sub }] : []; }), ...config.pages.filter(p => !p.deleted).map(p => ({ id: `page:${p.id}` as MainTabType, label: language === 'hi' ? p.hindiTitle || p.title : p.title, sub: '', menuIcon: p.icon, accent: 'from-orange-600 to-amber-700', badge: undefined, count: undefined }))].map((item) => {
         const isActive = activeTab === item.id;
 
         return (
@@ -110,7 +111,7 @@ export const VerticalNav: React.FC = () => {
                   : "bg-amber-100/70 text-orange-700"
               }`}
             >
-              <Icon className="w-4 h-4" />
+              <MenuIcon icon={item.menuIcon} itemId={item.id} className="w-4 h-4" />
             </div>
 
             {/* Labels */}
