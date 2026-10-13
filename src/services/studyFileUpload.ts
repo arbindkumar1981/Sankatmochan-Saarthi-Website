@@ -5,27 +5,27 @@ import type { WebsiteConfig } from './websiteConfig';
 export async function uploadBrandedStudyFile(file: File, adminUid: string, config: Pick<WebsiteConfig, 'name' | 'logoUrl'>, onStatus?: (message: string) => void) {
   if (!adminUid || file.size > 50 * 1024 * 1024) throw new Error('Choose a study file up to 50 MB.');
   const extension = file.name.split('.').pop()?.toLowerCase();
-  if (!['pdf', 'docx', 'png', 'jpg', 'jpeg', 'webp', 'txt'].includes(extension || '')) throw new Error('Automatic branding supports PDF, Word (.docx), images and TXT. Export older Word/PowerPoint files as PDF before uploading.');
+  if (!['pdf', 'docx', 'pptx', 'png', 'jpg', 'jpeg', 'webp', 'txt'].includes(extension || '')) throw new Error('Automatic branding supports PDF, Word (.docx), PowerPoint (.pptx), images and TXT. Export older Word/PowerPoint files as PDF before uploading.');
   const { loadBrandingImages, brandPdf } = await import('./noteBranding');
   const branding = await loadBrandingImages(config.logoUrl, config.name);
   const source = new Uint8Array(await file.arrayBuffer());
-  const word = extension === 'docx';
+  const office = extension === 'docx' || extension === 'pptx';
   let pdfSource: Uint8Array;
-  if (word) {
-    if (file.size > 12 * 1024 * 1024) throw new Error('Word files must be smaller than 12 MB. Split larger notes or upload a PDF.');
+  if (office) {
+    if (file.size > 12 * 1024 * 1024) throw new Error('Office files must be smaller than 12 MB. Split larger notes or upload a PDF.');
     if (!auth.currentUser || auth.currentUser.uid !== adminUid || auth.currentUser.isAnonymous) throw new Error('Administrator login required.');
     const api = import.meta.env.VITE_SAARTHI_API_URL;
-    if (!api) throw new Error('Word conversion is unavailable. Upload a PDF.');
-    onStatus?.('Converting Word to PDF…');
+    if (!api) throw new Error('Office conversion is unavailable. Upload a PDF.');
+    onStatus?.(extension === 'pptx' ? 'Converting PowerPoint to PDF…' : 'Converting Word to PDF…');
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 105000);
     try {
-      const response = await fetch(`${api.replace(/\/$/, '')}/v1/materials/convert-docx`, { method: 'POST', headers: { Authorization: `Bearer ${await auth.currentUser.getIdToken()}`, 'Content-Type': 'application/octet-stream' }, body: file, signal: controller.signal });
-      if (!response.ok) { const error = await response.json().catch(() => ({})); throw new Error(error.detail || 'Word conversion failed. Retry or upload a PDF.'); }
+      const response = await fetch(`${api.replace(/\/$/, '')}/v1/materials/convert-office`, { method: 'POST', headers: { Authorization: `Bearer ${await auth.currentUser.getIdToken()}`, 'Content-Type': 'application/octet-stream', 'X-Document-Format': extension }, body: file, signal: controller.signal });
+      if (!response.ok) { const error = await response.json().catch(() => ({})); throw new Error(error.detail || 'Office conversion failed. Retry or upload a PDF.'); }
       pdfSource = new Uint8Array(await response.arrayBuffer());
       if (pdfSource.byteLength > 50 * 1024 * 1024 || new TextDecoder().decode(pdfSource.slice(0, 5)) !== '%PDF-') throw new Error('Conversion did not return a valid PDF.');
     } catch (error) {
-      if (controller.signal.aborted) throw new Error('Word conversion timed out. Split the notes or upload a PDF.');
+      if (controller.signal.aborted) throw new Error('Office conversion timed out. Split the notes or upload a PDF.');
       throw error;
     } finally { clearTimeout(timeout); }
   } else pdfSource = extension === 'pdf' ? source : await browserFilePdf(file);
@@ -81,3 +81,4 @@ async function browserFilePdf(file: File): Promise<Uint8Array> {
   }
   return pdf.save();
 }
+

@@ -67,7 +67,7 @@ export const AuthModal: React.FC = () => {
 
   return (
     <div role="dialog" aria-modal="true" aria-label={websiteText("Saarthi Access Gateway")} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-950/70 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl border-2 border-orange-500 overflow-hidden relative">
+      <div className="bg-white rounded-2xl max-w-lg w-full max-h-[calc(100dvh-2rem)] shadow-2xl border-2 border-orange-500 overflow-y-auto relative">
         {/* Header Ribbon */}
         <div className="bg-gradient-to-r from-red-600 via-orange-600 to-amber-600 p-4 text-white flex items-center justify-between">
           <div className="flex items-center gap-2">
