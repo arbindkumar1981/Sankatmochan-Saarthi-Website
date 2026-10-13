@@ -1,3 +1,4 @@
+import { BabaImage } from './BabaImage';
 import { useWebsite } from '../context/WebsiteContext';
 import { WebsiteText } from '../context/WebsiteContext';
 import React from 'react';
@@ -34,7 +35,7 @@ export const AboutUsView: React.FC = () => {
       {/* Hero Spiritual Sanctuary */}
       <div className="bg-gradient-to-br from-amber-700 via-orange-600 to-red-700 text-white rounded-3xl p-6 sm:p-8 shadow-xl flex flex-col md:flex-row items-center gap-6 relative overflow-hidden">
         <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-full p-1.5 bg-gradient-to-tr from-yellow-300 via-amber-200 to-yellow-500 shadow-2xl overflow-hidden shrink-0 border-4 border-white/60">
-          {babaImageUrl && <img
+          {babaImageUrl && <BabaImage
             src={babaImageUrl}
             alt={websiteText("Revered Baba Neem Karoli Ji Maharaj (मूल पावन स्वरूप)")}
             className="w-full h-full object-cover object-top rounded-full bg-amber-900"
@@ -78,3 +79,4 @@ export const AboutUsView: React.FC = () => {
     </div>
   );
 };
+

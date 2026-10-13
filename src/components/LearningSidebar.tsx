@@ -193,11 +193,13 @@ export const LearningSidebar: React.FC = () => {
           {language === 'hi' ? websiteText("विषय चुनें (Subject)") : websiteText("Select Subject")}
         </label>
         <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
+          {!availableSubjects.length && <p role="status" className="rounded-lg bg-amber-50 p-2 text-xs text-stone-700">{websiteText(language === 'hi' ? 'इस बोर्ड, कक्षा और स्ट्रीम के लिए पाठ्यक्रम अभी उपलब्ध नहीं है। दूसरा चयन करें।' : 'No curriculum is available for this board, class and stream. Choose another selection.')}</p>}
           {availableSubjects.map((sub) => {
             const isSelected = selectedSubject?.id === sub.id;
             return (
               <button
                 key={sub.id}
+                aria-pressed={isSelected}
                 onClick={() => {
                   setSelectedSubject(sub);
                   setSelectedChapter(sub.chapters[0] || null);
@@ -249,7 +251,7 @@ export const LearningSidebar: React.FC = () => {
               className="w-full px-2.5 py-2 text-xs font-semibold bg-amber-50/50 border border-orange-200 rounded-xl text-stone-800 outline-none focus:ring-1 focus:ring-orange-500"
             >
               {selectedSubject.chapters.map((ch) => (
-                <option key={ch.id} value={ch.id}><WebsiteText original={"Ch "} />{ch.chapterNumber}: {language === 'hi' ? ch.hindiTitle || ch.title : ch.title}
+                <option key={ch.id} value={ch.id} disabled={/^new chapter$/i.test(ch.title.trim())}><WebsiteText original={"Ch "} />{ch.chapterNumber}: {language === 'hi' ? ch.hindiTitle || ch.title : ch.title}
                 </option>
               ))}
             </select>
@@ -301,6 +303,7 @@ export const LearningSidebar: React.FC = () => {
 
       </details>
 
+      {selectedChapter && /^new chapter$/i.test(selectedChapter.title.trim()) && <p role="status" className="text-xs text-amber-800">{websiteText('This chapter is a draft. Choose a named chapter for learning.')}</p>}
       {/* Module Selector (9 Modules strictly organized) */}
       <details open className="border-t border-orange-100 pt-2.5">
         <summary className="cursor-pointer block text-[11px] font-bold text-stone-600 uppercase tracking-wider mb-1.5">
@@ -312,6 +315,7 @@ export const LearningSidebar: React.FC = () => {
             return (
               <button
                 key={mod.id}
+                aria-pressed={isModActive}
                 onClick={() => setActiveModule(mod.id)}
                 className={`w-full text-left px-2.5 py-2 rounded-xl text-xs font-semibold flex items-center justify-between transition-all group ${
                   isModActive

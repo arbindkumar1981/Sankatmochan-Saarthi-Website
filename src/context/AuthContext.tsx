@@ -47,29 +47,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalInitialTab, setAuthModalInitialTab] = useState<'student' | 'admin'>('student');
 
-  // Load guest profile from local storage if exists
-  useEffect(() => {
-    const savedGuest = localStorage.getItem('saarthi_guest_user');
-    if (savedGuest && !user) {
-      try {
-        const parsed = JSON.parse(savedGuest);
-        setProfile(parsed);
-      } catch (e) {
-        console.error('Error parsing guest user', e);
-      }
-    }
-  }, [user]);
-
   // Sync Firebase Auth
   useEffect(() => {
+    let revision = 0;
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      const request = ++revision;
+      setLoading(true);
       setUser(currentUser);
+      setProfile(null);
       if (currentUser) {
         try {
           const userDocRef = doc(db, 'users', currentUser.uid);
           const snap = await getDoc(userDocRef);
 
           const isDesignatedAdmin = await hasAdminRecord(currentUser.uid);
+          if (request !== revision) return;
 
           if (snap.exists()) {
             const data = snap.data() as UserProfile;
@@ -98,28 +90,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             };
 
             await setDoc(userDocRef, newProfile);
+            if (request !== revision) return;
             setProfile(newProfile);
           }
         } catch (err) {
           console.error('Error fetching/saving user profile:', err);
         }
-      } else {
-        // Not logged in to firebase; check if guest profile exists
-        const savedGuest = localStorage.getItem('saarthi_guest_user');
-        if (savedGuest) {
-          try {
-            setProfile(JSON.parse(savedGuest));
-          } catch {
-            setProfile(null);
-          }
-        } else {
-          setProfile(null);
-        }
       }
+      if (request !== revision) return;
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => { ++revision; unsubscribe(); };
   }, []);
 
   const openAuthModal = (tab: 'student' | 'admin' = 'student') => {
@@ -142,6 +124,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const userDocRef = doc(db, 'users', result.user.uid);
       const snap = await getDoc(userDocRef);
 
+      if (auth.currentUser?.uid !== result.user.uid) return;
       const resolvedRole: UserRole = isDesignatedAdmin ? 'admin' : 'student';
 
       if (!snap.exists()) {
@@ -161,6 +144,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           updatedAt: new Date().toISOString()
         };
         await setDoc(userDocRef, newProfile);
+        if (auth.currentUser?.uid !== result.user.uid) return;
         setProfile(newProfile);
       } else {
         const existingData = snap.data() as UserProfile;
@@ -184,24 +168,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return false;
   };
 
-  const signInAsGuestStudent = (name: string, grade: ClassGrade, board: BoardType, stream?: StreamType) => {
-    const guestStudent: UserProfile = {
-      uid: 'guest-' + Math.random().toString(36).substring(2, 9),
-      email: `${name.toLowerCase().replace(/\\s+/g, '')}@student.saarthi.in`,
-      displayName: name,
-      role: 'student',
-      board: board,
-      classGrade: grade,
-      stream: grade === 'Class 12' || grade === 'Class 11' ? (stream || 'Science') : 'General',
-      preferredLanguage: 'en',
-      studyStreakDays: 3,
-      totalTestsTaken: 1,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    setProfile(guestStudent);
-    localStorage.setItem('saarthi_guest_user', JSON.stringify(guestStudent));
-    setAuthModalOpen(false);
+  // Compatibility entry point: never create a local profile that pretends to authenticate.
+  const signInAsGuestStudent = (_name: string, _grade: ClassGrade, _board: BoardType, _stream?: StreamType) => {
+    setAuthModalInitialTab('student');
+    setAuthModalOpen(true);
   };
 
   const updateStudentPreferences = async (prefs: Partial<UserProfile>) => {
@@ -265,3 +235,4 @@ export const useAuth = () => {
   if (!ctx) throw new Error('useAuth must be used within an AuthProvider');
   return ctx;
 };
+

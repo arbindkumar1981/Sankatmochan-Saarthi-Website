@@ -1,3 +1,4 @@
+import { BabaImage } from './BabaImage';
 import { WebsiteText } from '../context/WebsiteContext';
 import { useWebsite } from '../context/WebsiteContext';
 import React, { useState, useEffect } from 'react';
@@ -5,7 +6,6 @@ import { useCurriculum } from '../context/CurriculumContext';
 import { Sparkles, RotateCw } from 'lucide-react';
 import { SankatmochanLogo } from './SankatmochanLogo';
 
-const BABA_PUBLIC_DOMAIN_FALLBACK = 'https://upload.wikimedia.org/wikipedia/commons/6/66/Neemkaroli_14.jpg';
 
 export const BabaBanner: React.FC = () => {
   const { text: websiteText } = useWebsite();
@@ -50,12 +50,8 @@ export const BabaBanner: React.FC = () => {
           />
           </div>
           <div className="flex items-center justify-center">
-            {babaImageUrl && <img
+            {babaImageUrl && <BabaImage
               src={babaImageUrl}
-              onError={(e) => {
-                const img = e.currentTarget;
-                if (img.src !== BABA_PUBLIC_DOMAIN_FALLBACK) img.src = BABA_PUBLIC_DOMAIN_FALLBACK;
-              }}
               alt={websiteText("Baba Neem Karoli Ji")}
               className="w-12 h-12 sm:w-16 sm:h-16 rounded-full object-cover object-[center_28%] ring-2 ring-amber-300 shadow-lg bg-amber-50"
             />}
@@ -95,3 +91,4 @@ export const BabaBanner: React.FC = () => {
     </div>
   );
 };
+

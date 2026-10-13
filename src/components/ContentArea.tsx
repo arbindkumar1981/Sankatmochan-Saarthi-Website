@@ -1,3 +1,5 @@
+import { RequestScope } from '../services/requestScope';
+import { parseGeneratedFlashcards, parseGeneratedMindmap } from '../services/generatedLearning';
 import { DEFAULT_WEBSITE_CONFIG } from '../services/websiteConfig';
 import { optionLabel } from '../services/websiteConfig';
 import { useWebsite } from '../context/WebsiteContext';
@@ -108,10 +110,21 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
   };
 
   // Student on-demand Teacher Agent generation (Detailed/Revision Notes first).
-  const [studentGeneratedText, setStudentGeneratedText] = useState('');
+  const selectionKey = JSON.stringify([user?.uid, selectedBoard, selectedClass, selectedStream, selectedSubject?.id, selectedChapter?.id, selectedTopic?.id, activeModule, language]);
+  const [generationScope] = useState(() => new RequestScope());
+  const [generatedScope, setGeneratedScope] = useState('');
+  const [rawGeneratedText, setStudentGeneratedText] = useState('');
+  const [rawFlashcards, setGeneratedFlashcards] = useState<FlashcardItem[]>([]);
+  const [rawMindmap, setGeneratedMindmap] = useState<NonNullable<LearningContent['mindmapNodes']>>([]);
+  const studentGeneratedText = generatedScope === selectionKey ? rawGeneratedText : '';
+  const generatedFlashcards = generatedScope === selectionKey ? rawFlashcards : [];
+  const generatedMindmap = generatedScope === selectionKey ? rawMindmap : [];
+  const flashcards = generatedFlashcards.length ? generatedFlashcards : matchedContent?.flashcardItems || [];
+  const mindmapNodes = generatedMindmap.length ? generatedMindmap : matchedContent?.mindmapNodes || [];
   const [studentGenerating, setStudentGenerating] = useState(false);
   const [studentGenerationError, setStudentGenerationError] = useState('');
-  const [studentDiagramPlans, setStudentDiagramPlans] = useState<Array<{title:string; labels:string[]; instructions:string}>>([]);
+  const [rawDiagramPlans, setStudentDiagramPlans] = useState<Array<{title:string; labels:string[]; instructions:string}>>([]);
+  const studentDiagramPlans = generatedScope === selectionKey ? rawDiagramPlans : [];
   const [studentProvenance, setStudentProvenance] = useState<Array<{source?:string; source_url?:string; verification_status?:string}>>([]);
 
   const subjectStyleProfile = (name: string) => {
@@ -136,9 +149,13 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
     if (!selectedSubject || !selectedChapter) return;
     const api = import.meta.env.VITE_SAARTHI_API_URL;
     if (!api) { setStudentGenerationError('Saarthi Teacher service is not configured.'); return; }
+    const request = generationScope.start();
+    const controller = request.controller;
+    let timeout: number | undefined;
     setStudentGenerating(true); setStudentGenerationError('');
     try {
       const token = await user.getIdToken();
+      if (!generationScope.owns(request)) return;
       const assetType =
         activeModule === 'revision_notes' ? 'REVISION_NOTES' :
         activeModule === 'formulae' ? 'DEFINITIONS_FORMULAE' :
@@ -151,19 +168,20 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
       const topic = selectedTopic?.title || selectedChapter.title;
       const topicId = `${selectedSubject.id}:${selectedChapter.id}:${selectedTopic?.id || 'chapter'}`;
       const sample = learningContents.find(x => x.subjectId === selectedSubject.id && x.contentType === 'detailed_notes' && x.approved && x.published && x.bodyText)?.bodyText?.slice(0, 4000) || '';
-      const controller = new AbortController();
-      const timeout = window.setTimeout(() => controller.abort(), 600000);
+      timeout = window.setTimeout(() => controller.abort(), 600000);
       const res = await fetch(`${api}/v1/website/teacher/generate`, {
         method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, signal: controller.signal,
         body: JSON.stringify({
           board: selectedBoard, class_level: selectedClass === 'Class 9' ? 'IX' : selectedClass === 'Class 10' ? 'X' : selectedClass === 'Class 11' ? 'XI' : 'XII',
           subject: selectedSubject.teacherSubject || selectedSubject.name, language: language === 'hi' ? 'HINDI' : 'ENGLISH', asset_type: assetType, topic_id: topicId,
           chapter: selectedChapter.title, topic,
-          style_profile: subjectStyleProfile(selectedSubject.name), sample_style_reference: sample
+          style_profile: subjectStyleProfile(selectedSubject.name) +
+            (assetType === 'FLASHCARDS' ? ' Return ONLY JSON: {"flashcards":[{"question":"...","answer":"...","hint":"..."}]}. Include questionHindi/answerHindi when teaching in Hindi.' : '') +
+            (assetType === 'MIND_MAP' ? ' Return ONLY JSON: {"nodes":[{"id":"n1","label":"...","description":"...","children":["n2"]}]}. Each child must reference an existing node id.' : ''), sample_style_reference: sample
         })
       });
-      window.clearTimeout(timeout);
       const data = await res.json();
+      if (!generationScope.owns(request)) return;
       if (!res.ok) throw new Error(typeof data.detail === 'string' ? data.detail : 'Sankatmochansaarthi could not generate this material.');
       if (assetType === 'TEST') {
         const questions = parseGeneratedQuestions(data.content || '');
@@ -171,21 +189,33 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
         setTestStarted(false); setTestSubmitted(false); setSelectedAnswers({}); setSaveStatus('');
         setGeneratedTest({ id: `generated-${crypto.randomUUID()}`, title: `${topic} — Practice Test`, testType: 'chapter', board: selectedBoard, classGrade: selectedClass, stream: selectedStream, subjectId: selectedSubject.id, chapterId: selectedChapter.id, questions, totalMarks, passingMarks: Math.ceil(totalMarks * 0.8), durationMinutes: Math.max(5, questions.length * 2), approved: false, published: false, createdAt: new Date().toISOString() });
         setStudentGeneratedText('');
+      } else if (assetType === 'FLASHCARDS') {
+        setGeneratedFlashcards(parseGeneratedFlashcards(data.content || ''));
+        setStudentGeneratedText(''); setCurrentFlashcardIndex(0); setIsFlipped(false); setCardMastery({});
+      } else if (assetType === 'MIND_MAP') {
+        setGeneratedMindmap(parseGeneratedMindmap(data.content || ''));
+        setStudentGeneratedText('');
       } else setStudentGeneratedText(data.content || '');
+      setGeneratedScope(selectionKey);
       setStudentDiagramPlans(Array.isArray(data.diagram_plans) ? data.diagram_plans : []);
       setStudentProvenance(Array.isArray(data.provenance) ? data.provenance : []);
     } catch (e:any) {
+      if (!generationScope.owns(request)) return;
       const msg = e?.name === 'AbortError' ? 'Teacher Agent timed out. Please try again.' : (e?.message === 'Failed to fetch' ? 'Teacher Agent service is unreachable. Backend/model configuration is being checked.' : e?.message);
       setStudentGenerationError(msg || 'Generation failed. Please try again.');
     }
-    finally { setStudentGenerating(false); }
+    finally {
+      window.clearTimeout(timeout);
+      if (generationScope.owns(request)) { setStudentGenerating(false); generationScope.finish(request); }
+    }
   };
 
   const downloadGeneratedNotes = async () => {
     if (!user || user.isAnonymous) { openAuthModal('student'); return; }
     const structured = matchedContent ? [matchedContent.flashcardItems, matchedContent.formulaItems, matchedContent.pyqItems, matchedContent.caseStudyItem, matchedContent.mindmapNodes].filter(Boolean).map(value => JSON.stringify(value, null, 2)).join('\n\n') : '';
-    const body = studentGeneratedText || (language === 'hi' ? matchedContent?.bodyHindi || matchedContent?.bodyText : matchedContent?.bodyText) || structured;
-    const contentId = !studentGeneratedText && matchedContent?.attachmentType === 'application/pdf' && matchedContent.storagePath ? matchedContent.id : undefined;
+    const generatedBody = generatedFlashcards.length ? JSON.stringify({ flashcards: generatedFlashcards }, null, 2) : generatedMindmap.length ? JSON.stringify({ nodes: generatedMindmap }, null, 2) : studentGeneratedText;
+    const body = generatedBody || (language === 'hi' ? matchedContent?.bodyHindi || matchedContent?.bodyText : matchedContent?.bodyText) || structured;
+    const contentId = !generatedBody && matchedContent?.attachmentType === 'application/pdf' && matchedContent.storagePath ? matchedContent.id : undefined;
     if (!body && !contentId) { setStudentGenerationError('This material has no readable notes to save yet.'); return; }
     try {
       const key = `${selectedBoard}:${selectedClass}:${selectedSubject?.id}:${selectedChapter?.id}:${selectedTopic?.id || ''}:${activeModule}:${language}`;
@@ -202,6 +232,7 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
 
   // State for Flashcards
   const [currentFlashcardIndex, setCurrentFlashcardIndex] = useState(0);
+  const flashcardIndex = Math.min(currentFlashcardIndex, Math.max(0, flashcards.length - 1));
   const [isFlipped, setIsFlipped] = useState(false);
   const [cardMastery, setCardMastery] = useState<Record<string, 'mastered' | 'review'>>({});
 
@@ -218,13 +249,17 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
 
   // Never serve an unrelated fallback test from another subject/chapter.
   const [generatedTest, setGeneratedTest] = useState<EvaluationTest>();
-  const testCandidate = generatedTest || matchedTests[0];
+  const testCandidate = (generatedScope === selectionKey ? generatedTest : undefined) || matchedTests[0];
   const activeTest: EvaluationTest | undefined = testCandidate ? { ...testCandidate, totalMarks: testCandidate.questions.reduce((sum, q) => sum + q.marks, 0) } : undefined;
   const submitting = useRef(false);
   const [saveStatus, setSaveStatus] = useState('');
 
   // Reset interactive module state whenever curriculum/module selection changes.
   useEffect(() => {
+    generationScope.invalidate();
+    setStudentGenerating(false);
+    setGeneratedScope(''); setGeneratedFlashcards([]); setGeneratedMindmap([]);
+    setStudentDiagramPlans([]); setCardMastery({});
     setCurrentFlashcardIndex(0);
     setIsFlipped(false);
     setTestStarted(false);
@@ -237,7 +272,8 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
     setStudentGeneratedText('');
     setStudentGenerationError('');
     setStudentProvenance([]);
-  }, [activeModule, selectedSubject?.id, selectedChapter?.id, selectedTopic?.id]);
+    return () => generationScope.invalidate();
+  }, [selectionKey]);
 
   const [testStarted, setTestStarted] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -486,7 +522,14 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
               ? displayContent.bodyHindi
               : displayContent.bodyText)}
           </div>
-          {studentDiagramPlans.length > 0 && <div className="grid grid-cols-1 md:grid-cols-2 gap-4">{studentDiagramPlans.map((plan,idx)=><div key={idx} className="rounded-2xl border-2 border-sky-200 bg-sky-50/50 p-4"><div className="text-xs font-black uppercase tracking-wide text-sky-800 mb-3"><WebsiteText original={"Sankatmochansaarthi Diagram"} /></div><div className="bg-white rounded-xl border border-sky-200 min-h-48 p-4 flex flex-col items-center justify-center text-center"><div className="w-24 h-24 rounded-full border-4 border-sky-400 bg-gradient-to-br from-emerald-100 to-sky-100 flex items-center justify-center font-bold text-sm text-stone-800 px-2">{plan.title}</div>{plan.labels?.length>0&&<div className="mt-4 flex flex-wrap justify-center gap-2">{plan.labels.map((label,i)=><span key={i} className="px-2 py-1 rounded-full bg-white border border-orange-300 text-[11px] font-semibold">{label}</span>)}</div>}<p className="mt-3 text-[11px] text-stone-600 leading-relaxed">{plan.instructions}</p></div></div>)}</div>}
+          {studentDiagramPlans.length > 0 && <section aria-label="Diagram guidance" className="space-y-3">
+            <h3 className="font-bold text-sm">{websiteText('Diagram guidance — illustration not generated')}</h3>
+            {studentDiagramPlans.map((plan, index) => <article key={index} className="rounded-xl border bg-sky-50 p-4">
+              <h4 className="font-bold">{plan.title}</h4>
+              <p className="text-sm whitespace-pre-wrap mt-2">{plan.instructions}</p>
+              <p className="text-xs mt-2">{websiteText('Labels:')} {(plan.labels || []).join(', ')}</p>
+            </article>)}
+          </section>}
         </div>
       )}
 
@@ -543,63 +586,40 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
         </div>
       )}
 
-      {/* Module 4: Mind Maps */}
-      {activeModule === 'mindmaps' && (
-        <div className="space-y-4">
-          <div className="flex flex-wrap gap-2 justify-end"><button onClick={generateWithTeacher} disabled={studentGenerating} className="px-3 py-2 rounded-xl bg-orange-600 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5"><WandSparkles className="w-4 h-4"/>{studentGenerating ? websiteText("Generating…") : websiteText("Generate with Sankatmochansaarthi")}</button></div>
-          {studentGenerationError && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs">{studentGenerationError}</div>}
-          {studentGeneratedText && <div className="whitespace-pre-line bg-purple-50 border border-purple-200 rounded-2xl p-5 text-sm leading-relaxed">{studentGeneratedText}</div>}
-          <div className="bg-gradient-to-r from-purple-50 to-amber-50 border border-purple-200 rounded-2xl p-6 text-center">
-            <GitBranch className="w-12 h-12 text-purple-600 mx-auto mb-2 animate-bounce" />
-            <h3 className="font-bold text-base text-stone-900 font-cinzel"><WebsiteText original={"Visual Concept Hierarchy & Flowchart"} /></h3>
-            <p className="text-xs text-stone-600 max-w-md mx-auto mt-1"><WebsiteText original={"Structural concept connections designed for photographic memory retention."} /></p>
-
-            <div className="mt-6 flex flex-col md:flex-row items-center justify-center gap-3">
-              <div className="bg-white border-2 border-orange-500 px-4 py-2.5 rounded-xl shadow-md font-bold text-sm text-orange-900">
-                {selectedChapter?.title || 'Chapter Core'}
-              </div>
-              <span className="text-orange-400 font-bold hidden md:inline">→</span>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-xl">
-                <div className="bg-amber-50 border border-amber-300 p-3 rounded-xl text-left text-xs shadow-xs">
-                  <span className="font-bold text-orange-800 block mb-1"><WebsiteText original={"Pillar 1: Fundamental Laws"} /></span>
-                  <span><WebsiteText original={"Definitions, experimental validations, conditions, and core postulates."} /></span>
-                </div>
-                <div className="bg-orange-50 border border-orange-300 p-3 rounded-xl text-left text-xs shadow-xs">
-                  <span className="font-bold text-orange-800 block mb-1"><WebsiteText original={"Pillar 2: Mathematical Models"} /></span>
-                  <span><WebsiteText original={"Governing formulas, unit conversions, and quantitative relations."} /></span>
-                </div>
-                <div className="bg-red-50 border border-red-300 p-3 rounded-xl text-left text-xs shadow-xs">
-                  <span className="font-bold text-red-800 block mb-1"><WebsiteText original={"Pillar 3: High-Frequency PYQs"} /></span>
-                  <span><WebsiteText original={"Direct definitions, repeated board derivations, numericals."} /></span>
-                </div>
-                <div className="bg-emerald-50 border border-emerald-300 p-3 rounded-xl text-left text-xs shadow-xs">
-                  <span className="font-bold text-emerald-800 block mb-1"><WebsiteText original={"Pillar 4: Practical Applications"} /></span>
-                  <span><WebsiteText original={"Daily life occurrences, technological devices, case studies."} /></span>
-                </div>
-              </div>
-            </div>
-          </div>
+      {/* Actual concept nodes and their stored relationships. */}
+      {activeModule === 'mindmaps' && <section className="space-y-4">
+        <div className="flex flex-wrap gap-2">
+          <button onClick={generateWithTeacher} disabled={studentGenerating} className="rounded-xl bg-orange-600 px-3 py-2 text-white text-xs font-bold disabled:opacity-50">{websiteText(studentGenerating ? 'Generating…' : 'Generate with Sankatmochansaarthi')}</button>
+          {generatedMindmap.length > 0 && <button onClick={downloadGeneratedNotes} className="border rounded-xl px-3 py-2 text-xs">{websiteText('Save to My Dashboard')}</button>}
         </div>
-      )}
+        {studentGenerationError && <p role="alert" className="text-sm text-red-700">{studentGenerationError}</p>}
+        {!mindmapNodes.length ? <p className="rounded-xl border p-4 text-sm">{websiteText('No verified mind map has been published for this selection yet.')}</p> : <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+          {mindmapNodes.map(node => <article key={node.id} className="rounded-xl border border-purple-200 bg-purple-50 p-4">
+            <h3 className="font-bold text-purple-900">{node.label}</h3>
+            <p className="text-sm whitespace-pre-wrap mt-2">{node.description}</p>
+            {!!node.children?.length && <div className="mt-3 border-t pt-2 text-xs"><span className="font-semibold">{websiteText('Connects to:')}</span><ul className="list-disc pl-4">{node.children.map(id => <li key={id}>{mindmapNodes.find(child => child.id === id)?.label || id}</li>)}</ul></div>}
+          </article>)}
+        </div>}
+      </section>}
 
       {/* Module 5: Interactive Flashcards */}
       {activeModule === 'flashcards' && (
         <div className="space-y-4 max-w-xl mx-auto w-full select-none" onCopy={(e)=>e.preventDefault()} onCut={(e)=>e.preventDefault()} onContextMenu={(e)=>e.preventDefault()}>
-          <div className="flex flex-wrap gap-2 justify-end"><button onClick={generateWithTeacher} disabled={studentGenerating} className="px-3 py-2 rounded-xl bg-orange-600 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5"><WandSparkles className="w-4 h-4"/>{studentGenerating ? websiteText("Generating…") : websiteText("Generate with Sankatmochansaarthi")}</button>{studentGeneratedText && <button onClick={downloadGeneratedNotes} className="px-3 py-2 rounded-xl bg-stone-900 text-white text-xs font-bold flex items-center gap-1.5"><Download className="w-4 h-4"/><WebsiteText original={"Save to My Dashboard"} /></button>}</div>
+          <div className="flex flex-wrap gap-2 justify-end"><button onClick={generateWithTeacher} disabled={studentGenerating} className="px-3 py-2 rounded-xl bg-orange-600 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5"><WandSparkles className="w-4 h-4"/>{studentGenerating ? websiteText("Generating…") : websiteText("Generate with Sankatmochansaarthi")}</button>{generatedFlashcards.length > 0 && <button onClick={downloadGeneratedNotes} className="px-3 py-2 rounded-xl bg-stone-900 text-white text-xs font-bold flex items-center gap-1.5"><Download className="w-4 h-4"/><WebsiteText original={"Save to My Dashboard"} /></button>}</div>
           {studentGenerationError && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs">{studentGenerationError}</div>}
           {studentGeneratedText && <div className="whitespace-pre-line bg-amber-50 border border-orange-200 rounded-2xl p-5 text-sm leading-relaxed">{studentGeneratedText}</div>}
-          {displayContent.flashcardItems && displayContent.flashcardItems.length > 0 ? (
+          {flashcards && flashcards.length > 0 ? (
             <div>
               {/* Counter & Controls */}
               <div className="flex items-center justify-between text-xs text-stone-500 mb-2">
-                <span><WebsiteText original={"Card "} />{currentFlashcardIndex + 1}<WebsiteText original={" of "} />{displayContent.flashcardItems.length}
+                <span><WebsiteText original={"Card "} />{flashcardIndex + 1}<WebsiteText original={" of "} />{flashcards.length}
                 </span>
                 <span className="bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full font-bold"><WebsiteText original={"Click card to flip"} /></span>
               </div>
 
               {/* Flashcard Body */}
               {(() => {
-                const card = displayContent.flashcardItems[currentFlashcardIndex];
+                const card = flashcards[flashcardIndex];
                 return (
                   <div
                     onClick={() => setIsFlipped(!isFlipped)}
@@ -635,7 +655,7 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
               {/* Navigation and Mastery Buttons */}
               <div className="flex items-center justify-between gap-3 mt-4">
                 <button
-                  disabled={currentFlashcardIndex === 0}
+                  disabled={flashcardIndex === 0}
                   onClick={() => {
                     setIsFlipped(false);
                     setCurrentFlashcardIndex((prev) => Math.max(0, prev - 1));
@@ -647,9 +667,9 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => {
-                      const id = displayContent.flashcardItems![currentFlashcardIndex].id;
+                      const id = flashcards![flashcardIndex].id;
                       setCardMastery((prev) => ({ ...prev, [id]: 'mastered' }));
-                      if (currentFlashcardIndex < displayContent.flashcardItems!.length - 1) {
+                      if (flashcardIndex < flashcards!.length - 1) {
                         setIsFlipped(false);
                         setCurrentFlashcardIndex((prev) => prev + 1);
                       }
@@ -659,9 +679,9 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
                     <Check className="w-3.5 h-3.5" /><WebsiteText original={" Got It"} /></button>
                   <button
                     onClick={() => {
-                      const id = displayContent.flashcardItems![currentFlashcardIndex].id;
+                      const id = flashcards![flashcardIndex].id;
                       setCardMastery((prev) => ({ ...prev, [id]: 'review' }));
-                      if (currentFlashcardIndex < displayContent.flashcardItems!.length - 1) {
+                      if (flashcardIndex < flashcards!.length - 1) {
                         setIsFlipped(false);
                         setCurrentFlashcardIndex((prev) => prev + 1);
                       }
@@ -671,11 +691,11 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
                 </div>
 
                 <button
-                  disabled={currentFlashcardIndex === displayContent.flashcardItems.length - 1}
+                  disabled={flashcardIndex === flashcards.length - 1}
                   onClick={() => {
                     setIsFlipped(false);
                     setCurrentFlashcardIndex((prev) =>
-                      Math.min(displayContent.flashcardItems!.length - 1, prev + 1)
+                      Math.min(flashcards!.length - 1, prev + 1)
                     );
                   }}
                   className="px-4 py-2 bg-stone-100 disabled:opacity-40 text-stone-700 font-semibold rounded-xl text-xs flex items-center gap-1"
@@ -1030,3 +1050,4 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
     </div>
   );
 };
+

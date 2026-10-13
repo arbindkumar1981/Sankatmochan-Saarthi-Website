@@ -1,3 +1,4 @@
+import { recordsForIdentity } from '../services/requestScope';
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import {
   BoardType,
@@ -217,6 +218,8 @@ export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [youtubeVideos, setYoutubeVideos] = useState<YouTubeVideoItem[]>(INITIAL_YOUTUBE_VIDEOS);
   const [evaluationTests, setEvaluationTests] = useState<EvaluationTest[]>(INITIAL_TESTS);
   const [notices, setNotices] = useState<NoticeItem[]>(INITIAL_NOTICES);
+  const recordIdentity = user?.uid || 'guest';
+  const [recordOwner, setRecordOwner] = useState(recordIdentity);
   const [testResults, setTestResults] = useState<TestResult[]>([]);
   const [mistakeRecords, setMistakeRecords] = useState<MistakeRecord[]>([]);
 
@@ -288,28 +291,13 @@ export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     return () => { unsubVideos(); unsubTests(); unsubNotices(); };
   }, [isAdmin]);
 
-  // Sync test results for current authenticated user
+  // Clear records immediately when identity changes; ignore late callbacks after unsubscribe.
   useEffect(() => {
-    if (!user) {
-      // Load saved guest test results from localStorage
-      const localResults = localStorage.getItem('saarthi_guest_results');
-      if (localResults) {
-        try {
-          setTestResults(JSON.parse(localResults));
-        } catch {
-          setTestResults([]);
-        }
-      }
-      const localMistakes = localStorage.getItem('saarthi_guest_mistakes');
-      if (localMistakes) {
-        try {
-          setMistakeRecords(JSON.parse(localMistakes));
-        } catch {
-          setMistakeRecords([]);
-        }
-      }
-      return;
-    }
+    let active = true;
+    setTestResults([]);
+    setMistakeRecords([]);
+    setRecordOwner(recordIdentity);
+    if (!user || user.isAnonymous) return;
 
     try {
       const q = query(collection(db, 'test_results'), where('studentUid', '==', user.uid));
@@ -318,7 +306,7 @@ export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         (snap) => {
           const list: TestResult[] = [];
           snap.forEach((d) => list.push({ id: d.id, ...d.data() } as TestResult));
-          setTestResults(list);
+          if (active) setTestResults(list);
         },
         (err) => {
           console.warn('Error fetching test_results:', err.message);
@@ -331,7 +319,7 @@ export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         (snap) => {
           const list: MistakeRecord[] = [];
           snap.forEach((d) => list.push({ id: d.id, ...d.data() } as MistakeRecord));
-          setMistakeRecords(list);
+          if (active) setMistakeRecords(list);
         },
         (err) => {
           console.warn('Error fetching mistakes:', err.message);
@@ -339,6 +327,7 @@ export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       );
 
       return () => {
+        active = false;
         unsubResults();
         unsubMistakes();
       };
@@ -552,8 +541,8 @@ export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         youtubeVideos: isAdmin ? youtubeVideos : youtubeVideos.filter(x => x.approved && x.published && !hiddenAssetIds.has(`youtube_videos/${x.id}`)),
         evaluationTests: (isAdmin ? evaluationTests : evaluationTests.filter(x => x.approved && x.published && !hiddenAssetIds.has(`tests/${x.id}`))).map(x => mapLegacyTest(x, LEGACY_SUBJECTS, curriculumSubjects)),
         notices: isAdmin ? notices : notices.filter(x => x.active && !hiddenAssetIds.has(`notices/${x.id}`)),
-        testResults,
-        mistakeRecords,
+        testResults: recordsForIdentity(recordOwner, recordIdentity, testResults),
+        mistakeRecords: recordsForIdentity(recordOwner, recordIdentity, mistakeRecords),
         babaImageUrl,
         saveTestResult,
         updateMistakeStatus,
@@ -574,3 +563,4 @@ export const useCurriculum = () => {
   if (!ctx) throw new Error('useCurriculum must be used within CurriculumProvider');
   return ctx;
 };
+
