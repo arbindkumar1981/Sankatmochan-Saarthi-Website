@@ -83,7 +83,7 @@ export const VerticalNav: React.FC = () => {
   }
 
   return (
-    <nav className="w-full lg:w-64 bg-white rounded-2xl border border-orange-200/90 shadow-sm p-2.5 sm:p-3 flex flex-row lg:flex-col gap-1.5 overflow-x-auto lg:overflow-visible shrink-0 scrollbar-none">
+    <nav className="w-full bg-white rounded-2xl border border-orange-200/90 shadow-sm p-2.5 sm:p-3 flex flex-col gap-1.5 overflow-visible shrink-0 scrollbar-none">
       <div className="hidden lg:block px-3 py-2 border-b border-orange-100 mb-1">
         <span className="text-[11px] font-extrabold uppercase tracking-wider text-orange-900/70 font-cinzel">
           {language === 'hi' ? websiteText("मार्गदर्शन मेनू") : websiteText("Guidance Navigation")}
@@ -96,6 +96,7 @@ export const VerticalNav: React.FC = () => {
         return (
           <button
             key={item.id}
+            aria-current={isActive ? "page" : undefined}
             onClick={() => setActiveTab(item.id)}
             className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all relative whitespace-nowrap lg:whitespace-normal group ${
               isActive
@@ -145,3 +146,4 @@ export const VerticalNav: React.FC = () => {
     </nav>
   );
 };
+

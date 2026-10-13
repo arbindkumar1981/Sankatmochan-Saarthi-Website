@@ -1,12 +1,9 @@
 import { optionLabel } from '../services/websiteConfig';
 import { WebsiteText } from '../context/WebsiteContext';
 import { useWebsite } from '../context/WebsiteContext';
-import { activeOptions } from '../services/websiteConfig';
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useCurriculum } from '../context/CurriculumContext';
-import { SUPPORTED_BOARDS } from '../data/defaultCurriculum';
-import { BoardType, ClassGrade, StreamType } from '../types';
 import {
   Flame,
   User,
@@ -21,143 +18,11 @@ import {
 export const Header: React.FC = () => {
   const { config, text: websiteText } = useWebsite();
   const { user, profile, isAdmin, openAuthModal, signOut } = useAuth();
-  const {
-    selectedBoard,
-    setSelectedBoard,
-    selectedClass,
-    setSelectedClass,
-    selectedStream,
-    setSelectedStream,
-    selectedSubject,
-    setSelectedSubject,
-    selectedChapter,
-    setSelectedChapter,
-    selectedTopic,
-    setSelectedTopic,
-    availableSubjects,
-    language,
-    toggleLanguage
-  } = useCurriculum();
+  const { selectedClass, language, toggleLanguage } = useCurriculum();
 
   return (
     <header className="bg-white border-b border-orange-200/80 shadow-sm sticky top-0 z-30">
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 sm:py-2.5 flex flex-wrap items-center justify-between gap-3">
-        {/* Curriculum controls wrap on mobile as well as desktop. */}
-        <div className="flex order-last w-full flex-wrap items-center gap-2 bg-amber-50/70 border border-orange-200 px-2 py-1 rounded-xl">
-          {/* Class Select */}
-          <div className="flex items-center gap-1 text-xs">
-            <span className="text-stone-500 font-medium"><WebsiteText original={"Class:"} /></span>
-            <select
-              value={selectedClass}
-              onChange={(e) => setSelectedClass(e.target.value as ClassGrade)}
-              className="bg-transparent font-bold text-orange-900 outline-none cursor-pointer"
-            >
-              {activeOptions(config.classes).map(x => <option key={x.id} value={x.id}>{language === 'hi' ? x.hindiLabel || x.label : x.label}</option>)}
-            </select>
-          </div>
-
-          <div className="h-4 w-px bg-orange-200" />
-
-          {/* Stream Select (Only for 11 & 12) */}
-          {(selectedClass === 'Class 11' || selectedClass === 'Class 12') && (
-            <>
-              <div className="flex items-center gap-1 text-xs">
-                <span className="text-stone-500 font-medium"><WebsiteText original={"Stream:"} /></span>
-                <select
-                  value={selectedStream}
-                  onChange={(e) => setSelectedStream(e.target.value as StreamType)}
-                  className="bg-transparent font-bold text-orange-900 outline-none cursor-pointer"
-                >
-                  {activeOptions(config.streams).map(x => <option key={x.id} value={x.id}>{language === 'hi' ? x.hindiLabel || x.label : x.label}</option>)}
-                </select>
-              </div>
-              <div className="h-4 w-px bg-orange-200" />
-            </>
-          )}
-
-          {/* Board Select */}
-          <div className="flex items-center gap-1 text-xs">
-            <span className="text-stone-500 font-medium"><WebsiteText original={"Board:"} /></span>
-            <select
-              value={selectedBoard}
-              onChange={(e) => setSelectedBoard(e.target.value as BoardType)}
-              className="bg-transparent font-bold text-orange-900 outline-none cursor-pointer"
-            >
-              {activeOptions(config.boards).map((b) => (
-                <option key={b.id} value={b.id}>
-                  {language === 'hi' ? b.hindiLabel || b.label : b.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="h-4 w-px bg-orange-200" />
-
-          {/* Subject Select */}
-          <div className="flex items-center gap-1 text-xs">
-            <span className="text-stone-500 font-medium"><WebsiteText original={"Subject:"} /></span>
-            <select
-              value={selectedSubject?.id || ''}
-              onChange={(e) => {
-                const subject = availableSubjects.find(s => s.id === e.target.value) || null;
-                setSelectedSubject(subject);
-                setSelectedChapter(subject?.chapters[0] || null);
-                setSelectedTopic(null);
-              }}
-              className="max-w-[150px] bg-transparent font-bold text-orange-900 outline-none cursor-pointer"
-            >
-              <option value="" disabled><WebsiteText original={"Select"} /></option>
-              {availableSubjects.map(subject => (
-                <option key={subject.id} value={subject.id}>{subject.name}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="h-4 w-px bg-orange-200" />
-
-          {/* Keep chapter and topic identities separate, including repeated topic IDs. */}
-          <div className="flex min-w-0 items-center gap-1 text-xs">
-            <label htmlFor="header-chapter" className="text-stone-500 font-medium"><WebsiteText original={"Chapter:"} /></label>
-            <select
-              id="header-chapter"
-              value={selectedChapter?.id || ''}
-              onChange={e => {
-                setSelectedChapter(selectedSubject?.chapters.find(ch => ch.id === e.target.value) || null);
-                setSelectedTopic(null);
-              }}
-              disabled={!selectedSubject?.chapters.length}
-              title={selectedChapter ? (language === 'hi' ? selectedChapter.hindiTitle || selectedChapter.title : selectedChapter.title) : ''}
-              className="max-w-[260px] min-w-0 bg-transparent font-bold text-orange-900 outline-none cursor-pointer disabled:opacity-50"
-            >
-              {!selectedSubject?.chapters.length && <option value=""><WebsiteText original={"Select"} /></option>}
-              {selectedSubject?.chapters.map(ch => <option key={ch.id} value={ch.id}>{ch.chapterNumber}. {language === 'hi' ? ch.hindiTitle || ch.title : ch.title}</option>)}
-            </select>
-          </div>
-
-          <div className="h-4 w-px bg-orange-200" />
-
-          <div className="flex min-w-0 items-center gap-1 text-xs">
-            <label htmlFor="header-topic" className="text-stone-500 font-medium"><WebsiteText original={"Topic:"} /></label>
-            <select
-              id="header-topic"
-              value={selectedTopic?.id || ''}
-              onChange={(e) => {
-                setSelectedTopic(selectedChapter?.topics.find(topic => topic.id === e.target.value) || null);
-              }}
-              disabled={!selectedChapter}
-              title={selectedTopic ? (language === 'hi' ? selectedTopic.hindiTitle || selectedTopic.title : selectedTopic.title) : websiteText('Full Chapter Scope')}
-              className="max-w-[300px] min-w-0 bg-transparent font-bold text-orange-900 outline-none cursor-pointer disabled:opacity-50"
-            >
-              <option value=""><WebsiteText original={"Full Chapter Scope"} /></option>
-              {selectedChapter?.topics.map(topic => <option key={topic.id} value={topic.id}>{language === 'hi' ? topic.hindiTitle || topic.title : topic.title}</option>)}
-            </select>
-          </div>
-          {selectedChapter && <p className="w-full break-words border-t border-orange-100 pt-1 text-xs text-orange-900" aria-live="polite">
-            <WebsiteText original={"Chapter:"} /> {language === 'hi' ? selectedChapter.hindiTitle || selectedChapter.title : selectedChapter.title}
-            {' · '}<WebsiteText original={"Topic:"} /> {selectedTopic ? (language === 'hi' ? selectedTopic.hindiTitle || selectedTopic.title : selectedTopic.title) : websiteText('Full Chapter Scope')}
-          </p>}
-        </div>
-
+      <div className="w-full mx-auto px-3 sm:px-4 py-2 sm:py-2.5 flex flex-wrap items-center justify-between gap-3">
         {/* Right Actions: Language Switcher + Student Sign In / Admin Login together */}
         <div className="ml-auto flex flex-wrap items-center gap-2 sm:gap-3">
           {/* Language Switcher */}
@@ -236,3 +101,4 @@ export const Header: React.FC = () => {
     </header>
   );
 };
+

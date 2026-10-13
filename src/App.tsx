@@ -24,6 +24,7 @@ const MainAppContent: React.FC = () => {
   const { activeTab, language } = useCurriculum();
   const { isAdmin } = useAuth();
   const { config } = useWebsite();
+  const [navigationOpen, setNavigationOpen] = React.useState(false);
   const page = config.pages.find(p => `page:${p.id}` === activeTab && !p.deleted);
 
   return (
@@ -35,16 +36,20 @@ const MainAppContent: React.FC = () => {
       <Header />
 
       {/* 3. Main Workspace Container with Vertical Navigation */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-5 flex flex-col gap-4">
-        <div className="flex flex-col lg:flex-row gap-5 items-start">
+      <main className="flex-1 w-full mx-auto p-3 sm:p-5 flex flex-col gap-4">
+        <button type="button" aria-expanded={navigationOpen} aria-controls="workspace-navigation" onClick={() => setNavigationOpen(open => !open)} className="self-start rounded-lg border border-orange-200 bg-white px-3 py-2 text-sm font-semibold text-orange-900 focus-visible:ring-2 focus-visible:ring-orange-500">
+          {websiteText(navigationOpen ? (language === 'hi' ? 'नेविगेशन छिपाएँ' : 'Hide navigation') : (language === 'hi' ? 'पाठ्यक्रम और नेविगेशन खोलें' : 'Open curriculum & navigation'))}
+        </button>
+        <div className="flex flex-col lg:flex-row gap-3 items-start">
           {/* Vertical Navigation Bar */}
-          <VerticalNav />
+          <div className="w-full lg:w-72 shrink-0" hidden={!navigationOpen} id="workspace-navigation">
+            <details open><summary className="cursor-pointer py-2 text-xs font-bold text-orange-900">{websiteText(language === 'hi' ? 'मार्गदर्शन मेनू' : 'Guidance Navigation')}</summary><VerticalNav /></details>
+            {activeTab === 'learning' && <LearningSidebar />}
+          </div>
 
           {/* Active Workspace View Routing */}
           {activeTab === 'learning' && (
-            <div className="flex-1 w-full flex flex-col md:flex-row gap-5 items-start">
-              {/* Learning Sidebar (Hierarchy & 9 Modules) */}
-              <LearningSidebar />
+            <div className="flex-1 min-w-0 w-full flex flex-col gap-3 items-stretch">
               {/* Content and Interactive Test Area */}
               <ProtectedMaterial><ContentArea /></ProtectedMaterial>
             </div>
@@ -103,3 +108,4 @@ export default function App() {
     </AuthProvider>
   );
 }
+
