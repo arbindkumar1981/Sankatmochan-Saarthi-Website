@@ -6,18 +6,15 @@ import { useAuth } from '../context/AuthContext';
 import { useCurriculum } from '../context/CurriculumContext';
 import {
   Flame,
-  User,
   GraduationCap,
   ShieldCheck,
   Languages,
-  LogOut,
-  Layers,
-  ChevronDown
+  LogOut
 } from 'lucide-react';
 
 export const Header: React.FC = () => {
   const { config, text: websiteText } = useWebsite();
-  const { user, profile, isAdmin, openAuthModal, signOut } = useAuth();
+  const { profile, openAuthModal, signOut } = useAuth();
   const { selectedClass, language, toggleLanguage } = useCurriculum();
 
   return (
@@ -101,4 +98,3 @@ export const Header: React.FC = () => {
     </header>
   );
 };
-
