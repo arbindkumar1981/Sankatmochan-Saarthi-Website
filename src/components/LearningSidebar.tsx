@@ -1,10 +1,10 @@
-import { optionLabel } from '../services/websiteConfig';
+import { activeOptions, optionLabel } from '../services/websiteConfig';
 import { WebsiteText } from '../context/WebsiteContext';
 import React from 'react';
 import { useWebsite } from '../context/WebsiteContext';
 import { useCurriculum } from '../context/CurriculumContext';
 import { MenuIcon } from './MenuIcon';
-import { ContentModuleType, SubjectMeta, ChapterMeta, TopicMeta } from '../types';
+import { ContentModuleType, BoardType, ClassGrade, StreamType } from '../types';
 import {
   FileText,
   BookmarkCheck,
@@ -28,8 +28,11 @@ export const LearningSidebar: React.FC = () => {
     activeModule,
     setActiveModule,
     selectedBoard,
+    setSelectedBoard,
     selectedClass,
+    setSelectedClass,
     selectedStream,
+    setSelectedStream,
     selectedSubject,
     setSelectedSubject,
     selectedChapter,
@@ -126,32 +129,64 @@ export const LearningSidebar: React.FC = () => {
   ];
 
   return (
-    <div className="w-full md:w-80 bg-white rounded-2xl border border-orange-200 shadow-sm p-3 flex flex-col gap-3 shrink-0">
-      {/* Hierarchy Path Badge: Board → Class → Stream */}
-      <div className="bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-amber-500/15 border border-orange-200/90 rounded-xl p-2.5">
-        <div className="text-[10px] font-bold text-orange-950 uppercase tracking-wide flex items-center gap-1 font-cinzel">
-          <Sparkles className="w-3 h-3 text-orange-600" />
-          <span>{language === 'hi' ? websiteText("पाठ्यक्रम अनुक्रम") : websiteText("Curriculum Hierarchy")}</span>
-        </div>
-        <div className="text-xs font-bold text-stone-800 mt-1 flex flex-wrap items-center gap-1">
-          <span className="bg-white px-2 py-0.5 rounded border border-orange-200 text-orange-800">
-            {optionLabel(config.boards,selectedBoard,language)}
-          </span>
-          <span className="text-orange-400">→</span>
-          <span className="bg-white px-2 py-0.5 rounded border border-orange-200 text-orange-800">
-            {optionLabel(config.classes,selectedClass,language)}
-          </span>
+    <div className="w-full bg-white rounded-2xl border border-orange-200 shadow-sm p-3 flex flex-col gap-3 shrink-0">
+      <details open className="group">
+        <summary className="cursor-pointer text-xs font-bold text-orange-900 py-2">{websiteText(language === 'hi' ? 'पाठ्यक्रम अनुक्रम' : 'Curriculum Hierarchy')}</summary>
+        {/* Curriculum controls wrap on mobile as well as desktop. */}
+        <div className="flex w-full flex-col items-stretch gap-2 bg-amber-50/70 border border-orange-200 px-2 py-1 rounded-xl">
+          {/* Board Select */}
+          <div className="flex items-center gap-1 text-xs">
+            <span className="text-stone-500 font-medium"><WebsiteText original={"Board:"} /></span>
+            <select
+              aria-label={websiteText("Board")}
+              value={selectedBoard}
+              onChange={(e) => setSelectedBoard(e.target.value as BoardType)}
+              className="bg-transparent font-bold text-orange-900 outline-none cursor-pointer"
+            >
+              {activeOptions(config.boards).map((b) => (
+                <option key={b.id} value={b.id}>
+                  {language === 'hi' ? b.hindiLabel || b.label : b.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="h-px w-full bg-orange-200" />
+
+          {/* Class Select */}
+          <div className="flex items-center gap-1 text-xs">
+            <span className="text-stone-500 font-medium"><WebsiteText original={"Class:"} /></span>
+            <select
+              aria-label={websiteText("Class")}
+              value={selectedClass}
+              onChange={(e) => setSelectedClass(e.target.value as ClassGrade)}
+              className="bg-transparent font-bold text-orange-900 outline-none cursor-pointer"
+            >
+              {activeOptions(config.classes).map(x => <option key={x.id} value={x.id}>{language === 'hi' ? x.hindiLabel || x.label : x.label}</option>)}
+            </select>
+          </div>
+
+          <div className="h-px w-full bg-orange-200" />
+
+          {/* Stream Select (Only for 11 & 12) */}
           {(selectedClass === 'Class 11' || selectedClass === 'Class 12') && (
             <>
-              <span className="text-orange-400">→</span>
-              <span className="bg-white px-2 py-0.5 rounded border border-orange-200 text-orange-800">
-                {optionLabel(config.streams,selectedStream,language)}
-              </span>
+              <div className="flex items-center gap-1 text-xs">
+                <span className="text-stone-500 font-medium"><WebsiteText original={"Stream:"} /></span>
+                <select
+                  aria-label={websiteText("Stream")}
+                  value={selectedStream}
+                  onChange={(e) => setSelectedStream(e.target.value as StreamType)}
+                  className="bg-transparent font-bold text-orange-900 outline-none cursor-pointer"
+                >
+                  {activeOptions(config.streams).map(x => <option key={x.id} value={x.id}>{language === 'hi' ? x.hindiLabel || x.label : x.label}</option>)}
+                </select>
+              </div>
+              <div className="h-px w-full bg-orange-200" />
             </>
           )}
-        </div>
-      </div>
 
+        </div>
       {/* Subject Selector */}
       <div>
         <label className="block text-[11px] font-bold text-stone-600 uppercase tracking-wider mb-1">
@@ -177,7 +212,7 @@ export const LearningSidebar: React.FC = () => {
                 <div className="flex items-center gap-2 truncate">
                   <BookOpen className="w-3.5 h-3.5 shrink-0 opacity-80" />
                   <span className="truncate">
-                    {language === 'hi' ? sub.hindiName : sub.name}
+                    {language === 'hi' ? sub.hindiName || sub.name : sub.name}
                   </span>
                 </div>
                 {sub.officialCode && (
@@ -204,6 +239,7 @@ export const LearningSidebar: React.FC = () => {
               {language === 'hi' ? websiteText("अध्याय (Chapter)") : websiteText("Chapter")}
             </label>
             <select
+              aria-label={websiteText("Chapter")}
               value={selectedChapter?.id || ''}
               onChange={(e) => {
                 const ch = selectedSubject.chapters.find((c) => c.id === e.target.value);
@@ -213,7 +249,7 @@ export const LearningSidebar: React.FC = () => {
               className="w-full px-2.5 py-2 text-xs font-semibold bg-amber-50/50 border border-orange-200 rounded-xl text-stone-800 outline-none focus:ring-1 focus:ring-orange-500"
             >
               {selectedSubject.chapters.map((ch) => (
-                <option key={ch.id} value={ch.id}><WebsiteText original={"Ch "} />{ch.chapterNumber}: {language === 'hi' ? ch.hindiTitle : ch.title}
+                <option key={ch.id} value={ch.id}><WebsiteText original={"Ch "} />{ch.chapterNumber}: {language === 'hi' ? ch.hindiTitle || ch.title : ch.title}
                 </option>
               ))}
             </select>
@@ -252,7 +288,7 @@ export const LearningSidebar: React.FC = () => {
                     >
                       <ChevronRight className="w-3 h-3 text-orange-500 shrink-0" />
                       <span className="truncate">
-                        {language === 'hi' ? top.hindiTitle : top.title}
+                        {language === 'hi' ? top.hindiTitle || top.title : top.title}
                       </span>
                     </button>
                   );
@@ -263,11 +299,13 @@ export const LearningSidebar: React.FC = () => {
         </div>
       )}
 
+      </details>
+
       {/* Module Selector (9 Modules strictly organized) */}
-      <div className="border-t border-orange-100 pt-2.5">
-        <label className="block text-[11px] font-bold text-stone-600 uppercase tracking-wider mb-1.5">
+      <details open className="border-t border-orange-100 pt-2.5">
+        <summary className="cursor-pointer block text-[11px] font-bold text-stone-600 uppercase tracking-wider mb-1.5">
           {language === 'hi' ? websiteText("शिक्षण मॉड्यूल (Learning Modules)") : websiteText("Learning Modules")}
-        </label>
+        </summary>
         <div className="space-y-1">
           {config.modules.filter(option => !option.deleted).map(option => { const builtIn = modules.find(mod => mod.id === option.id); return { id: option.id, icon: FileText, color: 'text-orange-600 bg-orange-50', tag: undefined, ...builtIn, menuIcon: option.icon, label: option.label, hindiLabel: option.hindiLabel || option.label }; }).map((mod) => {
             const isModActive = activeModule === mod.id;
@@ -308,7 +346,8 @@ export const LearningSidebar: React.FC = () => {
             );
           })}
         </div>
-      </div>
+      </details>
     </div>
   );
 };
+
