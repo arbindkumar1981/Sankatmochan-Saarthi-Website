@@ -259,11 +259,11 @@ export const AdminPanel: React.FC = () => {
       return;
     }
 
-    const allowedExtensions = ['pdf','docx','png','jpg','jpeg','webp','txt'];
+    const allowedExtensions = ['pdf','docx','pptx','png','jpg','jpeg','webp','txt'];
     if (contentFile) {
       const ext = contentFile.name.split('.').pop()?.toLowerCase() || '';
       if (!allowedExtensions.includes(ext)) {
-        setContentError('Use PDF, Word (.docx), images or TXT. Export older Word/PowerPoint files as PDF.');
+        setContentError('Use PDF, Word (.docx), PowerPoint (.pptx), images or TXT. Export older Word/PowerPoint files as PDF.');
         return;
       }
       if (contentFile.size > 50 * 1024 * 1024) {
@@ -557,10 +557,10 @@ export const AdminPanel: React.FC = () => {
                 <label className="block text-[11px] font-semibold text-stone-700 mb-2">Upload Study Document (optional when text is entered)</label>
                 <label className="cursor-pointer flex items-center gap-2 text-xs font-bold text-orange-700">
                   <Upload className="w-4 h-4" />
-                  <span>{contentFile ? contentFile.name : 'Choose PDF, Word (.docx), PNG/JPG/WEBP or TXT'}</span>
-                  <input type="file" className="hidden" accept=".pdf,.docx,.png,.jpg,.jpeg,.webp,.txt" onChange={e => setContentFile(e.target.files?.[0] || null)} />
+                  <span>{contentFile ? contentFile.name : 'Choose PDF, Word (.docx), PowerPoint (.pptx), PNG/JPG/WEBP or TXT'}</span>
+                  <input type="file" className="hidden" accept=".pdf,.docx,.pptx,.png,.jpg,.jpeg,.webp,.txt" onChange={e => setContentFile(e.target.files?.[0] || null)} />
                 </label>
-                <p className="text-[10px] text-stone-500 mt-1">Word (.docx) becomes a PDF with logo and watermark. Students read the PDF in their dashboard; the original stays private. Word up to 12 MB; PDF/images up to 50 MB; TXT up to 1 MB.</p>
+                <p className="text-[10px] text-stone-500 mt-1">Word (.docx) and PowerPoint (.pptx) become PDFs with logo and watermark. Students read the PDF in their dashboard; the original stays private. Word/PowerPoint up to 12 MB; PDF/images up to 50 MB; TXT up to 1 MB.</p>
               </div>
               {contentError && <p className="text-xs font-semibold text-red-700 bg-red-50 border border-red-200 rounded-lg p-2">{contentError}</p>}
 
@@ -965,3 +965,4 @@ export const AdminPanel: React.FC = () => {
     </div>
   );
 };
+
