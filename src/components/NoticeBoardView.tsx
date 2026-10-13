@@ -1,3 +1,4 @@
+import { BabaImage } from './BabaImage';
 import { useWebsite } from '../context/WebsiteContext';
 import { WebsiteText } from '../context/WebsiteContext';
 import React from 'react';
@@ -64,7 +65,7 @@ export const NoticeBoardView: React.FC = () => {
       <div className="bg-gradient-to-br from-amber-600 via-orange-600 to-red-700 text-white rounded-3xl p-5 sm:p-6 shadow-lg relative overflow-hidden">
         <div className="flex flex-col sm:flex-row items-center gap-4 relative z-10">
           <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full p-1 bg-gradient-to-tr from-yellow-300 via-amber-200 to-yellow-500 shadow-xl overflow-hidden shrink-0 border-2 border-white">
-            <img
+            <BabaImage
               src={babaImageUrl}
               alt={websiteText("Revered Baba Neem Karoli Ji Maharaj (मूल पावन स्वरूप)")}
               className="w-full h-full object-cover object-top rounded-full bg-amber-900"
@@ -203,3 +204,4 @@ export const NoticeBoardView: React.FC = () => {
     </div>
   );
 };
+

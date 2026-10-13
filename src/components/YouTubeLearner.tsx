@@ -1,7 +1,9 @@
+import { readScratchpad, scratchpadKey } from '../services/scratchpad';
+import { useAuth } from '../context/AuthContext';
 import { optionLabel } from '../services/websiteConfig';
 import { useWebsite } from '../context/WebsiteContext';
 import { WebsiteText } from '../context/WebsiteContext';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { auth } from '../services/firebase';
 import { useCurriculum } from '../context/CurriculumContext';
 import { YouTubeVideoItem } from '../types';
@@ -36,7 +38,15 @@ export const YouTubeLearner: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [customUrl, setCustomUrl] = useState('');
   const [notesText, setNotesText] = useState('');
-  const [savedNotes, setSavedNotes] = useState<string[]>([]);
+  const { user } = useAuth();
+  const noteKey = scratchpadKey(user?.uid);
+  const [noteStore, setNoteStore] = useState<{ key: string; notes: string[] }>({ key: noteKey, notes: [] });
+  const [noteError, setNoteError] = useState('');
+  const savedNotes = noteStore.key === noteKey ? noteStore.notes : [];
+  useEffect(() => {
+    setNoteStore({ key: noteKey, notes: readScratchpad(localStorage, noteKey) });
+    setNotesText(''); setNoteError('');
+  }, [noteKey]);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [remoteVideos, setRemoteVideos] = useState<YouTubeVideoItem[]>([]);
   const [searchingRemote, setSearchingRemote] = useState(false);
@@ -172,8 +182,13 @@ export const YouTubeLearner: React.FC = () => {
 
   const handleSaveNote = () => {
     if (notesText.trim()) {
-      setSavedNotes([notesText.trim(), ...savedNotes]);
-      setNotesText('');
+      if (notesText.trim().length > 5000) { setNoteError('Keep each note under 5,000 characters.'); return; }
+      const notes = [notesText.trim(), ...savedNotes].slice(0, 100);
+      try {
+        localStorage.setItem(noteKey, JSON.stringify(notes));
+        setNoteStore({ key: noteKey, notes });
+        setNotesText(''); setNoteError('');
+      } catch { setNoteError('The browser could not save this note. Free some browser storage and try again.'); }
     }
   };
 
@@ -471,6 +486,8 @@ export const YouTubeLearner: React.FC = () => {
               </button>
             </div>
 
+            <p className="text-xs text-stone-500">Notes are saved in this browser, separately for each signed-in account.</p>
+            {noteError && <p role="alert" className="text-xs text-red-700">{noteError}</p>}
             {savedNotes.length > 0 && (
               <div className="mt-3 space-y-1.5 max-h-36 overflow-y-auto pr-1">
                 {savedNotes.map((n, i) => (
@@ -596,3 +613,4 @@ export const YouTubeLearner: React.FC = () => {
     </div>
   );
 };
+

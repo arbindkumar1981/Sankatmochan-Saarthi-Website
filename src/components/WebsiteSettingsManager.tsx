@@ -57,7 +57,7 @@ export function WebsiteSettingsManager() {
         <div className="flex flex-wrap items-center gap-2"><button className={button} onClick={focusEditor}>Edit</button><button className={button} onClick={() => change(row.id, { deleted: !row.deleted })}>{row.deleted ? 'Restore / Add back' : 'Delete'}</button></div>
       </div>)}
       <button className={button} onClick={() => update({ [key]: [...rows, { id: id(singular), label: `New ${singular}`, hindiLabel: '' }] })}>Add {singular}</button>
-      {key === 'classes' && <p className="text-xs text-stone-600">New classes can hold admin-published material. AI teaching currently supports Classes IX–XII.</p>}
+      {key === 'classes' && <p className="text-xs text-stone-600">New classes can hold admin-published material. AI teaching currently supports Classes IX–XII. Removing an option hides that class from student navigation; restore it here when ready.</p>}
       {key === 'boards' && <p className="text-xs text-stone-600">Add subjects for a new board in Curriculum Manager. AI generation currently supports CBSE.</p>}
     </div>;
   };
@@ -96,3 +96,4 @@ export function WebsiteSettingsManager() {
     <div className="flex flex-wrap gap-2 sticky bottom-0 bg-white border-t p-3"><button className={`${button} bg-orange-600 text-white`} disabled={busy} onClick={submit}>{busy ? 'Saving…' : 'Save website changes'}</button><button className={button} disabled={busy} onClick={() => { if (window.confirm('Discard unsaved edits and load saved settings?')) { setDraft(structuredClone(config)); setBaseRevision(revision); setMessage(''); } }}>Reload saved settings</button></div>
   </section>;
 }
+

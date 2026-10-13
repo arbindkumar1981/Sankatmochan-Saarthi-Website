@@ -1,12 +1,8 @@
-import { subjectsForSelection } from '../services/adminValidation';
 import { WebsiteText } from '../context/WebsiteContext';
 import { useWebsite } from '../context/WebsiteContext';
-import { activeOptions } from '../services/websiteConfig';
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useCurriculum } from '../context/CurriculumContext';
-import { SUPPORTED_BOARDS } from '../data/defaultCurriculum';
-import { BoardType, ClassGrade, StreamType } from '../types';
 import {
   GraduationCap,
   ShieldCheck,
@@ -21,33 +17,15 @@ import {
 
 export const AuthModal: React.FC = () => {
   const { text: websiteText } = useWebsite();
-  const { config } = useWebsite();
   const {
     authModalOpen,
     authModalInitialTab,
     closeAuthModal,
-    signInWithGoogle,
-    signInAsGuestStudent
+    signInWithGoogle
   } = useAuth();
 
-  const { language, curriculumSubjects, setSelectedSubject: setLearningSubject, setSelectedStream: setLearningStream } = useCurriculum();
-
+  const { language } = useCurriculum();
   const [activeTab, setActiveTab] = useState<'student' | 'admin'>(authModalInitialTab);
-  const [studentName, setStudentName] = useState('');
-  const [selectedClass, setSelectedClass] = useState<ClassGrade>('Class 10');
-  const [selectedBoard, setSelectedBoard] = useState<BoardType>('CBSE');
-  const [selectedStream, setSelectedStream] = useState<StreamType>('General');
-  const [selectedSubjectId, setSelectedSubjectId] = useState('');
-  const [showAllSeniorSubjects, setShowAllSeniorSubjects] = useState(false);
-
-  const isSeniorClass = selectedClass === 'Class 11' || selectedClass === 'Class 12';
-  const seniorClassSubjects = curriculumSubjects.filter((sub) => sub.classes.includes(selectedClass) && (sub.board || 'CBSE') === selectedBoard);
-  const loginSubjects = subjectsForSelection(curriculumSubjects, selectedBoard, selectedClass, selectedStream, isSeniorClass && showAllSeniorSubjects);
-
-  React.useEffect(() => {
-    if (!loginSubjects.some(s => s.id === selectedSubjectId)) setSelectedSubjectId(loginSubjects[0]?.id || '');
-  }, [selectedBoard, selectedClass, selectedStream, showAllSeniorSubjects, curriculumSubjects]);
-
   const [adminError, setAdminError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -65,6 +43,7 @@ export const AuthModal: React.FC = () => {
       await signInWithGoogle('student');
     } catch (err) {
       console.error(err);
+      setAdminError(err instanceof Error ? err.message : 'Google sign-in failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -84,18 +63,10 @@ export const AuthModal: React.FC = () => {
     }
   };
 
-  const handleGuestStudentSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!studentName.trim()) return;
-    const subject = loginSubjects.find(s => s.id === selectedSubjectId) || loginSubjects[0];
-    setLearningStream(selectedStream);
-    if (subject) setLearningSubject(subject);
-    signInAsGuestStudent(studentName.trim(), selectedClass, selectedBoard, selectedStream);
-  };
 
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-950/70 backdrop-blur-sm animate-fade-in">
+    <div role="dialog" aria-modal="true" aria-label={websiteText("Saarthi Access Gateway")} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-950/70 backdrop-blur-sm animate-fade-in">
       <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl border-2 border-orange-500 overflow-hidden relative">
         {/* Header Ribbon */}
         <div className="bg-gradient-to-r from-red-600 via-orange-600 to-amber-600 p-4 text-white flex items-center justify-between">
@@ -115,6 +86,7 @@ export const AuthModal: React.FC = () => {
             </div>
           </div>
           <button
+            aria-label={language === "hi" ? "प्रवेश विंडो बंद करें" : "Close sign-in"}
             onClick={closeAuthModal}
             className="p-1 rounded-full text-white/80 hover:text-white hover:bg-white/20 transition-colors"
           >
@@ -192,99 +164,10 @@ export const AuthModal: React.FC = () => {
                 </button>
               </div>
 
-              <div className="relative flex items-center justify-center">
-                <div className="border-t border-stone-200 w-full" />
-                <span className="bg-white px-3 text-xs text-stone-400 uppercase font-semibold">
-                  {language === 'hi' ? websiteText("या त्वरित छात्र प्रवेश") : websiteText("Or Quick Student Sign In")}
-                </span>
-                <div className="border-t border-stone-200 w-full" />
-              </div>
-
-              {/* Quick Guest Student Form */}
-              <form onSubmit={handleGuestStudentSubmit} className="space-y-3.5">
-                <div>
-                  <label className="block text-xs font-semibold text-stone-700 mb-1">
-                    {language === 'hi' ? websiteText("विद्यार्थी का नाम") : websiteText("Student Full Name")} *
-                  </label>
-                  <div className="relative">
-                    <User className="w-4 h-4 absolute left-3 top-3 text-stone-400" />
-                    <input
-                      type="text"
-                      required
-                      placeholder={language === 'hi' ? websiteText("जैसे: अर्णव शर्मा") : websiteText("e.g. Arbind Kumar")}
-                      value={studentName}
-                      onChange={(e) => setStudentName(e.target.value)}
-                      className="w-full pl-9 pr-3 py-2 text-sm border border-stone-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-stone-700 mb-1">
-                      {language === 'hi' ? websiteText("कक्षा (Class)") : websiteText("Class")}
-                    </label>
-                    <select
-                      value={selectedClass}
-                      onChange={(e) => setSelectedClass(e.target.value as ClassGrade)}
-                      className="w-full px-3 py-2 text-sm border border-stone-300 rounded-xl bg-white focus:ring-2 focus:ring-orange-500 outline-none"
-                    >
-                      {activeOptions(config.classes).map(x => <option key={x.id} value={x.id}>{language === 'hi' ? x.hindiLabel || x.label : x.label}</option>)}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-stone-700 mb-1">
-                      {language === 'hi' ? websiteText("शिक्षा बोर्ड (Board)") : websiteText("Board")}
-                    </label>
-                    <select
-                      value={selectedBoard}
-                      onChange={(e) => setSelectedBoard(e.target.value as BoardType)}
-                      className="w-full px-3 py-2 text-sm border border-stone-300 rounded-xl bg-white focus:ring-2 focus:ring-orange-500 outline-none"
-                    >
-                      {activeOptions(config.boards).map((b) => (
-                        <option key={b.id} value={b.id}>
-                          {language === 'hi' ? b.hindiLabel || b.label : b.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                {(selectedClass === 'Class 11' || selectedClass === 'Class 12') && (
-                  <div>
-                    <label className="block text-xs font-semibold text-stone-700 mb-1">{language === 'hi' ? websiteText("स्ट्रीम (Stream)") : websiteText("Stream")}</label>
-                    <select value={selectedStream} onChange={(e) => setSelectedStream(e.target.value as StreamType)} className="w-full px-3 py-2 text-sm border border-stone-300 rounded-xl bg-white focus:ring-2 focus:ring-orange-500 outline-none">
-                      {activeOptions(config.streams).map(x=><option key={x.id} value={x.id}>{language === 'hi' ? x.hindiLabel || x.label : x.label}</option>)}
-                    </select>
-                  </div>
-                )}
-
-                {isSeniorClass && (
-                  <label className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50/70 px-3 py-2 text-xs text-stone-700">
-                    <input type="checkbox" checked={showAllSeniorSubjects} onChange={(e) => setShowAllSeniorSubjects(e.target.checked)} className="accent-orange-600" />
-                    <span>{language === 'hi' ? websiteText("अन्य / वैकल्पिक विषय भी दिखाएँ") : websiteText("Show other / optional subjects too")}</span>
-                    <span className="ml-auto text-[10px] text-stone-500">{seniorClassSubjects.length}<WebsiteText original={" available"} /></span>
-                  </label>
-                )}
-
-                <div>
-                  <label className="block text-xs font-semibold text-stone-700 mb-1">{language === 'hi' ? websiteText("विषय चुनें (Subject)") : websiteText("Select Subject")}</label>
-                  <select required value={selectedSubjectId} onChange={(e) => setSelectedSubjectId(e.target.value)} className="w-full px-3 py-2 text-sm border border-stone-300 rounded-xl bg-white focus:ring-2 focus:ring-orange-500 outline-none">
-                    {loginSubjects.length ? loginSubjects.map(sub => <option key={sub.id} value={sub.id}>{language === 'hi' ? sub.hindiName : sub.name}{sub.officialCode ? ` (${sub.officialCode})` : ''}</option>) : <option value=""><WebsiteText original={"No subject available"} /></option>}
-                  </select>
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full mt-2 py-2.5 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-bold rounded-xl shadow-md transition-all text-sm flex items-center justify-center gap-2"
-                >
-                  <LogIn className="w-4 h-4" />
-                  <span>
-                    {language === 'hi' ? websiteText("अध्ययन प्रारंभ करें") : websiteText("Start Learning with Saarthi")}
-                  </span>
-                </button>
-              </form>
+              {adminError && <p role="alert" className="text-sm text-red-700">{adminError}</p>}
+              <p className="rounded-xl bg-orange-50 border border-orange-200 p-3 text-sm">
+                {language === 'hi' ? 'अध्ययन सामग्री, टेस्ट और सुरक्षित प्रगति के लिए Google खाते से साइन इन करें।' : 'Sign in with Google to access learning material, tests and securely saved progress.'}
+              </p>
 
               <div className="bg-amber-50/70 border border-amber-200 p-2.5 rounded-xl text-[11px] text-amber-900 flex items-start gap-2">
                 <CheckCircle2 className="w-4 h-4 text-orange-600 shrink-0 mt-0.5" />
@@ -332,3 +215,4 @@ export const AuthModal: React.FC = () => {
     </div>
   );
 };
+
