@@ -17,14 +17,14 @@ import { ContactUsView } from './components/ContactUsView';
 const AdminPanel = React.lazy(() => import('./components/AdminPanel').then(module => ({ default: module.AdminPanel })));
 import { WebsiteProvider, useWebsite } from './context/WebsiteContext';
 import { AuthModal } from './components/AuthModal';
-import { Sparkles, Heart, Shield, Flame } from 'lucide-react';
+import { Flame, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 
 const MainAppContent: React.FC = () => {
   const { text: websiteText } = useWebsite();
-  const { activeTab, language } = useCurriculum();
+  const { activeTab, language, selectedSubject, selectedChapter, selectedTopic } = useCurriculum();
+  const [navigationOpen, setNavigationOpen] = React.useState(false);
   const { isAdmin } = useAuth();
   const { config } = useWebsite();
-  const [navigationOpen, setNavigationOpen] = React.useState(false);
   const page = config.pages.find(p => `page:${p.id}` === activeTab && !p.deleted);
 
   return (
@@ -36,38 +36,47 @@ const MainAppContent: React.FC = () => {
       <Header />
 
       {/* 3. Main Workspace Container with Vertical Navigation */}
-      <main className="flex-1 w-full mx-auto p-3 sm:p-5 flex flex-col gap-4">
-        <button type="button" aria-expanded={navigationOpen} aria-controls="workspace-navigation" onClick={() => setNavigationOpen(open => !open)} className="self-start rounded-lg border border-orange-200 bg-white px-3 py-2 text-sm font-semibold text-orange-900 focus-visible:ring-2 focus-visible:ring-orange-500">
-          {websiteText(navigationOpen ? (language === 'hi' ? 'नेविगेशन छिपाएँ' : 'Hide navigation') : (language === 'hi' ? 'पाठ्यक्रम और नेविगेशन खोलें' : 'Open curriculum & navigation'))}
-        </button>
-        <div className="flex flex-col lg:flex-row gap-3 items-start">
-          {/* Vertical Navigation Bar */}
-          <div className="w-full lg:w-72 shrink-0" hidden={!navigationOpen} id="workspace-navigation">
-            <details open><summary className="cursor-pointer py-2 text-xs font-bold text-orange-900">{websiteText(language === 'hi' ? 'मार्गदर्शन मेनू' : 'Guidance Navigation')}</summary><VerticalNav /></details>
-            {activeTab === 'learning' && <LearningSidebar />}
+      <main className="flex-1 w-full mx-auto p-3 sm:p-4 flex flex-col gap-4">
+        <div className="flex flex-wrap items-center gap-3 min-w-0">
+          <button type="button" onClick={() => setNavigationOpen(open => !open)} aria-expanded={navigationOpen} aria-controls="learning-navigation" className="shrink-0 flex items-center gap-2 rounded-xl border border-orange-200 bg-white px-3 py-2 text-sm font-semibold text-orange-900 focus-visible:outline-2 focus-visible:outline-orange-500">
+            {navigationOpen ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeftOpen className="w-4 h-4" />}
+            {language === 'hi' ? (navigationOpen ? 'नेविगेशन छिपाएँ' : 'नेविगेशन खोलें') : (navigationOpen ? 'Hide navigation' : 'Show navigation')}
+          </button>
+          {activeTab === 'learning' && <p className="min-w-0 flex-1 text-sm text-stone-600 break-words" aria-live="polite">
+            {selectedSubject && (language === 'hi' ? selectedSubject.hindiName || selectedSubject.name : selectedSubject.name)}
+            {selectedChapter && <> · {language === 'hi' ? selectedChapter.hindiTitle || selectedChapter.title : selectedChapter.title}</>}
+            {selectedChapter && <> · {selectedTopic ? (language === 'hi' ? selectedTopic.hindiTitle || selectedTopic.title : selectedTopic.title) : websiteText('Full Chapter Scope')}</>}
+          </p>}
+        </div>
+        <div className="flex flex-col lg:flex-row gap-4 items-start min-w-0">
+          <aside id="learning-navigation" aria-label={language === 'hi' ? 'अध्ययन नेविगेशन' : 'Learning navigation'} className={`${navigationOpen ? 'flex' : 'hidden'} w-full lg:w-72 shrink-0 flex-col gap-3 lg:sticky lg:top-20 lg:max-h-[calc(100dvh-6rem)] lg:overflow-y-auto`}>
+            <VerticalNav />
+            <LearningSidebar showModules={activeTab === 'learning'} />
+          </aside>
+          <div className="flex-1 w-full min-w-0">
+
+            {/* Active Workspace View Routing */}
+            {activeTab === 'learning' && (
+              <div className="w-full min-w-0">
+                {/* Content and Interactive Test Area */}
+                <ProtectedMaterial><ContentArea /></ProtectedMaterial>
+              </div>
+            )}
+
+            {activeTab === 'youtube' && <YouTubeLearner />}
+
+            {activeTab === 'notices' && <NoticeBoardView />}
+
+            {activeTab === 'evaluation' && <EvaluationHub />}
+            {activeTab === 'materials' && <MyMaterials />}
+
+            {activeTab === 'about' && <AboutUsView />}
+
+            {activeTab === 'contact' && <ContactUsView />}
+
+            {page && <section className="flex-1 w-full bg-white border rounded-2xl p-6"><h2 className="text-2xl font-bold">{language === 'hi' ? page.hindiTitle || page.title : page.title}</h2><p className="mt-4 whitespace-pre-wrap break-words">{language === 'hi' ? page.hindiBody || page.body : page.body}</p></section>}
+            {activeTab === 'admin' && isAdmin && <React.Suspense fallback={<p>Opening Admin panel…</p>}><AdminPanel /></React.Suspense>}
           </div>
-
-          {/* Active Workspace View Routing */}
-          {activeTab === 'learning' && (
-            <div className="flex-1 min-w-0 w-full flex flex-col gap-3 items-stretch">
-              {/* Content and Interactive Test Area */}
-              <ProtectedMaterial><ContentArea /></ProtectedMaterial>
-            </div>
-          )}
-
-          {activeTab === 'youtube' && <YouTubeLearner />}
-
-          {activeTab === 'notices' && <NoticeBoardView />}
-
-          {activeTab === 'evaluation' && <EvaluationHub />}
-          {activeTab === 'materials' && <MyMaterials />}
-
-          {activeTab === 'about' && <AboutUsView />}
-
-          {activeTab === 'contact' && <ContactUsView />}
-
-          {page && <section className="flex-1 w-full bg-white border rounded-2xl p-6"><h2 className="text-2xl font-bold">{language === 'hi' ? page.hindiTitle || page.title : page.title}</h2><p className="mt-4 whitespace-pre-wrap break-words">{language === 'hi' ? page.hindiBody || page.body : page.body}</p></section>}
-          {activeTab === 'admin' && isAdmin && <React.Suspense fallback={<p>Opening Admin panel…</p>}><AdminPanel /></React.Suspense>}
         </div>
       </main>
 
@@ -108,4 +117,3 @@ export default function App() {
     </AuthProvider>
   );
 }
-
