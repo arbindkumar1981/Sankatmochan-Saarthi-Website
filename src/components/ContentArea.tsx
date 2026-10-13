@@ -232,6 +232,7 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
 
   // State for Flashcards
   const [currentFlashcardIndex, setCurrentFlashcardIndex] = useState(0);
+  const flashcardIndex = Math.min(currentFlashcardIndex, Math.max(0, flashcards.length - 1));
   const [isFlipped, setIsFlipped] = useState(false);
   const [cardMastery, setCardMastery] = useState<Record<string, 'mastered' | 'review'>>({});
 
@@ -611,14 +612,14 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
             <div>
               {/* Counter & Controls */}
               <div className="flex items-center justify-between text-xs text-stone-500 mb-2">
-                <span><WebsiteText original={"Card "} />{currentFlashcardIndex + 1}<WebsiteText original={" of "} />{flashcards.length}
+                <span><WebsiteText original={"Card "} />{flashcardIndex + 1}<WebsiteText original={" of "} />{flashcards.length}
                 </span>
                 <span className="bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full font-bold"><WebsiteText original={"Click card to flip"} /></span>
               </div>
 
               {/* Flashcard Body */}
               {(() => {
-                const card = flashcards[currentFlashcardIndex];
+                const card = flashcards[flashcardIndex];
                 return (
                   <div
                     onClick={() => setIsFlipped(!isFlipped)}
@@ -654,7 +655,7 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
               {/* Navigation and Mastery Buttons */}
               <div className="flex items-center justify-between gap-3 mt-4">
                 <button
-                  disabled={currentFlashcardIndex === 0}
+                  disabled={flashcardIndex === 0}
                   onClick={() => {
                     setIsFlipped(false);
                     setCurrentFlashcardIndex((prev) => Math.max(0, prev - 1));
@@ -666,9 +667,9 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => {
-                      const id = flashcards![currentFlashcardIndex].id;
+                      const id = flashcards![flashcardIndex].id;
                       setCardMastery((prev) => ({ ...prev, [id]: 'mastered' }));
-                      if (currentFlashcardIndex < flashcards!.length - 1) {
+                      if (flashcardIndex < flashcards!.length - 1) {
                         setIsFlipped(false);
                         setCurrentFlashcardIndex((prev) => prev + 1);
                       }
@@ -678,9 +679,9 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
                     <Check className="w-3.5 h-3.5" /><WebsiteText original={" Got It"} /></button>
                   <button
                     onClick={() => {
-                      const id = flashcards![currentFlashcardIndex].id;
+                      const id = flashcards![flashcardIndex].id;
                       setCardMastery((prev) => ({ ...prev, [id]: 'review' }));
-                      if (currentFlashcardIndex < flashcards!.length - 1) {
+                      if (flashcardIndex < flashcards!.length - 1) {
                         setIsFlipped(false);
                         setCurrentFlashcardIndex((prev) => prev + 1);
                       }
@@ -690,7 +691,7 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
                 </div>
 
                 <button
-                  disabled={currentFlashcardIndex === flashcards.length - 1}
+                  disabled={flashcardIndex === flashcards.length - 1}
                   onClick={() => {
                     setIsFlipped(false);
                     setCurrentFlashcardIndex((prev) =>
