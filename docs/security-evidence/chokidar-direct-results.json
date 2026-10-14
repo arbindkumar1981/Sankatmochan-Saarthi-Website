@@ -1,0 +1,185 @@
+{
+  "node": "v24.21.0",
+  "platform": "win32",
+  "baseline": "installed Firebase CLI chokidar 3.6.0",
+  "candidate": "isolated exact chokidar 4.0.3",
+  "results": [
+    {
+      "version": "3.6.0",
+      "test": "api",
+      "status": "PASS",
+      "api": "CommonJS, FSWatcher, watch, add, close"
+    },
+    {
+      "version": "3.6.0",
+      "test": "directory-lifecycle",
+      "status": "PASS",
+      "events": [
+        "add",
+        "change",
+        "unlink"
+      ],
+      "closedWithoutFurtherEvents": true
+    },
+    {
+      "version": "3.6.0",
+      "test": "add-method",
+      "status": "PASS",
+      "addedFileChangeDetected": true
+    },
+    {
+      "version": "3.6.0",
+      "test": "literal-firestore-rules",
+      "status": "PASS",
+      "literal": "firestore.rules",
+      "readUpdatedContent": true
+    },
+    {
+      "version": "3.6.0",
+      "test": "literal-storage-rules",
+      "status": "PASS",
+      "literal": "storage.rules",
+      "readUpdatedContent": true
+    },
+    {
+      "version": "3.6.0",
+      "test": "literal-database-rules-json",
+      "status": "PASS",
+      "literal": "database.rules.json",
+      "readUpdatedContent": true
+    },
+    {
+      "version": "3.6.0",
+      "test": "literal-firestore-draft--rules",
+      "status": "PASS",
+      "literal": "firestore{draft}.rules",
+      "readUpdatedContent": true
+    },
+    {
+      "version": "3.6.0",
+      "test": "glob-watch-path",
+      "status": "PASS",
+      "changed": [
+        "entry.js"
+      ]
+    },
+    {
+      "version": "3.6.0",
+      "test": "functions-ignore-generated-output-js",
+      "status": "PASS",
+      "ignoredPattern": "**/generated/**",
+      "changed": [
+        "index.js"
+      ]
+    },
+    {
+      "version": "3.6.0",
+      "test": "functions-ignore-spec-test-js",
+      "status": "PASS",
+      "ignoredPattern": "**/*.test.js",
+      "changed": [
+        "index.js"
+      ]
+    },
+    {
+      "version": "3.6.0",
+      "test": "functions-ignore-package-lock-json",
+      "status": "PASS",
+      "ignoredPattern": "**/package-lock.json",
+      "changed": [
+        "index.js"
+      ]
+    },
+    {
+      "version": "3.6.0",
+      "test": "functions-regex-ignore",
+      "status": "PASS",
+      "changed": [
+        "index.js"
+      ]
+    },
+    {
+      "version": "4.0.3",
+      "test": "api",
+      "status": "PASS",
+      "api": "CommonJS, FSWatcher, watch, add, close"
+    },
+    {
+      "version": "4.0.3",
+      "test": "directory-lifecycle",
+      "status": "PASS",
+      "events": [
+        "add",
+        "change",
+        "unlink"
+      ],
+      "closedWithoutFurtherEvents": true
+    },
+    {
+      "version": "4.0.3",
+      "test": "add-method",
+      "status": "PASS",
+      "addedFileChangeDetected": true
+    },
+    {
+      "version": "4.0.3",
+      "test": "literal-firestore-rules",
+      "status": "PASS",
+      "literal": "firestore.rules",
+      "readUpdatedContent": true
+    },
+    {
+      "version": "4.0.3",
+      "test": "literal-storage-rules",
+      "status": "PASS",
+      "literal": "storage.rules",
+      "readUpdatedContent": true
+    },
+    {
+      "version": "4.0.3",
+      "test": "literal-database-rules-json",
+      "status": "PASS",
+      "literal": "database.rules.json",
+      "readUpdatedContent": true
+    },
+    {
+      "version": "4.0.3",
+      "test": "literal-firestore-draft--rules",
+      "status": "PASS",
+      "literal": "firestore{draft}.rules",
+      "readUpdatedContent": true
+    },
+    {
+      "version": "4.0.3",
+      "test": "glob-watch-path",
+      "status": "FAIL",
+      "error": "Expected values to be strictly deep-equal:\n+ actual - expected\n\n+ []\n- [\n-   'entry.js'\n- ]\n"
+    },
+    {
+      "version": "4.0.3",
+      "test": "functions-ignore-generated-output-js",
+      "status": "FAIL",
+      "error": "Firebase ignored pattern **/generated/** did not exclude generated/output.js; actual changed files generated/output.js, index.js\n+ actual - expected\n\n  [\n+   'generated/output.js',\n    'index.js'\n  ]\n"
+    },
+    {
+      "version": "4.0.3",
+      "test": "functions-ignore-spec-test-js",
+      "status": "FAIL",
+      "error": "Firebase ignored pattern **/*.test.js did not exclude spec.test.js; actual changed files index.js, spec.test.js\n+ actual - expected\n\n  [\n    'index.js',\n+   'spec.test.js'\n  ]\n"
+    },
+    {
+      "version": "4.0.3",
+      "test": "functions-ignore-package-lock-json",
+      "status": "FAIL",
+      "error": "Firebase ignored pattern **/package-lock.json did not exclude package-lock.json; actual changed files index.js, package-lock.json\n+ actual - expected\n\n  [\n    'index.js',\n+   'package-lock.json'\n  ]\n"
+    },
+    {
+      "version": "4.0.3",
+      "test": "functions-regex-ignore",
+      "status": "PASS",
+      "changed": [
+        "index.js"
+      ]
+    }
+  ]
+}

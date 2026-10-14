@@ -12,6 +12,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - uses: oven-sh/setup-bun@v2
+      - name: Install locked website SDK for root gRPC integration
+        run: bun install --frozen-lockfile
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
