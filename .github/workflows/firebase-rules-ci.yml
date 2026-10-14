@@ -22,3 +22,5 @@ jobs:
       - name: Verify real Firestore and Storage authorization rules locally
         working-directory: tests/emulator
         run: npm test
+      - name: ESLint source checks
+        run: node tests/emulator/node_modules/eslint/bin/eslint.js src

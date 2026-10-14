@@ -5,6 +5,8 @@
     "test": "node run.mjs"
   },
   "devDependencies": {
+    "eslint": "9.39.5",
+    "@typescript-eslint/parser": "8.70.0",
     "@firebase/rules-unit-testing": "5.0.0",
     "firebase": "12.19.0",
     "firebase-tools": "15.33.0"

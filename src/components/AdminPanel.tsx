@@ -5,6 +5,7 @@ import { WebsiteSettingsManager } from './WebsiteSettingsManager';
 import { CurriculumManager } from './CurriculumManager';
 import { ManagedRecords } from './ManagedRecords';
 import { KnowledgeReview } from './KnowledgeReview';
+import { learningApi } from '../services/learningApi';
 import React, { useEffect, useMemo, useState } from 'react';
 import { uploadBrandedStudyFile } from '../services/studyFileUpload';
 import { collection, doc, onSnapshot, setDoc } from 'firebase/firestore';
@@ -72,7 +73,7 @@ export const AdminPanel: React.FC = () => {
     language
   } = useCurriculum();
 
-  const { profile, user } = useAuth();
+  const { profile, user, isAdmin } = useAuth();
 
   const [adminTab, setAdminTab] = useState<
     'content' | 'videos' | 'tests' | 'notices' | 'students' | 'enquiries' | 'settings' | 'curriculum'
@@ -199,16 +200,30 @@ export const AdminPanel: React.FC = () => {
 
   // Live registered-student directory and cross-student result history for administrators.
   const [registeredStudents, setRegisteredStudents] = useState<UserProfile[]>([]);
-  const [allStudentResults, setAllStudentResults] = useState<any[]>([]);
+  const [historicalStudentResults, setHistoricalStudentResults] = useState<any[]>([]);
+  const [verifiedStudentResults, setVerifiedStudentResults] = useState<any[]>([]);
+  const [directoryError, setDirectoryError] = useState('');
+  const allStudentResults = [...verifiedStudentResults, ...historicalStudentResults];
   useEffect(() => {
     const unsubUsers = onSnapshot(collection(db, 'users'), snap => {
       setRegisteredStudents(snap.docs.map(d => ({ uid: d.id, ...d.data() } as UserProfile)).filter(p => p.role !== 'admin'));
     }, err => console.warn('Student directory sync failed:', err.message));
     const unsubResults = onSnapshot(collection(db, 'test_results'), snap => {
-      setAllStudentResults(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setHistoricalStudentResults(snap.docs.map(d => ({ id: d.id, ...d.data(), serverEvaluated: false })));
     }, err => console.warn('Admin result history sync failed:', err.message));
     return () => { unsubUsers(); unsubResults(); };
   }, []);
+
+  useEffect(() => {
+    if (!isAdmin || !user || user.isAnonymous) { setVerifiedStudentResults([]); return; }
+    if (adminTab !== 'students') return;
+    const controller = new AbortController();
+    setDirectoryError('');
+    void learningApi<any[]>('/admin/history', undefined, controller.signal)
+      .then(results => { if (!controller.signal.aborted) setVerifiedStudentResults(results); })
+      .catch(() => { if (!controller.signal.aborted) setDirectoryError('Recent verified results could not load. Reopen Students to retry.'); });
+    return () => controller.abort();
+  }, [isAdmin, user?.uid, adminTab]);
 
   const classRoman = (grade: ClassGrade) => (({ 'Class 9': 'IX', 'Class 10': 'X', 'Class 11': 'XI', 'Class 12': 'XII' } as Record<string, string>)[grade]);
 
@@ -876,6 +891,8 @@ export const AdminPanel: React.FC = () => {
           <h3 className="text-sm font-bold text-stone-900 uppercase tracking-wider font-cinzel">
             Registered Student Directory & Test History ({registeredStudents.length})
           </h3>
+          {directoryError && <p role="alert" className="text-red-700 text-sm">{directoryError}</p>}
+          <p className="text-xs text-stone-600">Includes the latest 1,000 verified assessments and preserved earlier records. Earlier scores were recorded before server verification.</p>
           {registeredStudents.length === 0 ? (
             <div className="p-8 text-center text-stone-500 bg-stone-50 rounded-2xl border text-xs">No registered students found.</div>
           ) : (
