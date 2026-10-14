@@ -13,7 +13,6 @@ on:
 
 permissions:
   contents: read
-  id-token: write
 
 concurrency:
   group: saarthi-firebase-production
@@ -47,6 +46,9 @@ jobs:
 
   deploy:
     if: github.event_name == 'workflow_dispatch' && inputs.release_approved == true
+    permissions:
+      contents: read
+      id-token: write
     needs: test
     runs-on: ubuntu-latest
     environment: production
