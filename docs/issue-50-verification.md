@@ -4,6 +4,26 @@ Issue: https://github.com/arbindkumar1981/Sankatmochan-Saarthi-Website/issues/50
 
 ## Evidence and diagnosis limits
 
+### Follow-up review: 14 October 2026
+
+Both draft PRs are open and conflict-free according to GitHub. Website CI and all three backend CI workflows passed on their original repair commits. The supplemental documentation changes below do not change runtime code.
+
+Standalone Cloud Shell now provides existing authenticated read-only access, despite the console history page still failing to load. The latest failed build for the API image in asia-south2 is `92cb8a81-79b2-4c42-a9aa-25fa98f3e993`, created 30 September 2026 at 18:35:35 UTC (1 October at 00:05:35 IST). The two later failures are for the worker image. No failed global build records were returned.
+
+Exact API failure link: https://console.cloud.google.com/cloud-build/builds;region=asia-south2/92cb8a81-79b2-4c42-a9aa-25fa98f3e993?project=247863708315
+
+Actual sanitized log evidence: step 1 uses `google.python.missing-entrypoint@0.9.0` and fails because the Python pyproject source needs a supported main.py/app.py, a project script, GOOGLE_ENTRYPOINT or Procfile. The builder exits with status 51. This establishes a build-time missing-entrypoint failure for this recorded API build. The later worker-as-web Procfile defect fixed by PR #79 is a separate issue, not the observed error. Mapping this record to the original issue screenshot still requires its build ID/source identity; a missing buildTriggerId must not be described as proof of a repository trigger.
+
+Current Cloud Run read-only inspection confirms latest-created and latest-ready are both `sankatmochan-saarthi-v3-git-00192-sbp`, with 100% traffic. Fresh HTTP checks return Hosting 200, API health 200 and unsigned material 401. No service, traffic, database or IAM configuration was changed.
+
+Review findings: PR #51 introduces no authentication/authorization changes; its ESM config is exercised by passing CI. PR #79 keeps API and worker process selection consistent, but its local subprocess test does not build an OCI/buildpack image or exercise the real queue/database worker. Those deployment checks remain required. Both repositories auto-deploy on main pushes, so merging can trigger production actions; explicit release approval and review of the existing production gate are required before merging.
+
+Existing website risks outside these diffs: ContentArea grades using client-visible correctIndex; repository Firestore rules permit owner-created numeric scores without authoritative grading; EvaluationHub permits manual Mark as Mastered. No frontend retest-to-server-mastery integration was found. Assessment integrity and measured retest mastery fail the source-review requirements. Backend learning-loop unit tests do not prove that the website is integrated with that backend flow. These need a separately approved security/assessment task; do not silently add the old uncommitted audit changes to either PR.
+
+Merge recommendation: review/approve website #51 first as the smaller independent change, then backend #79 after image/worker verification and an approved coordinated release. Green CI does not certify the complete learning loop. No merge or deployment was performed.
+
+The earlier investigation record below is retained as historical context; its log-access blocker and unconfirmed root cause are superseded by this follow-up.
+
 Fresh website source: 2d9172f. Fresh backend source: bed35a6 in arbindkumar1981/Sankatmochan-Saarthi-v3. Dedicated repair branches preserve the earlier local audit changes.
 
 Actual GitHub Actions deployment log inspected: https://github.com/arbindkumar1981/Sankatmochan-Saarthi-v3/actions/runs/38334339876 . Both its test and deployment jobs succeeded. The log reports the API revision `sankatmochan-saarthi-v3-git-00192-sbp` serving 100% traffic at deployment, successful private converter checks, and successful Teacher E2E execution `saarthi-teacher-e2e-kq7p5`. This is historical evidence, not a fresh inspection of current traffic or the failed repository trigger.
