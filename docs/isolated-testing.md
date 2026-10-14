@@ -5,9 +5,11 @@ Both Firebase projects are protected existing systems. The Founder confirmed
 Enterprise Firestore databases, not empty staging. Do not modify or repurpose it
 or `sankatmochan-509100`, create resources, upgrade billing or change IAM.
 
-The paired bridge now uses actual emulator HTTP, backend approval/publication
-commits, a disposable localhost Postgres database and Student API PDF reads.
-It checks out a pinned reviewed backend commit in CI. Auth identity lookup and
+The backend bridge uses actual emulator HTTP, approval/publication commits,
+a disposable localhost Postgres database and Student API PDF reads. Backend CI
+uses checksum-verified snapshots of these reviewed website rules because the
+private backend cannot be checked out with this repository's CI token. No new
+cross-repository credential or access grant is introduced. Auth identity lookup and
 server-owner transport exist only in the test; production auth/IAM is unchanged.
 The demo-project/localhost/database guards prevent cloud fallback. This workflow
 provisions no cloud user, database, bucket or project.
@@ -22,8 +24,8 @@ the local Auth emulator, uses actual SDK sessions for profile/ownership rules,
 admin file upload, draft privacy and student access to published metadata. The
 fixture password is public test data; no real passwords or ID tokens are logged.
 The Admin designation exists only in emulator Firestore. This individual rules
-test uses a trusted publication fixture; the following backend bridge exercises
-the real approval/publication endpoint against the same emulators.
+test uses a trusted publication fixture; the backend bridge exercises the real
+approval/publication endpoint against matching rule snapshots in its emulators.
 
 The bridge is local API/PDF integration evidence, NOT real Google OAuth,
 effective cloud IAM or complete cloud E2E. See backend

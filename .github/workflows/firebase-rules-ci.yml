@@ -7,49 +7,8 @@ jobs:
   rules:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_DB: saarthi_firebase_test
-          POSTGRES_HOST_AUTH_METHOD: trust
-        ports: ['5432:5432']
-        options: >-
-          --health-cmd "pg_isready -U postgres -d saarthi_firebase_test"
-          --health-interval 5s --health-timeout 5s --health-retries 10
-    env:
-      SAARTHI_FIREBASE_BRIDGE: '1'
-      SAARTHI_FIREBASE_TEST_DATABASE_URL: postgresql://postgres@127.0.0.1:5432/saarthi_firebase_test
-      SAARTHI_BACKEND_TEST_DIR: ${{ github.workspace }}/paired-backend
     steps:
       - uses: actions/checkout@v4
-      - name: Checkout reviewed paired backend test
-        uses: actions/checkout@v4
-        with:
-          repository: arbindkumar1981/Sankatmochan-Saarthi-v3
-          ref: 8340d80823f85b6186ede644529f5eab79a771df
-          path: paired-backend
-          persist-credentials: false
-      - uses: astral-sh/setup-uv@v6
-      - name: Prepare disposable local learning schema
-        working-directory: paired-backend
-        run: |
-          uv sync --extra dev
-          uv run python - <<'PY'
-          import asyncio, os
-          from pathlib import Path
-          import asyncpg
-          assert os.environ.get('CI') == 'true'
-          url = os.environ['SAARTHI_FIREBASE_TEST_DATABASE_URL']
-          assert url == 'postgresql://postgres@127.0.0.1:5432/saarthi_firebase_test'
-          async def prepare():
-              connection = await asyncpg.connect(url)
-              try:
-                  await connection.execute(Path('schema/website-learning.sql').read_text())
-              finally:
-                  await connection.close()
-          asyncio.run(prepare())
-          PY
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -60,7 +19,7 @@ jobs:
       - name: Install isolated emulator tooling
         working-directory: tests/emulator
         run: npm ci
-      - name: Verify Auth, rules, API publication, legacy bank and private PDF locally
+      - name: Verify real Firestore and Storage authorization rules locally
         working-directory: tests/emulator
         run: npm test
       - name: Verify locked deployment CLI version
