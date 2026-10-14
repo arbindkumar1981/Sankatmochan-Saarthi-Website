@@ -32,3 +32,18 @@ test('structured generated questions become objective questions with bounded ans
   for (const bad of [{ ...q, correctIndex: 2 }, { ...q, marks: 0 }, { ...q, explanation: '' }, { ...q, options: ['only one'] }]) assert.throws(() => api.parseGeneratedQuestions(JSON.stringify({ questions: [bad] })));
   assert.throws(() => api.parseGeneratedQuestions('Unstructured notes'));
 });
+
+test('assessment matches only its exact active curriculum and topic', () => {
+  const scope = {board:'CBSE',classGrade:'Class 12',stream:'Science',subjectId:'bio',chapterId:'ch',topicId:'topic'};
+  const assessment = {...scope,approved:true,published:true};
+  assert.equal(api.matchesAssessment(assessment,scope),true);
+  for(const change of [{topicId:'other'},{topicId:undefined},{chapterId:'other'},{classGrade:'Class 11'},{subjectId:'chem'},{stream:'Commerce'},{board:'ICSE_ISC'}]) assert.equal(api.matchesAssessment(assessment,{...scope,...change}),false);
+  assert.equal(api.matchesAssessment({...assessment,published:false},scope),false);
+});
+
+test('teacher presentation sample cannot cross a topic or hidden source', () => {
+  const scope = {board:'CBSE',classGrade:'Class 12',stream:'Science',subjectId:'bio',chapterId:'ch',topicId:'topic'};
+  const content = {...scope,approved:true,published:true,contentType:'detailed_notes',bodyText:'Exact topic notes'};
+  assert.equal(api.scopedStyleSample([content],scope),'Exact topic notes');
+  for(const change of [{topicId:'other'},{deleted:true},{status:'ARCHIVED'},{approved:false},{stream:'Commerce'},{classGrade:'Class 11'}]) assert.equal(api.scopedStyleSample([{...content,...change}],scope),'');
+});

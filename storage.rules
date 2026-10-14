@@ -15,8 +15,11 @@ service firebase.storage {
 
     match /learning-materials/{adminUid}/{fileName} {
       allow read: if isAdmin();
-      allow create, update: if isAdmin() && request.auth.uid == adminUid && allowedStudyFile();
-      allow delete: if isAdmin() && request.auth.uid == adminUid;
+      // Reviewed files are immutable; replacing material creates a new object path.
+      allow create: if resource == null && isAdmin() && request.auth.uid == adminUid && allowedStudyFile();
+      allow update: if false;
+      // Prevent delete/recreate from changing an already reviewed branded PDF.
+      allow delete: if isAdmin() && request.auth.uid == adminUid && !fileName.matches('.*-branded-.*');
     }
   }
 }

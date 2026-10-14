@@ -1,0 +1,29 @@
+{
+  "platform": "win32",
+  "results": [
+    {
+      "test": "brace-alternatives-and-array-paths",
+      "status": "PASS"
+    },
+    {
+      "test": "negative-watch-pattern",
+      "status": "PASS"
+    },
+    {
+      "test": "new-nested-glob-file",
+      "status": "PASS"
+    },
+    {
+      "test": "explicit-cwd-and-unwatch-shared-base",
+      "status": "PASS"
+    },
+    {
+      "test": "ignore-negation-preserves-reincluded-file",
+      "status": "PASS"
+    },
+    {
+      "test": "bounded-depth-rejects-hostile-pattern-without-crash",
+      "status": "PASS"
+    }
+  ]
+}

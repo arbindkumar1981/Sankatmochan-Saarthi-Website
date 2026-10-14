@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {spawnSync} from 'node:child_process';
+import {fileURLToPath} from 'node:url';
+const load = path => JSON.parse(readFileSync(new URL(path, import.meta.url), 'utf8'));
+const expected = '15.33.0';
+assert.equal(load('./package.json').devDependencies['firebase-tools'], expected);
+assert.equal(load('./package-lock.json').packages['node_modules/firebase-tools'].version, expected);
+assert.equal(load('./node_modules/firebase-tools/package.json').version, expected);
+const cli = new URL('./node_modules/firebase-tools/lib/bin/firebase.js', import.meta.url);
+const result = spawnSync(process.execPath, [fileURLToPath(cli), '--version'], {encoding: 'utf8'});
+assert.equal(result.status, 0, 'Locked CLI must start successfully');
+assert.equal(result.stdout.trim(), expected);
+console.log(`PASS: deployment CLI ${expected} matches manifest, lock and executable`);

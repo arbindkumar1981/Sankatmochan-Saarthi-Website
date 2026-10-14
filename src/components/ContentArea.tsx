@@ -5,7 +5,8 @@ import { optionLabel } from '../services/websiteConfig';
 import { useWebsite } from '../context/WebsiteContext';
 import { WebsiteText } from '../context/WebsiteContext';
 import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
-import { parseGeneratedQuestions } from '../services/testAssessment';
+import { matchesAssessment } from '../services/testAssessment';
+import { learningApi, assessmentScope, type PublicEvaluationTest, type SecureAttempt } from '../services/learningApi';
 import { useCurriculum } from '../context/CurriculumContext';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -56,6 +57,7 @@ export const ContentArea: React.FC = () => {
   const { config, text: websiteText } = useWebsite();
   const {
     activeModule,
+    setActiveModule,
     selectedBoard,
     selectedClass,
     selectedStream,
@@ -66,7 +68,9 @@ export const ContentArea: React.FC = () => {
     learningContents,
     evaluationTests,
     youtubeVideos,
-    saveTestResult
+    refreshLearningHistory,
+    testResults,
+    assessmentError
   } = useCurriculum();
 
   const { profile, user, openAuthModal } = useAuth();
@@ -143,6 +147,7 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
 
   const customModule = !DEFAULT_WEBSITE_CONFIG.modules.some(x=>x.id===activeModule);
   const generateWithTeacher = async () => {
+    const requestedSelection = selectionIdentity.current;
     if(customModule){setStudentGenerationError('This module uses admin-published learning material.');return;}
     if (!['Class 9', 'Class 10', 'Class 11', 'Class 12'].includes(selectedClass)) { setStudentGenerationError('AI generation supports Classes IX–XII. Choose admin-published material for other classes.'); return; }
     if (!profile || !user) { openAuthModal('student'); return; }
@@ -167,7 +172,18 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
         'DETAILED_NOTES';
       const topic = selectedTopic?.title || selectedChapter.title;
       const topicId = `${selectedSubject.id}:${selectedChapter.id}:${selectedTopic?.id || 'chapter'}`;
-      const sample = learningContents.find(x => x.subjectId === selectedSubject.id && x.contentType === 'detailed_notes' && x.approved && x.published && x.bodyText)?.bodyText?.slice(0, 4000) || '';
+      if (assetType === 'TEST') {
+        const scope = currentScope();
+        const previousResult = testResults.filter(r=>r.serverEvaluated && Object.entries(scope).every(([key,value])=>(r[key as keyof typeof r] || '')===value)).sort((a,b)=>Date.parse(b.createdAt)-Date.parse(a.createdAt))[0];
+        const previousAttemptId = testSubmitted && secureAttempt ? secureAttempt.attemptId : (previousResult && previousResult.score * 100 < previousResult.totalMarks * 80 ? previousResult.id : undefined);
+        const attempt = await learningApi<SecureAttempt>('/generated-attempts', {scope, subject: selectedSubject.teacherSubject || selectedSubject.name, chapter: selectedChapter.title, topic, language: language === 'hi' ? 'HINDI' : 'ENGLISH', ...(previousAttemptId ? {previousAttemptId} : {})}, controller.signal);
+        if (!generationScope.owns(request)) return;
+        setSecureAttempt(attempt); setGeneratedTest(attempt.test); setGeneratedScope(selectionKey);
+        setSelectedAnswers({}); setCurrentQuestionIndex(0); setTestSubmitted(false);
+        setTestTimeRemaining(Math.max(0, Math.floor((Date.parse(attempt.expiresAt) - Date.now()) / 1000)));
+        setTestStarted(true); setSubmittedScorecard(null);
+        return;
+      }
       timeout = window.setTimeout(() => controller.abort(), 600000);
       const res = await fetch(`${api}/v1/website/teacher/generate`, {
         method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, signal: controller.signal,
@@ -177,19 +193,13 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
           chapter: selectedChapter.title, topic,
           style_profile: subjectStyleProfile(selectedSubject.name) +
             (assetType === 'FLASHCARDS' ? ' Return ONLY JSON: {"flashcards":[{"question":"...","answer":"...","hint":"..."}]}. Include questionHindi/answerHindi when teaching in Hindi.' : '') +
-            (assetType === 'MIND_MAP' ? ' Return ONLY JSON: {"nodes":[{"id":"n1","label":"...","description":"...","children":["n2"]}]}. Each child must reference an existing node id.' : ''), sample_style_reference: sample
+            (assetType === 'MIND_MAP' ? ' Return ONLY JSON: {"nodes":[{"id":"n1","label":"...","description":"...","children":["n2"]}]}. Each child must reference an existing node id.' : ''), website_scope: currentScope()
         })
       });
       const data = await res.json();
       if (!generationScope.owns(request)) return;
       if (!res.ok) throw new Error(typeof data.detail === 'string' ? data.detail : 'Sankatmochansaarthi could not generate this material.');
-      if (assetType === 'TEST') {
-        const questions = parseGeneratedQuestions(data.content || '');
-        const totalMarks = questions.reduce((sum, q) => sum + q.marks, 0);
-        setTestStarted(false); setTestSubmitted(false); setSelectedAnswers({}); setSaveStatus('');
-        setGeneratedTest({ id: `generated-${crypto.randomUUID()}`, title: `${topic} — Practice Test`, testType: 'chapter', board: selectedBoard, classGrade: selectedClass, stream: selectedStream, subjectId: selectedSubject.id, chapterId: selectedChapter.id, questions, totalMarks, passingMarks: Math.ceil(totalMarks * 0.8), durationMinutes: Math.max(5, questions.length * 2), approved: false, published: false, createdAt: new Date().toISOString() });
-        setStudentGeneratedText('');
-      } else if (assetType === 'FLASHCARDS') {
+      if (assetType === 'FLASHCARDS') {
         setGeneratedFlashcards(parseGeneratedFlashcards(data.content || ''));
         setStudentGeneratedText(''); setCurrentFlashcardIndex(0); setIsFlipped(false); setCardMastery({});
       } else if (assetType === 'MIND_MAP') {
@@ -240,19 +250,28 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
   const [copiedFormulaId, setCopiedFormulaId] = useState<string | null>(null);
 
   // State for Test Yourself
-  const matchedTests = evaluationTests.filter((t) => {
-    if(t.board!==selectedBoard || t.classGrade!==selectedClass || !t.approved || !t.published)return false;
-    if (t.subjectId !== selectedSubject?.id) return false;
-    if (selectedChapter && t.chapterId && t.chapterId !== selectedChapter.id) return false;
-    return true;
-  });
+  const matchedTests = evaluationTests.filter(t => matchesAssessment(t, {board: selectedBoard, classGrade: selectedClass, stream: selectedStream, subjectId: selectedSubject?.id || '', chapterId: selectedChapter?.id, topicId: selectedTopic?.id}));
 
   // Never serve an unrelated fallback test from another subject/chapter.
-  const [generatedTest, setGeneratedTest] = useState<EvaluationTest>();
+  const currentScope = () => assessmentScope({board: selectedBoard, classGrade: selectedClass, stream: selectedStream, subjectId: selectedSubject?.id || '', chapterId: selectedChapter?.id, topicId: selectedTopic?.id});
+  const selectionIdentity = useRef('');
+  selectionIdentity.current = selectionKey;
+  const [secureAttempt, setSecureAttempt] = useState<SecureAttempt>();
+  const [generatedTest, setGeneratedTest] = useState<PublicEvaluationTest>();
   const testCandidate = (generatedScope === selectionKey ? generatedTest : undefined) || matchedTests[0];
-  const activeTest: EvaluationTest | undefined = testCandidate ? { ...testCandidate, totalMarks: testCandidate.questions.reduce((sum, q) => sum + q.marks, 0) } : undefined;
+  const activeTest = testCandidate;
   const submitting = useRef(false);
   const [saveStatus, setSaveStatus] = useState('');
+  const [testSubmitted, setTestSubmitted] = useState(false);
+  const [mastery, setMastery] = useState<{currentMastery:number|null;mastered:boolean;trend:number[]} | null>(null);
+  const [masteryError, setMasteryError] = useState('');
+  useEffect(() => {
+    setMastery(null); setMasteryError('');
+    if (activeModule !== 'test_yourself' || !user || user.isAnonymous || !selectedChapter || !selectedSubject) return;
+    const controller = new AbortController();
+    void learningApi<{currentMastery:number|null;mastered:boolean;trend:number[]}>('/mastery', currentScope(), controller.signal).then(value => { if (!controller.signal.aborted) setMastery(value); }).catch(() => { if (!controller.signal.aborted) setMasteryError('Mastery could not load. Retry by reopening Test Yourself.'); });
+    return () => controller.abort();
+  }, [activeModule, selectedBoard, selectedClass, selectedStream, selectedSubject?.id, selectedChapter?.id, selectedTopic?.id, user?.uid, testSubmitted]);
 
   // Reset interactive module state whenever curriculum/module selection changes.
   useEffect(() => {
@@ -265,6 +284,7 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
     setTestStarted(false);
     setTestSubmitted(false);
     setGeneratedTest(undefined);
+    setSecureAttempt(undefined);
     setSaveStatus('');
     setCurrentQuestionIndex(0);
     setSelectedAnswers({});
@@ -279,7 +299,6 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>({});
   const [testTimeRemaining, setTestTimeRemaining] = useState(600); // 10 mins
-  const [testSubmitted, setTestSubmitted] = useState(false);
   const [submittedScorecard, setSubmittedScorecard] = useState<{
     score: number;
     totalMarks: number;
@@ -302,24 +321,34 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
     if (testStarted && !testSubmitted && testTimeRemaining > 0) {
       interval = setInterval(() => {
         setTestTimeRemaining((prev) => {
-          return Math.max(0, prev - 1);
+          return secureAttempt ? Math.max(0, Math.floor((Date.parse(secureAttempt.expiresAt) - Date.now()) / 1000)) : Math.max(0, prev - 1);
         });
       }, 1000);
     }
     return () => clearInterval(interval);
-  }, [testStarted, testSubmitted, testTimeRemaining]);
+  }, [testStarted, testSubmitted, testTimeRemaining, secureAttempt]);
 
-  const handleStartTest = () => {
-    if (!profile) {
+  const handleStartTest = async () => {
+    if (!profile || !user || user.isAnonymous) {
       openAuthModal('student');
       return;
     }
-    setTestStarted(true);
-    setTestSubmitted(false);
-    setSelectedAnswers({});
-    setCurrentQuestionIndex(0);
-    setTestTimeRemaining((activeTest?.durationMinutes || 15) * 60);
-    setSubmittedScorecard(null);
+    if (!activeTest) return;
+    const requestedSelection = selectionIdentity.current;
+    setStudentGenerating(true);
+    try {
+      const attempt = await learningApi<SecureAttempt>('/attempts', {testId: activeTest.id, scope: currentScope()});
+      if (requestedSelection !== selectionIdentity.current) return;
+      setSecureAttempt(attempt); setGeneratedTest(attempt.test);
+      setGeneratedScope(selectionKey);
+      setTestTimeRemaining(Math.max(0, Math.floor((Date.parse(attempt.expiresAt) - Date.now()) / 1000)));
+      setTestStarted(true);
+      setTestSubmitted(false);
+      setSelectedAnswers({});
+      setCurrentQuestionIndex(0);
+      setSubmittedScorecard(null);
+    } catch (error) { if (requestedSelection === selectionIdentity.current) setStudentGenerationError(error instanceof Error ? error.message : 'Unable to start test.'); }
+    finally { if (requestedSelection === selectionIdentity.current) setStudentGenerating(false); }
   };
 
   const handleSelectOption = (qIdx: number, optIdx: number) => {
@@ -327,100 +356,23 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
   };
 
   const handleAutoSubmit = async () => {
-    if (!activeTest || submitting.current) return;
+    if (!activeTest || !secureAttempt || submitting.current) return;
     submitting.current = true;
-    const questions = activeTest.questions;
-    let score = 0;
-    const answers: TestResultAnswer[] = [];
-    const strengths: string[] = [];
-    const weaknesses: string[] = [];
-
-    questions.forEach((q, idx) => {
-      const selected = selectedAnswers[idx] !== undefined ? selectedAnswers[idx] : -1;
-      const isCorrect = selected === q.correctIndex;
-      const marksAwarded = isCorrect ? q.marks : 0;
-      score += marksAwarded;
-
-      if (isCorrect) {
-        if (q.competencyTag && !strengths.includes(q.competencyTag)) {
-          strengths.push(q.competencyTag);
-        }
-      } else {
-        if (q.competencyTag && !weaknesses.includes(q.competencyTag)) {
-          weaknesses.push(q.competencyTag);
-        }
-      }
-
-      answers.push({
-        questionId: q.id,
-        questionText: q.questionText,
-        options: [...q.options],
-        selectedOption: selected,
-        correctOption: q.correctIndex,
-        isCorrect,
-        explanation: q.explanation,
-        marksAwarded
-      });
-    });
-
-    const totalMarks = activeTest.totalMarks || questions.length;
-    const percentage = Math.round((score / totalMarks) * 100);
-    const attemptedCount = Object.keys(selectedAnswers).length;
-    const correctCount = answers.filter((a) => a.isCorrect).length;
-    const accuracy = attemptedCount > 0 ? Math.round((correctCount / attemptedCount) * 100) : 0;
-    const timeTaken = (activeTest.durationMinutes * 60) - testTimeRemaining;
-
-    let remarks = '';
-    if (percentage >= 80) {
-      remarks = 'उत्कृष्ट प्रदर्शन! Baba Neem Karoli Ji & Hanuman Ji bless your hard work. Concepts are exceptionally strong.';
-      confetti({ particleCount: 90, spread: 70, origin: { y: 0.6 } });
-    } else if (percentage >= 50) {
-      remarks = 'सराहनीय प्रयास! Good conceptual grasp. Review the questions saved to your Mistake Book to achieve top rank.';
-    } else {
-      remarks = 'अध्ययन में लगन बढ़ाएं! Do not worry. Every mistake is a stepping stone to mastery. Re-read the revision notes and re-attempt.';
-    }
-
-    const resultPayload = {
-      studentUid: profile?.uid || 'guest-108',
-      studentName: profile?.displayName || 'Student',
-      testId: activeTest.id,
-      testTitle: activeTest.title,
-      testType: activeTest.testType,
-      board: selectedBoard,
-      classGrade: selectedClass,
-      subjectId: selectedSubject?.id || '',
-      score,
-      totalMarks,
-      percentage,
-      accuracy,
-      timeTakenSeconds: timeTaken,
-      answers,
-      strengths: strengths.length > 0 ? strengths : ['Conceptual grasp'],
-      weaknesses: weaknesses.length > 0 ? weaknesses : ['None! Ready for boards'],
-      remarks,
-      createdAt: new Date().toISOString()
-    };
-
-    setSubmittedScorecard({
-      score,
-      totalMarks,
-      percentage,
-      accuracy,
-      timeTaken,
-      remarks,
-      strengths: resultPayload.strengths,
-      weaknesses: resultPayload.weaknesses,
-      answers
-    });
-    setTestSubmitted(true);
-    setTestStarted(false);
-
+    const requestedSelection = selectionIdentity.current;
     try {
-      setSaveStatus('Saving result and Mistake Book…');
-      await saveTestResult(resultPayload);
-      setSaveStatus('Result and Mistake Book saved.');
-    } catch (err) {
-      setSaveStatus('Your score is shown, but the result could not be saved. Check your connection before leaving this page.');
+      setSaveStatus('Submitting for server evaluation…');
+      const answers = Object.fromEntries(activeTest.questions.map((q, i) => [q.id, selectedAnswers[i] ?? -1]));
+      const result = await learningApi<import('../types').TestResult>(`/attempts/${secureAttempt.attemptId}/submit`, {answers});
+      if (requestedSelection !== selectionIdentity.current) return;
+      setSubmittedScorecard({...result, timeTaken: result.timeTakenSeconds});
+      setTestSubmitted(true); setTestStarted(false);
+      if (result.score * 100 >= result.totalMarks * 80) confetti({particleCount: 90, spread: 70, origin: {y: .6}});
+      setSaveStatus('Server-evaluated result saved.');
+      await refreshLearningHistory().catch(() => { if (requestedSelection === selectionIdentity.current) setSaveStatus('Result saved. Dashboard refresh failed; reload to see history.'); });
+    } catch (error) {
+      if (requestedSelection !== selectionIdentity.current) return;
+      setSaveStatus(error instanceof Error ? error.message : 'Submission failed. Retry with the same answers.');
+      setTestStarted(false);
     } finally { submitting.current = false; }
   };
 
@@ -485,11 +437,11 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
 
       {customModule && <section className="space-y-3">
         <p className="whitespace-pre-wrap break-words">{language==='hi' ? displayContent.bodyHindi || displayContent.bodyText : displayContent.bodyText}</p>
-        {hasPublishedModuleContent && <button className="border rounded-xl px-3 py-2 text-sm" onClick={downloadGeneratedNotes}>Save to My Dashboard</button>}
+        {hasPublishedModuleContent && <button className="border rounded-xl px-3 py-2 text-sm" onClick={downloadGeneratedNotes}><WebsiteText original={"Save to My Dashboard"} /></button>}
         {studentGenerationError && <p role="alert">{studentGenerationError}</p>}
       </section>}
-      {matchedContent?.storagePath && matchedContent.attachmentType === 'application/pdf' ? <Suspense fallback={<p role="status">Opening PDF reader…</p>}><StudyPdfReader key={matchedContent.id} contentId={matchedContent.id} /></Suspense> : matchedContent?.attachmentUrl && <p className="border rounded-xl p-3 text-sm">{matchedContent.attachmentName || 'Study file'} — ask Admin to replace this file with a branded PDF.</p>}
-      {hasPublishedModuleContent && !customModule && <button className="border rounded-xl px-3 py-2 text-sm mb-3" onClick={downloadGeneratedNotes}>Save to My Dashboard</button>}
+      {matchedContent?.storagePath && matchedContent.attachmentType === 'application/pdf' ? <Suspense fallback={<p role="status"><WebsiteText original={"Opening PDF reader…"} /></p>}><StudyPdfReader key={matchedContent.id} contentId={matchedContent.id} /></Suspense> : matchedContent?.attachmentUrl && <p className="border rounded-xl p-3 text-sm">{matchedContent.attachmentName || 'Study file'}<WebsiteText original={"— ask Admin to replace this file with a branded PDF."} /></p>}
+      {hasPublishedModuleContent && !customModule && <button className="border rounded-xl px-3 py-2 text-sm mb-3" onClick={downloadGeneratedNotes}><WebsiteText original={"Save to My Dashboard"} /></button>}
 
       {/* Module 1 & 2: Detailed Notes & Revision Notes */}
       {(activeModule === 'detailed_notes' || activeModule === 'revision_notes') && (
@@ -522,7 +474,7 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
               ? displayContent.bodyHindi
               : displayContent.bodyText)}
           </div>
-          {studentDiagramPlans.length > 0 && <section aria-label="Diagram guidance" className="space-y-3">
+          {studentDiagramPlans.length > 0 && <section aria-label={websiteText("Diagram guidance")} className="space-y-3">
             <h3 className="font-bold text-sm">{websiteText('Diagram guidance — illustration not generated')}</h3>
             {studentDiagramPlans.map((plan, index) => <article key={index} className="rounded-xl border bg-sky-50 p-4">
               <h4 className="font-bold">{plan.title}</h4>
@@ -816,14 +768,18 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
       {/* Module 9: Test Yourself (Interactive Objective Testing Engine) */}
       {activeModule === 'test_yourself' && (
         <div className="space-y-5">
+          {assessmentError && <p role="alert">{assessmentError}</p>}
+          {masteryError && <p role="status">{masteryError}</p>}
+          {mastery && <p className="border rounded-xl p-3"><WebsiteText original={"Mastery for this selection:"} />{mastery.currentMastery === null ? <WebsiteText original={"No server-evaluated attempt yet"} /> : `${mastery.currentMastery}% · ${mastery.mastered ? 'Target reached' : 'Review weak concepts and retest; target 80%'}`}</p>}
           {saveStatus && <p role="status" className="p-3 border rounded-xl">{saveStatus}</p>}
-          <div className="flex flex-wrap gap-2 justify-end"><button onClick={generateWithTeacher} disabled={studentGenerating} className="px-3 py-2 rounded-xl bg-orange-600 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5"><WandSparkles className="w-4 h-4"/>{studentGenerating ? websiteText("Generating…") : websiteText("Generate Test with Sankatmochansaarthi")}</button></div>
+          {secureAttempt && !testStarted && !testSubmitted && <button onClick={() => { void handleAutoSubmit(); }} className="border rounded-xl p-3"><WebsiteText original={"Retry submission with the same answers"} /></button>}
+          <div className="flex flex-wrap gap-2 justify-end"><button onClick={generateWithTeacher} disabled={studentGenerating || testStarted || (Boolean(secureAttempt) && !testSubmitted)} className="px-3 py-2 rounded-xl bg-orange-600 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5"><WandSparkles className="w-4 h-4"/>{studentGenerating ? websiteText("Generating…") : websiteText("Generate Test with Sankatmochansaarthi")}</button></div>
           {studentGenerationError && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs">{studentGenerationError}</div>}
           {studentGeneratedText && <div className="whitespace-pre-line bg-stone-50 border border-stone-200 rounded-2xl p-5 text-sm leading-relaxed">{studentGeneratedText}</div>}
           {!activeTest && (
             <div className="p-8 text-center text-stone-500 bg-stone-50 rounded-2xl border border-stone-200"><WebsiteText original={"No published test is available for this subject/chapter selection yet."} /></div>
           )}
-          {activeTest && !testStarted && !testSubmitted && (
+          {activeTest && !secureAttempt && !testStarted && !testSubmitted && (
             <div className="bg-gradient-to-br from-amber-50 via-orange-50 to-white border-2 border-orange-300 rounded-3xl p-6 sm:p-8 text-center max-w-2xl mx-auto shadow-md">
               <CheckSquare className="w-12 h-12 text-orange-600 mx-auto mb-3" />
               <h3 className="text-xl sm:text-2xl font-black text-stone-900 font-cinzel">
@@ -836,7 +792,7 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
                 <div className="bg-white border border-orange-200 p-3 rounded-2xl shadow-xs">
                   <span className="text-stone-400 block text-[10px] uppercase font-bold"><WebsiteText original={"Questions"} /></span>
                   <span className="text-lg font-black text-stone-800">
-                    {activeTest?.questions.length || 5}
+                    {activeTest?.questionCount ?? activeTest?.questions.length ?? 0}
                   </span>
                 </div>
                 <div className="bg-white border border-orange-200 p-3 rounded-2xl shadow-xs">
@@ -854,6 +810,7 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
 
               <button
                 onClick={handleStartTest}
+                disabled={studentGenerating}
                 className="py-3 px-8 bg-gradient-to-r from-orange-600 via-red-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white font-extrabold text-sm sm:text-base rounded-2xl shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5"
               >
                 {language === 'hi' ? websiteText("परीक्षा प्रारंभ करें") : websiteText("Start Test Now")}
@@ -985,10 +942,12 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
                 </div>
 
                 <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                  <button onClick={()=>setActiveModule('detailed_notes')} className="px-5 py-2 bg-white text-orange-900 font-bold rounded-xl text-xs"><WebsiteText original={"Review this topic's learning material"} /></button>
                   <button
-                    onClick={handleStartTest}
+                    onClick={generateWithTeacher}
+                    disabled={studentGenerating}
                     className="px-5 py-2 bg-white text-orange-900 font-bold rounded-xl text-xs shadow-md hover:bg-amber-50 transition-colors"
-                  ><WebsiteText original={"Retry Test"} /></button>
+                  ><WebsiteText original={"Generate focused retest"} /></button>
                 </div>
               </div>
 

@@ -1,0 +1,8 @@
+{
+  "baselineLockSHA256": "d645830bb8885a74914dff08e173028b7db0f8cfcacc13a793d6b027c49e0007",
+  "websiteLockSHA256": "604483c075985d8aedb59c6dcb36e95feb9536b1008c77d4be008d82fdd592ed",
+  "upstreamArtifactIntegrity": "sha512-ln0MPfXeTn8lXwKDkbtd8d7BvRkzscDmxP1RxO2I4Auq4l8WODzl746eQWaVJAY5EFuuFzikcok0JN04qmEz9Q==",
+  "prototypeArtifactIntegrity": "sha512-E+968+iPgVKOPwP9WGsUmXlf38jVv+LQrnbuHwwclXV6tNeslV7zey1FX+91ZAS0ZGd7LVt7vIslSeH7SAOgSg==",
+  "prototypeLockSHA256": "a1d2b81d08b6f22b4e53b34c333f77b958b39f62afa480ef15220a22f50302a4",
+  "adapterSHA256": "db04ff9767c68fd92b3ac9aea4782bfe82d8211ce7cd40911ccbed56f1779b5c"
+}

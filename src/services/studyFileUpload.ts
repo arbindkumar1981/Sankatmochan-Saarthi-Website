@@ -3,6 +3,11 @@ import { auth, storage } from './firebase';
 import type { WebsiteConfig } from './websiteConfig';
 
 export async function uploadBrandedStudyFile(file: File, adminUid: string, config: Pick<WebsiteConfig, 'name' | 'logoUrl'>, onStatus?: (message: string) => void) {
+  const uploader = auth.currentUser;
+  const requireUploader = () => {
+    if (!uploader || uploader.isAnonymous || uploader.uid !== adminUid || auth.currentUser !== uploader) throw new Error('Administrator login changed. Please sign in again.');
+  };
+  requireUploader();
   if (!adminUid || file.size > 50 * 1024 * 1024) throw new Error('Choose a study file up to 50 MB.');
   const extension = file.name.split('.').pop()?.toLowerCase();
   if (!['pdf', 'docx', 'pptx', 'png', 'jpg', 'jpeg', 'webp', 'txt'].includes(extension || '')) throw new Error('Automatic branding supports PDF, Word (.docx), PowerPoint (.pptx), images and TXT. Export older Word/PowerPoint files as PDF before uploading.');
@@ -20,7 +25,9 @@ export async function uploadBrandedStudyFile(file: File, adminUid: string, confi
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 105000);
     try {
-      const response = await fetch(`${api.replace(/\/$/, '')}/v1/materials/convert-office`, { method: 'POST', headers: { Authorization: `Bearer ${await auth.currentUser.getIdToken()}`, 'Content-Type': 'application/octet-stream', 'X-Document-Format': extension }, body: file, signal: controller.signal });
+      const token = await uploader!.getIdToken();
+      requireUploader();
+      const response = await fetch(`${api.replace(/\/$/, '')}/v1/materials/convert-office`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/octet-stream', 'X-Document-Format': extension }, body: file, signal: controller.signal });
       if (!response.ok) { const error = await response.json().catch(() => ({})); throw new Error(error.detail || 'Office conversion failed. Retry or upload a PDF.'); }
       pdfSource = new Uint8Array(await response.arrayBuffer());
       if (pdfSource.byteLength > 50 * 1024 * 1024 || new TextDecoder().decode(pdfSource.slice(0, 5)) !== '%PDF-') throw new Error('Conversion did not return a valid PDF.');
@@ -38,10 +45,13 @@ export async function uploadBrandedStudyFile(file: File, adminUid: string, confi
   const attachmentName = extension === 'pdf' ? file.name : `${file.name.replace(/\.[^.]+$/, '')}.pdf`;
   const storagePath = `${base}-branded-${attachmentName.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
   onStatus?.('Saving PDF and private original…');
+  requireUploader();
   await uploadBytes(ref(storage, originalStoragePath), file, { contentType: file.type || 'application/octet-stream' });
   const branded = new Blob([new Uint8Array(bytes)], { type: 'application/pdf' });
   const fileRef = ref(storage, storagePath);
+  requireUploader();
   await uploadBytes(fileRef, branded, { contentType: branded.type });
+  requireUploader();
   return { storagePath, originalStoragePath, attachmentUrl: '', attachmentName, attachmentType: branded.type, attachmentSize: branded.size, brandingVersion: 2, brandedWith: config.name };
 }
 

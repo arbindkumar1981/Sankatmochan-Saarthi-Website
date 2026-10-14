@@ -85,7 +85,7 @@ export const DailySpiritualAffirmation: React.FC = () => {
 
   return (
     <aside
-      aria-label="Daily Spiritual Affirmation"
+      aria-label={websiteText("Daily Spiritual Affirmation")}
       className="w-full bg-gradient-to-r from-amber-100/90 via-orange-100/80 to-amber-100/90 border border-orange-300 rounded-xl px-3 py-2 shadow-xs hover:shadow-sm transition-all"
     >
       {/* Single Unbroken Line Layout */}

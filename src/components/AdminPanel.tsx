@@ -1,9 +1,12 @@
+import { WebsiteText } from '../context/WebsiteContext';
 import { useWebsite } from '../context/WebsiteContext';
 import { activeOptions } from '../services/websiteConfig';
 import { subjectsForSelection } from '../services/adminValidation';
 import { WebsiteSettingsManager } from './WebsiteSettingsManager';
 import { CurriculumManager } from './CurriculumManager';
 import { ManagedRecords } from './ManagedRecords';
+import { KnowledgeReview } from './KnowledgeReview';
+import { learningApi } from '../services/learningApi';
 import React, { useEffect, useMemo, useState } from 'react';
 import { uploadBrandedStudyFile } from '../services/studyFileUpload';
 import { collection, doc, onSnapshot, setDoc } from 'firebase/firestore';
@@ -47,7 +50,7 @@ import {
 } from 'lucide-react';
 
 export const AdminPanel: React.FC = () => {
-  const { config } = useWebsite();
+  const { config , text: websiteText } = useWebsite();
   const {
     learningContents,
     deletedAssetIds,
@@ -71,7 +74,7 @@ export const AdminPanel: React.FC = () => {
     language
   } = useCurriculum();
 
-  const { profile, user } = useAuth();
+  const { profile, user, isAdmin } = useAuth();
 
   const [adminTab, setAdminTab] = useState<
     'content' | 'videos' | 'tests' | 'notices' | 'students' | 'enquiries' | 'settings' | 'curriculum'
@@ -198,16 +201,30 @@ export const AdminPanel: React.FC = () => {
 
   // Live registered-student directory and cross-student result history for administrators.
   const [registeredStudents, setRegisteredStudents] = useState<UserProfile[]>([]);
-  const [allStudentResults, setAllStudentResults] = useState<any[]>([]);
+  const [historicalStudentResults, setHistoricalStudentResults] = useState<any[]>([]);
+  const [verifiedStudentResults, setVerifiedStudentResults] = useState<any[]>([]);
+  const [directoryError, setDirectoryError] = useState('');
+  const allStudentResults = [...verifiedStudentResults, ...historicalStudentResults];
   useEffect(() => {
     const unsubUsers = onSnapshot(collection(db, 'users'), snap => {
       setRegisteredStudents(snap.docs.map(d => ({ uid: d.id, ...d.data() } as UserProfile)).filter(p => p.role !== 'admin'));
     }, err => console.warn('Student directory sync failed:', err.message));
     const unsubResults = onSnapshot(collection(db, 'test_results'), snap => {
-      setAllStudentResults(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setHistoricalStudentResults(snap.docs.map(d => ({ id: d.id, ...d.data(), serverEvaluated: false })));
     }, err => console.warn('Admin result history sync failed:', err.message));
     return () => { unsubUsers(); unsubResults(); };
   }, []);
+
+  useEffect(() => {
+    if (!isAdmin || !user || user.isAnonymous) { setVerifiedStudentResults([]); return; }
+    if (adminTab !== 'students') return;
+    const controller = new AbortController();
+    setDirectoryError('');
+    void learningApi<any[]>('/admin/history', undefined, controller.signal)
+      .then(results => { if (!controller.signal.aborted) setVerifiedStudentResults(results); })
+      .catch(() => { if (!controller.signal.aborted) setDirectoryError('Recent verified results could not load. Reopen Students to retry.'); });
+    return () => controller.abort();
+  }, [isAdmin, user?.uid, adminTab]);
 
   const classRoman = (grade: ClassGrade) => (({ 'Class 9': 'IX', 'Class 10': 'X', 'Class 11': 'XI', 'Class 12': 'XII' } as Record<string, string>)[grade]);
 
@@ -411,11 +428,8 @@ export const AdminPanel: React.FC = () => {
             <ShieldCheck className="w-6 h-6" />
           </div>
           <div>
-            <h2 className="text-lg sm:text-xl font-black text-stone-900 font-cinzel">
-              Admin Control Panel
-            </h2>
-            <p className="text-xs text-red-900 font-medium">
-              Logged in as: <span className="font-bold">{profile?.displayName || 'Principal A. Kumar'}</span> ({profile?.email})
+            <h2 className="text-lg sm:text-xl font-black text-stone-900 font-cinzel"><WebsiteText original={"Admin Control Panel"} /></h2>
+            <p className="text-xs text-red-900 font-medium"><WebsiteText original={"Logged in as:"} /><span className="font-bold">{profile?.displayName || 'Principal A. Kumar'}</span> ({profile?.email})
             </p>
           </div>
         </div>
@@ -423,7 +437,7 @@ export const AdminPanel: React.FC = () => {
       </div>
 
       {/* One organized control panel; only the selected manager is opened. */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3" aria-label="Admin control panel">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3" aria-label={websiteText("Admin control panel")}>
         {([
           ['settings', 'Website & Navigation', 'Names, icons, pages, logo and menu order', ImageIcon],
           ['curriculum', 'Subjects, Chapters & Topics', 'Add, edit, replace, remove and restore', BookOpen],
@@ -433,12 +447,13 @@ export const AdminPanel: React.FC = () => {
           ['notices', 'Notices', 'Student notices and announcements', BellRing],
           ['students', 'Students', 'Student records and learning progress', Users],
           ['enquiries', 'Enquiries', 'Questions and contact requests', Inbox]
-        ] as const).map(([key, label, description, Icon]) => <button key={key} aria-pressed={adminTab === key} onClick={() => setAdminTab(key)} className={`flex flex-col gap-2 border rounded-xl p-3 text-left ${adminTab === key ? 'bg-orange-50 border-orange-500 text-orange-900' : 'bg-white border-stone-200 text-stone-700 hover:bg-orange-50'}`}><Icon className="w-5 h-5" /><span className="font-bold text-sm">{label}</span><span className="text-xs text-stone-500">{description}</span></button>)}
+        ] as const).map(([key, label, description, Icon]) => <button key={key} aria-pressed={adminTab === key} onClick={() => setAdminTab(key)} className={`flex flex-col gap-2 border rounded-xl p-3 text-left ${adminTab === key ? 'bg-orange-50 border-orange-500 text-orange-900' : 'bg-white border-stone-200 text-stone-700 hover:bg-orange-50'}`}><Icon className="w-5 h-5" /><span className="font-bold text-sm">{websiteText(label)}</span><span className="text-xs text-stone-500">{websiteText(description)}</span></button>)}
       </div>
       {adminTab === 'curriculum' && <CurriculumManager />}
       {/* Admin Tab 1: Content Manager */}
       {adminTab === 'content' && (
         <div className="space-y-4">
+          <KnowledgeReview />
           <ManagedRecords collection="learning_contents" onScopeChange={scope => {
             if (scope.board) setContentBoard(scope.board);
             if (scope.classGrade) setContentClass(scope.classGrade);
@@ -448,40 +463,34 @@ export const AdminPanel: React.FC = () => {
             if (scope.contentType) setContentType(scope.contentType);
           }} />
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-stone-900 uppercase tracking-wider font-cinzel">
-              Curriculum Content Repository (Add / Edit / Approve / Publish)
-            </h3>
+            <h3 className="text-sm font-bold text-stone-900 uppercase tracking-wider font-cinzel"><WebsiteText original={"Curriculum Content Repository (Add / Edit / Approve / Publish)"} /></h3>
             <button
               onClick={() => setShowContentForm(!showContentForm)}
               className="px-3.5 py-1.5 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-xl text-xs flex items-center gap-1 shadow-sm transition-all"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>{showContentForm ? 'Cancel' : 'Add New Content'}</span>
+              <span>{showContentForm ? <WebsiteText original={"Cancel"} /> : <WebsiteText original={"Add New Content"} />}</span>
             </button>
           </div>
 
 
           {showContentForm && (
             <form onSubmit={handleCreateContent} className="bg-amber-50/60 border border-orange-200 p-4 rounded-2xl space-y-3">
-              <h4 className="font-bold text-xs text-orange-950 font-cinzel">New Curriculum Item</h4>
+              <h4 className="font-bold text-xs text-orange-950 font-cinzel"><WebsiteText original={"New Curriculum Item"} /></h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-semibold text-stone-700 mb-1">
-                    English Title *
-                  </label>
+                  <label className="block text-[11px] font-semibold text-stone-700 mb-1"><WebsiteText original={"English Title *"} /></label>
                   <input
                     type="text"
                     required
                     value={contentTitle}
                     onChange={(e) => setContentTitle(e.target.value)}
-                    placeholder="e.g. Master Guide: Quadratic Equations"
+                    placeholder={websiteText("e.g. Master Guide: Quadratic Equations")}
                     className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-semibold text-stone-700 mb-1">
-                    Hindi Title
-                  </label>
+                  <label className="block text-[11px] font-semibold text-stone-700 mb-1"><WebsiteText original={"Hindi Title"} /></label>
                   <input
                     type="text"
                     value={contentHindiTitle}
@@ -493,74 +502,70 @@ export const AdminPanel: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                <div><label className="block text-[11px] font-semibold mb-1">Board *</label><select value={contentBoard} onChange={e => { setContentBoard(e.target.value as BoardType); setContentSubjectId(''); setContentChapterId(''); setContentTopicId(''); setContentTopicTitle(''); setContentSubtopic(''); }} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white">{activeOptions(config.boards).map(x=><option key={x.id} value={x.id}>{x.label}</option>)}</select></div>
-                <div><label className="block text-[11px] font-semibold mb-1">Class *</label><select value={contentClass} onChange={e => { setContentClass(e.target.value as ClassGrade); setContentSubjectId(''); setContentChapterId(''); setContentTopicId(''); setContentTopicTitle(''); setContentSubtopic(''); }} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white">{activeOptions(config.classes).map(x=><option key={x.id} value={x.id}>{x.label}</option>)}</select></div>
-                <div><label className="block text-[11px] font-semibold mb-1">Stream</label><select value={contentStream} onChange={e => { setContentStream(e.target.value as StreamType); setContentSubjectId(''); setContentChapterId(''); setContentTopicId(''); setContentTopicTitle(''); setContentSubtopic(''); }} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white">{activeOptions(config.streams).map(x=><option key={x.id} value={x.id}>{x.label}</option>)}</select></div>
-                <div><label className="block text-[11px] font-semibold mb-1">Subject *</label><select value={formSubject?.id || ''} onChange={e => { setContentSubjectId(e.target.value); setContentChapterId(''); setContentTopicId(''); setContentTopicTitle(''); setContentSubtopic(''); }} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white">{formSubjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></div>
-                <div><label className="block text-[11px] font-semibold mb-1">Chapter *</label><select value={formChapter?.id || ''} onChange={e => { setContentChapterId(e.target.value); setContentTopicId(''); setContentTopicTitle(''); setContentSubtopic(''); }} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white">{formSubject?.chapters.map(ch => <option key={ch.id} value={ch.id}>{ch.chapterNumber}. {ch.title}</option>)}</select></div>
+                <div><label className="block text-[11px] font-semibold mb-1"><WebsiteText original={"Board *"} /></label><select value={contentBoard} onChange={e => { setContentBoard(e.target.value as BoardType); setContentSubjectId(''); setContentChapterId(''); setContentTopicId(''); setContentTopicTitle(''); setContentSubtopic(''); }} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white">{activeOptions(config.boards).map(x=><option key={x.id} value={x.id}>{language === 'hi' ? x.hindiLabel || x.label : x.label}</option>)}</select></div>
+                <div><label className="block text-[11px] font-semibold mb-1"><WebsiteText original={"Class *"} /></label><select value={contentClass} onChange={e => { setContentClass(e.target.value as ClassGrade); setContentSubjectId(''); setContentChapterId(''); setContentTopicId(''); setContentTopicTitle(''); setContentSubtopic(''); }} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white">{activeOptions(config.classes).map(x=><option key={x.id} value={x.id}>{language === 'hi' ? x.hindiLabel || x.label : x.label}</option>)}</select></div>
+                <div><label className="block text-[11px] font-semibold mb-1"><WebsiteText original={"Stream"} /></label><select value={contentStream} onChange={e => { setContentStream(e.target.value as StreamType); setContentSubjectId(''); setContentChapterId(''); setContentTopicId(''); setContentTopicTitle(''); setContentSubtopic(''); }} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white">{activeOptions(config.streams).map(x=><option key={x.id} value={x.id}>{language === 'hi' ? x.hindiLabel || x.label : x.label}</option>)}</select></div>
+                <div><label className="block text-[11px] font-semibold mb-1"><WebsiteText original={"Subject *"} /></label><select value={formSubject?.id || ''} onChange={e => { setContentSubjectId(e.target.value); setContentChapterId(''); setContentTopicId(''); setContentTopicTitle(''); setContentSubtopic(''); }} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white">{formSubjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></div>
+                <div><label className="block text-[11px] font-semibold mb-1"><WebsiteText original={"Chapter *"} /></label><select value={formChapter?.id || ''} onChange={e => { setContentChapterId(e.target.value); setContentTopicId(''); setContentTopicTitle(''); setContentSubtopic(''); }} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white">{formSubject?.chapters.map(ch => <option key={ch.id} value={ch.id}>{ch.chapterNumber}. {ch.title}</option>)}</select></div>
                 <div>
-                  <label className="block text-[11px] font-semibold mb-1">Topic *</label>
+                  <label className="block text-[11px] font-semibold mb-1"><WebsiteText original={"Topic *"} /></label>
                   <select
-                    aria-label="Upload topic"
+                    aria-label={websiteText("Upload topic")}
                     value={uploadTopicChoices.includes(contentTopicTitle) ? contentTopicTitle : ''}
                     onChange={e => { setContentTopicTitle(e.target.value); setContentSubtopic(''); }}
                     className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white outline-none"
                   >
-                    <option value="">Select topic</option>
+                    <option value=""><WebsiteText original={"Select topic"} /></option>
                     {uploadTopicChoices.map(title => <option key={title} value={title}>{title}</option>)}
                   </select>
                   <input
-                    aria-label="Add new upload topic"
+                    aria-label={websiteText("Add new upload topic")}
                     value={uploadTopicChoices.includes(contentTopicTitle) ? '' : contentTopicTitle}
                     onChange={e => { setContentTopicTitle(e.target.value); setContentSubtopic(''); }}
-                    placeholder="Or type a new topic"
+                    placeholder={websiteText("Or type a new topic")}
                     className="w-full mt-1.5 px-3 py-1.5 text-xs border rounded-xl bg-white outline-none"
                   />
                 </div>
               </div>
-              <div><label className="block text-[11px] font-semibold mb-1">Sub-topic</label><input aria-label="Upload subtopic" list="upload-subtopic-choices" value={contentSubtopic} onChange={e => setContentSubtopic(e.target.value)} placeholder="Choose an existing subtopic or type a new name" className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white outline-none" /><datalist id="upload-subtopic-choices">{uploadSubtopicChoices.map(title => <option key={title} value={title} />)}</datalist></div>
+              <div><label className="block text-[11px] font-semibold mb-1"><WebsiteText original={"Sub-topic"} /></label><input aria-label={websiteText("Upload subtopic")} list="upload-subtopic-choices" value={contentSubtopic} onChange={e => setContentSubtopic(e.target.value)} placeholder={websiteText("Choose an existing subtopic or type a new name")} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white outline-none" /><datalist id="upload-subtopic-choices">{uploadSubtopicChoices.map(title => <option key={title} value={title} />)}</datalist></div>
 
               <div>
-                <label className="block text-[11px] font-semibold text-stone-700 mb-1">
-                  Module Type
-                </label>
+                <label className="block text-[11px] font-semibold text-stone-700 mb-1"><WebsiteText original={"Module Type"} /></label>
                 <select
                   value={contentType}
                   onChange={(e) => setContentType(e.target.value as any)}
                   className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white outline-none"
                 >
-                  {activeOptions(config.modules).filter(x=>!['test_yourself','recommended_videos'].includes(x.id)).map(x=><option key={x.id} value={x.id}>{x.label}</option>)}
+                  {activeOptions(config.modules).filter(x=>!['test_yourself','recommended_videos'].includes(x.id)).map(x=><option key={x.id} value={x.id}>{language === 'hi' ? x.hindiLabel || x.label : x.label}</option>)}
                 </select>
               </div>
 
               {contentType === 'detailed_notes' && (
                 <div className="rounded-xl border border-orange-300 bg-orange-50 p-3 flex flex-wrap items-center justify-between gap-2">
-                  <div><p className="text-xs font-bold text-orange-950">Saarthi Teacher Agent</p><p className="text-[10px] text-stone-600">Generate detailed notes from the selected CBSE class, subject, chapter, topic and sub-topic. Review before publishing.</p></div>
-                  <button type="button" onClick={handleGenerateDetailedNotes} disabled={contentGenerating || contentSaving} className="px-4 py-2 bg-stone-900 hover:bg-black disabled:opacity-60 text-white rounded-xl text-xs font-bold flex items-center gap-2"><Sparkles className="w-4 h-4"/>{contentGenerating ? 'Generating Notes...' : 'Generate Detailed Notes'}</button>
+                  <div><p className="text-xs font-bold text-orange-950"><WebsiteText original={"Saarthi Teacher Agent"} /></p><p className="text-[10px] text-stone-600"><WebsiteText original={"Generate detailed notes from the selected CBSE class, subject, chapter, topic and sub-topic. Review before publishing."} /></p></div>
+                  <button type="button" onClick={handleGenerateDetailedNotes} disabled={contentGenerating || contentSaving} className="px-4 py-2 bg-stone-900 hover:bg-black disabled:opacity-60 text-white rounded-xl text-xs font-bold flex items-center gap-2"><Sparkles className="w-4 h-4"/>{contentGenerating ? <WebsiteText original={"Generating Notes..."} /> : <WebsiteText original={"Generate Detailed Notes"} />}</button>
                 </div>
               )}
 
               <div>
-                <label className="block text-[11px] font-semibold text-stone-700 mb-1">
-                  Body Text (Markdown supported)
-                </label>
+                <label className="block text-[11px] font-semibold text-stone-700 mb-1"><WebsiteText original={"Body Text (Markdown supported)"} /></label>
                 <textarea
                   rows={4}
                   value={contentBody}
                   onChange={(e) => setContentBody(e.target.value)}
-                  placeholder="Enter detailed pedagogical notes..."
+                  placeholder={websiteText("Enter detailed pedagogical notes...")}
                   className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white outline-none font-mono"
                 />
               </div>
 
               <div className="rounded-xl border border-dashed border-orange-300 bg-white p-3">
-                <label className="block text-[11px] font-semibold text-stone-700 mb-2">Upload Study Document (optional when text is entered)</label>
+                <label className="block text-[11px] font-semibold text-stone-700 mb-2"><WebsiteText original={"Upload Study Document (optional when text is entered)"} /></label>
                 <label className="cursor-pointer flex items-center gap-2 text-xs font-bold text-orange-700">
                   <Upload className="w-4 h-4" />
-                  <span>{contentFile ? contentFile.name : 'Choose PDF, Word (.docx), PowerPoint (.pptx), PNG/JPG/WEBP or TXT'}</span>
+                  <span>{contentFile ? contentFile.name : <WebsiteText original={"Choose PDF, Word (.docx), PowerPoint (.pptx), PNG/JPG/WEBP or TXT"} />}</span>
                   <input type="file" className="hidden" accept=".pdf,.docx,.pptx,.png,.jpg,.jpeg,.webp,.txt" onChange={e => setContentFile(e.target.files?.[0] || null)} />
                 </label>
-                <p className="text-[10px] text-stone-500 mt-1">Word (.docx) and PowerPoint (.pptx) become PDFs with logo and watermark. Students read the PDF in their dashboard; the original stays private. Word/PowerPoint up to 12 MB; PDF/images up to 50 MB; TXT up to 1 MB.</p>
+                <p className="text-[10px] text-stone-500 mt-1"><WebsiteText original={"Word (.docx) and PowerPoint (.pptx) become PDFs with logo and watermark. Students read the PDF in their dashboard; the original stays private. Word/PowerPoint up to 12 MB; PDF/images up to 50 MB; TXT up to 1 MB."} /></p>
               </div>
               {contentError && <p className="text-xs font-semibold text-red-700 bg-red-50 border border-red-200 rounded-lg p-2">{contentError}</p>}
 
@@ -569,13 +574,13 @@ export const AdminPanel: React.FC = () => {
                 disabled={contentSaving}
                 className="px-4 py-2 bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white font-bold rounded-xl text-xs shadow-sm"
               >
-                {contentSaving ? contentUploadStatus || 'Uploading & Saving...' : 'Save & Publish to Curriculum'}
+                {contentSaving ? contentUploadStatus || 'Uploading & Saving...' : <WebsiteText original={"Save & Publish to Curriculum"} />}
               </button>
             </form>
           )}
 
           {/* List of existing contents */}
-          <details className="space-y-2"><summary className="cursor-pointer text-sm font-semibold">Publication status & approval</summary>
+          <details className="space-y-2"><summary className="cursor-pointer text-sm font-semibold"><WebsiteText original={"Publication status & approval"} /></summary>
             {learningContents.map((c) => (
               <div
                 key={c.id}
@@ -593,8 +598,7 @@ export const AdminPanel: React.FC = () => {
                   <h4 className="font-bold text-stone-900 text-sm">{c.title}</h4>
                   <p className="text-[11px] text-stone-500">{c.chapterTitle}{c.topicTitle ? ` • ${c.topicTitle}` : ''}{c.subtopicTitle ? ` • ${c.subtopicTitle}` : ''}</p>
                   {c.attachmentUrl && <a href={c.attachmentUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[11px] text-orange-700 font-bold hover:underline mt-1"><Paperclip className="w-3 h-3" />{c.attachmentName || 'Open uploaded file'}</a>}
-                  <p className="text-[11px] text-stone-500 font-mono mt-0.5">
-                    Version: v{c.version} • Status: {c.published ? 'Published' : 'Draft'}
+                  <p className="text-[11px] text-stone-500 font-mono mt-0.5"><WebsiteText original={"Version: v"} />{c.version}<WebsiteText original={"• Status:"} />{c.published ? <WebsiteText original={"Published"} /> : <WebsiteText original={"Draft"} />}
                   </p>
                 </div>
 
@@ -607,7 +611,7 @@ export const AdminPanel: React.FC = () => {
                         : 'bg-amber-100 text-amber-800 hover:bg-amber-200'
                     }`}
                   >
-                    {c.approved ? 'Approved ✓' : 'Approve & Publish'}
+                    {c.approved ? <WebsiteText original={"Approved ✓"} /> : <WebsiteText original={"Approve & Publish"} />}
                   </button>
 
 
@@ -623,15 +627,13 @@ export const AdminPanel: React.FC = () => {
         <div className="space-y-4">
           <ManagedRecords collection="youtube_videos" />
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-stone-900 uppercase tracking-wider font-cinzel">
-              Saarthi Recommended Videos
-            </h3>
+            <h3 className="text-sm font-bold text-stone-900 uppercase tracking-wider font-cinzel"><WebsiteText original={"Saarthi Recommended Videos"} /></h3>
             <button
               onClick={() => setShowVideoForm(!showVideoForm)}
               className="px-3.5 py-1.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-xs flex items-center gap-1 shadow-sm transition-all"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>{showVideoForm ? 'Cancel' : 'Add Recommended Video'}</span>
+              <span>{showVideoForm ? <WebsiteText original={"Cancel"} /> : <WebsiteText original={"Add Recommended Video"} />}</span>
             </button>
           </div>
 
@@ -639,48 +641,42 @@ export const AdminPanel: React.FC = () => {
             <form onSubmit={adminSubmit(handleCreateVideo)} className="bg-red-50/50 border border-red-200 p-4 rounded-2xl space-y-3">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-semibold text-stone-700 mb-1">
-                    Lecture Title *
-                  </label>
+                  <label className="block text-[11px] font-semibold text-stone-700 mb-1"><WebsiteText original={"Lecture Title *"} /></label>
                   <input
                     type="text"
                     required
                     value={videoTitle}
                     onChange={(e) => setVideoTitle(e.target.value)}
-                    placeholder="e.g. Electric Current and Ohm's Law One Shot"
+                    placeholder={websiteText("e.g. Electric Current and Ohm's Law One Shot")}
                     className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-semibold text-stone-700 mb-1">
-                    YouTube URL or ID *
-                  </label>
+                  <label className="block text-[11px] font-semibold text-stone-700 mb-1"><WebsiteText original={"YouTube URL or ID *"} /></label>
                   <input
                     type="text"
                     required
                     value={videoYoutubeId}
                     onChange={(e) => setVideoYoutubeId(e.target.value)}
-                    placeholder="e.g. https://www.youtube.com/watch?v=... or ID"
+                    placeholder={websiteText("e.g. https://www.youtube.com/watch?v=... or ID")}
                     className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white outline-none font-mono"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                <div><label className="block text-[11px] font-semibold mb-1">Board *</label><select value={videoBoard} onChange={e=>setVideoBoard(e.target.value as BoardType)} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white">{activeOptions(config.boards).map(x=><option key={x.id} value={x.id}>{x.label}</option>)}</select></div>
-                <div><label className="block text-[11px] font-semibold mb-1">Class *</label><select value={videoClass} onChange={e=>{setVideoClass(e.target.value as ClassGrade);setVideoSubjectId('');setVideoChapterId('')}} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white">{activeOptions(config.classes).map(x=><option key={x.id} value={x.id}>{x.label}</option>)}</select></div>
-                <div><label className="block text-[11px] font-semibold mb-1">Stream</label><select value={videoStream} onChange={e=>{setVideoStream(e.target.value as StreamType);setVideoSubjectId('');setVideoChapterId('')}} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white">{activeOptions(config.streams).map(x=><option key={x.id} value={x.id}>{x.label}</option>)}</select></div>
-                <div><label className="block text-[11px] font-semibold mb-1">Subject *</label><select value={videoSubject?.id || ''} onChange={e=>{setVideoSubjectId(e.target.value);setVideoChapterId('')}} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white">{videoSubjects.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></div>
-                <div><label className="block text-[11px] font-semibold mb-1">Chapter *</label><select value={videoChapter?.id || ''} onChange={e=>setVideoChapterId(e.target.value)} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white">{videoSubject?.chapters.map(ch=><option key={ch.id} value={ch.id}>{ch.chapterNumber}. {ch.title}</option>)}</select></div>
-                <div><label className="block text-[11px] font-semibold mb-1">Topic (write yourself)</label><input value={videoTopic} onChange={e=>setVideoTopic(e.target.value)} placeholder="Type topic name" className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white"/></div>
-                <div><label className="block text-[11px] font-semibold mb-1">Sub-topic (write yourself)</label><input value={videoSubtopic} onChange={e=>setVideoSubtopic(e.target.value)} placeholder="Type sub-topic name" className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white"/></div>
+                <div><label className="block text-[11px] font-semibold mb-1"><WebsiteText original={"Board *"} /></label><select value={videoBoard} onChange={e=>setVideoBoard(e.target.value as BoardType)} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white">{activeOptions(config.boards).map(x=><option key={x.id} value={x.id}>{language === 'hi' ? x.hindiLabel || x.label : x.label}</option>)}</select></div>
+                <div><label className="block text-[11px] font-semibold mb-1"><WebsiteText original={"Class *"} /></label><select value={videoClass} onChange={e=>{setVideoClass(e.target.value as ClassGrade);setVideoSubjectId('');setVideoChapterId('')}} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white">{activeOptions(config.classes).map(x=><option key={x.id} value={x.id}>{language === 'hi' ? x.hindiLabel || x.label : x.label}</option>)}</select></div>
+                <div><label className="block text-[11px] font-semibold mb-1"><WebsiteText original={"Stream"} /></label><select value={videoStream} onChange={e=>{setVideoStream(e.target.value as StreamType);setVideoSubjectId('');setVideoChapterId('')}} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white">{activeOptions(config.streams).map(x=><option key={x.id} value={x.id}>{language === 'hi' ? x.hindiLabel || x.label : x.label}</option>)}</select></div>
+                <div><label className="block text-[11px] font-semibold mb-1"><WebsiteText original={"Subject *"} /></label><select value={videoSubject?.id || ''} onChange={e=>{setVideoSubjectId(e.target.value);setVideoChapterId('')}} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white">{videoSubjects.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></div>
+                <div><label className="block text-[11px] font-semibold mb-1"><WebsiteText original={"Chapter *"} /></label><select value={videoChapter?.id || ''} onChange={e=>setVideoChapterId(e.target.value)} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white">{videoSubject?.chapters.map(ch=><option key={ch.id} value={ch.id}>{ch.chapterNumber}. {ch.title}</option>)}</select></div>
+                <div><label className="block text-[11px] font-semibold mb-1"><WebsiteText original={"Topic (write yourself)"} /></label><input value={videoTopic} onChange={e=>setVideoTopic(e.target.value)} placeholder={websiteText("Type topic name")} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white"/></div>
+                <div><label className="block text-[11px] font-semibold mb-1"><WebsiteText original={"Sub-topic (write yourself)"} /></label><input value={videoSubtopic} onChange={e=>setVideoSubtopic(e.target.value)} placeholder={websiteText("Type sub-topic name")} className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white"/></div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-semibold text-stone-700 mb-1">
-                    Channel Name
-                  </label>
+                  <label className="block text-[11px] font-semibold text-stone-700 mb-1"><WebsiteText original={"Channel Name"} /></label>
                   <input
                     type="text"
                     value={videoChannel}
@@ -689,9 +685,7 @@ export const AdminPanel: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-semibold text-stone-700 mb-1">
-                    Duration
-                  </label>
+                  <label className="block text-[11px] font-semibold text-stone-700 mb-1"><WebsiteText original={"Duration"} /></label>
                   <input
                     type="text"
                     value={videoDuration}
@@ -705,9 +699,7 @@ export const AdminPanel: React.FC = () => {
               <button
                 type="submit"
                 className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-xs shadow-sm"
-              >
-                Add Video to Platform
-              </button>
+              ><WebsiteText original={"Add Video to Platform"} /></button>
             </form>
           )}
 
@@ -723,15 +715,12 @@ export const AdminPanel: React.FC = () => {
                   </div>
                   <div>
                     <h5 className="font-bold text-stone-900 line-clamp-1">{v.title}</h5>
-                    <span className="text-[11px] text-stone-500 font-mono">
-                      ID: {v.youtubeId} • Channel: {v.channelTitle}
+                    <span className="text-[11px] text-stone-500 font-mono"><WebsiteText original={"ID:"} />{v.youtubeId}<WebsiteText original={"• Channel:"} />{v.channelTitle}
                     </span>
                   </div>
                 </div>
 
-                <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                  Approved
-                </span>
+                <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full"><WebsiteText original={"Approved"} /></span>
               </div>
             ))}
           </div>
@@ -742,24 +731,24 @@ export const AdminPanel: React.FC = () => {
         <div className="space-y-4">
           <ManagedRecords collection="tests" />
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-stone-900 uppercase tracking-wider font-cinzel">Assessment Test Bank ({evaluationTests.length})</h3>
-            <button onClick={() => setShowTestForm(!showTestForm)} className="px-3.5 py-1.5 bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center gap-1"><Plus className="w-3.5 h-3.5"/>{showTestForm ? 'Cancel' : 'Create Test'}</button>
+            <h3 className="text-sm font-bold text-stone-900 uppercase tracking-wider font-cinzel"><WebsiteText original={"Assessment Test Bank ("} />{evaluationTests.length})</h3>
+            <button onClick={() => setShowTestForm(!showTestForm)} className="px-3.5 py-1.5 bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center gap-1"><Plus className="w-3.5 h-3.5"/>{showTestForm ? <WebsiteText original={"Cancel"} /> : <WebsiteText original={"Create Test"} />}</button>
           </div>
           {showTestForm && <form onSubmit={adminSubmit(handleCreateTest)} className="bg-emerald-50 border border-emerald-200 p-4 rounded-2xl space-y-3">
-            <input required value={testTitle} onChange={e=>setTestTitle(e.target.value)} placeholder="Test title" className="w-full px-3 py-2 text-xs border rounded-xl bg-white"/>
-            <label className="block text-xs">Board<select value={testBoard} onChange={e=>{setTestBoard(e.target.value);setTestSubjectId('');setTestChapterId('')}} className="w-full border rounded-xl p-2">{activeOptions(config.boards).map(x=><option key={x.id} value={x.id}>{x.label}</option>)}</select></label>
+            <input required value={testTitle} onChange={e=>setTestTitle(e.target.value)} placeholder={websiteText("Test title")} className="w-full px-3 py-2 text-xs border rounded-xl bg-white"/>
+            <label className="block text-xs"><WebsiteText original={"Board"} /><select value={testBoard} onChange={e=>{setTestBoard(e.target.value);setTestSubjectId('');setTestChapterId('')}} className="w-full border rounded-xl p-2">{activeOptions(config.boards).map(x=><option key={x.id} value={x.id}>{language === 'hi' ? x.hindiLabel || x.label : x.label}</option>)}</select></label>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              <select value={testClass} onChange={e=>{setTestClass(e.target.value as ClassGrade);setTestSubjectId('');setTestChapterId('')}} className="px-2 py-2 text-xs border rounded-xl bg-white">{activeOptions(config.classes).map(x=><option key={x.id} value={x.id}>{x.label}</option>)}</select>
-              <select value={testStream} onChange={e=>{setTestStream(e.target.value as StreamType);setTestSubjectId('');setTestChapterId('')}} className="px-2 py-2 text-xs border rounded-xl bg-white">{activeOptions(config.streams).map(x=><option key={x.id} value={x.id}>{x.label}</option>)}</select>
+              <select value={testClass} onChange={e=>{setTestClass(e.target.value as ClassGrade);setTestSubjectId('');setTestChapterId('')}} className="px-2 py-2 text-xs border rounded-xl bg-white">{activeOptions(config.classes).map(x=><option key={x.id} value={x.id}>{language === 'hi' ? x.hindiLabel || x.label : x.label}</option>)}</select>
+              <select value={testStream} onChange={e=>{setTestStream(e.target.value as StreamType);setTestSubjectId('');setTestChapterId('')}} className="px-2 py-2 text-xs border rounded-xl bg-white">{activeOptions(config.streams).map(x=><option key={x.id} value={x.id}>{language === 'hi' ? x.hindiLabel || x.label : x.label}</option>)}</select>
               <select value={testSubject?.id || ''} onChange={e=>{setTestSubjectId(e.target.value);setTestChapterId('')}} className="px-2 py-2 text-xs border rounded-xl bg-white">{testSubjects.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select>
               <select value={testChapter?.id || ''} onChange={e=>setTestChapterId(e.target.value)} className="px-2 py-2 text-xs border rounded-xl bg-white">{testSubject?.chapters.map(ch=><option key={ch.id} value={ch.id}>{ch.chapterNumber}. {ch.title}</option>)}</select>
             </div>
-            <textarea required value={testQuestionText} onChange={e=>setTestQuestionText(e.target.value)} placeholder="Question" className="w-full px-3 py-2 text-xs border rounded-xl bg-white"/>
+            <textarea required value={testQuestionText} onChange={e=>setTestQuestionText(e.target.value)} placeholder={websiteText("Question")} className="w-full px-3 py-2 text-xs border rounded-xl bg-white"/>
             <textarea required value={testOptionsText} onChange={e=>setTestOptionsText(e.target.value)} placeholder={"Options — one per line\nOption A\nOption B\nOption C\nOption D"} rows={5} className="w-full px-3 py-2 text-xs border rounded-xl bg-white"/>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2"><input type="number" min={0} value={testCorrectIndex} onChange={e=>setTestCorrectIndex(Number(e.target.value))} placeholder="Correct option index (0=A)" className="px-3 py-2 text-xs border rounded-xl bg-white"/><input value={testExplanation} onChange={e=>setTestExplanation(e.target.value)} placeholder="Explanation" className="px-3 py-2 text-xs border rounded-xl bg-white"/></div>
-            <button type="submit" className="px-4 py-2 bg-emerald-700 text-white font-bold rounded-xl text-xs">Publish Test</button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2"><input type="number" min={0} value={testCorrectIndex} onChange={e=>setTestCorrectIndex(Number(e.target.value))} placeholder={websiteText("Correct option index (0=A)")} className="px-3 py-2 text-xs border rounded-xl bg-white"/><input value={testExplanation} onChange={e=>setTestExplanation(e.target.value)} placeholder={websiteText("Explanation")} className="px-3 py-2 text-xs border rounded-xl bg-white"/></div>
+            <button type="submit" className="px-4 py-2 bg-emerald-700 text-white font-bold rounded-xl text-xs"><WebsiteText original={"Publish Test"} /></button>
           </form>}
-          <div className="space-y-2">{evaluationTests.map(t=><div key={t.id} className="p-3 border rounded-xl text-xs flex justify-between gap-3"><div><b>{t.title}</b><div className="text-stone-500">{t.classGrade} • {t.subjectId} • {t.questions.length} question(s)</div></div><span className="text-emerald-700 font-bold">{t.published ? 'Published' : 'Draft'}</span></div>)}</div>
+          <div className="space-y-2">{evaluationTests.map(t=><div key={t.id} className="p-3 border rounded-xl text-xs flex justify-between gap-3"><div><b>{t.title}</b><div className="text-stone-500">{t.classGrade} • {t.subjectId} • {t.questions.length}<WebsiteText original={"question(s)"} /></div></div><span className="text-emerald-700 font-bold">{t.published ? <WebsiteText original={"Published"} /> : <WebsiteText original={"Draft"} />}</span></div>)}</div>
         </div>
       )}
 
@@ -768,73 +757,63 @@ export const AdminPanel: React.FC = () => {
         <div className="space-y-4">
           <ManagedRecords collection="notices" />
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-stone-900 uppercase tracking-wider font-cinzel">
-              Motivational Circulars & Notice Board
-            </h3>
+            <h3 className="text-sm font-bold text-stone-900 uppercase tracking-wider font-cinzel"><WebsiteText original={"Motivational Circulars & Notice Board"} /></h3>
             <button
               onClick={() => setShowNoticeForm(!showNoticeForm)}
               className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs flex items-center gap-1 shadow-sm transition-all"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>{showNoticeForm ? 'Cancel' : 'Post Notice'}</span>
+              <span>{showNoticeForm ? <WebsiteText original={"Cancel"} /> : <WebsiteText original={"Post Notice"} />}</span>
             </button>
           </div>
 
           {showNoticeForm && (
             <form onSubmit={adminSubmit(handleCreateNotice)} className="bg-amber-50/60 border border-amber-200 p-4 rounded-2xl space-y-3">
               <div>
-                <label className="block text-[11px] font-semibold text-stone-700 mb-1">
-                  Notice Title *
-                </label>
+                <label className="block text-[11px] font-semibold text-stone-700 mb-1"><WebsiteText original={"Notice Title *"} /></label>
                 <input
                   type="text"
                   required
                   value={noticeTitle}
                   onChange={(e) => setNoticeTitle(e.target.value)}
-                  placeholder="e.g. CBSE Practical Exam Schedule Announced"
+                  placeholder={websiteText("e.g. CBSE Practical Exam Schedule Announced")}
                   className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold text-stone-700 mb-1">
-                  Detailed Announcement Message *
-                </label>
+                <label className="block text-[11px] font-semibold text-stone-700 mb-1"><WebsiteText original={"Detailed Announcement Message *"} /></label>
                 <textarea
                   rows={3}
                   required
                   value={noticeMessage}
                   onChange={(e) => setNoticeMessage(e.target.value)}
-                  placeholder="Official circular details..."
+                  placeholder={websiteText("Official circular details...")}
                   className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white outline-none"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-semibold text-stone-700 mb-1">
-                    Category
-                  </label>
+                  <label className="block text-[11px] font-semibold text-stone-700 mb-1"><WebsiteText original={"Category"} /></label>
                   <select
                     value={noticeCategory}
                     onChange={(e) => setNoticeCategory(e.target.value as any)}
                     className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white outline-none"
                   >
-                    <option value="motivational">Motivational Blessing</option>
-                    <option value="academic">Academic Update</option>
-                    <option value="urgent">Urgent Announcement</option>
+                    <option value="motivational"><WebsiteText original={"Motivational Blessing"} /></option>
+                    <option value="academic"><WebsiteText original={"Academic Update"} /></option>
+                    <option value="urgent"><WebsiteText original={"Urgent Announcement"} /></option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-semibold text-stone-700 mb-1">
-                    Blessing Quote (Optional)
-                  </label>
+                  <label className="block text-[11px] font-semibold text-stone-700 mb-1"><WebsiteText original={"Blessing Quote (Optional)"} /></label>
                   <input
                     type="text"
                     value={noticeQuote}
                     onChange={(e) => setNoticeQuote(e.target.value)}
-                    placeholder="e.g. Sub dukh door karein Sankatmochan Hanuman Ji"
+                    placeholder={websiteText("e.g. Sub dukh door karein Sankatmochan Hanuman Ji")}
                     className="w-full px-3 py-1.5 text-xs border rounded-xl bg-white outline-none font-serif italic"
                   />
                 </div>
@@ -843,9 +822,7 @@ export const AdminPanel: React.FC = () => {
               <button
                 type="submit"
                 className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs shadow-sm"
-              >
-                Publish Notice
-              </button>
+              ><WebsiteText original={"Publish Notice"} /></button>
             </form>
           )}
 
@@ -871,16 +848,17 @@ export const AdminPanel: React.FC = () => {
       {/* Admin Tab 4: Students */}
       {adminTab === 'students' && (
         <div className="space-y-4">
-          <h3 className="text-sm font-bold text-stone-900 uppercase tracking-wider font-cinzel">
-            Registered Student Directory & Test History ({registeredStudents.length})
+          <h3 className="text-sm font-bold text-stone-900 uppercase tracking-wider font-cinzel"><WebsiteText original={"Registered Student Directory & Test History ("} />{registeredStudents.length})
           </h3>
+          {directoryError && <p role="alert" className="text-red-700 text-sm">{directoryError}</p>}
+          <p className="text-xs text-stone-600"><WebsiteText original={"Includes the latest 1,000 verified assessments and preserved earlier records. Earlier scores were recorded before server verification."} /></p>
           {registeredStudents.length === 0 ? (
-            <div className="p-8 text-center text-stone-500 bg-stone-50 rounded-2xl border text-xs">No registered students found.</div>
+            <div className="p-8 text-center text-stone-500 bg-stone-50 rounded-2xl border text-xs"><WebsiteText original={"No registered students found."} /></div>
           ) : (
             <div className="bg-white border border-stone-200 rounded-2xl overflow-x-auto shadow-xs">
               <div className="min-w-[680px]">
                 <div className="p-3 bg-stone-50 border-b border-stone-200 text-xs font-bold text-stone-700 grid grid-cols-4">
-                  <span>Student / Email</span><span>Class & Board</span><span>Tests Completed</span><span>Recent Score</span>
+                  <span><WebsiteText original={"Student / Email"} /></span><span><WebsiteText original={"Class & Board"} /></span><span><WebsiteText original={"Tests Completed"} /></span><span><WebsiteText original={"Recent Score"} /></span>
                 </div>
                 <div className="px-3 divide-y divide-stone-100 text-xs text-stone-800">
                   {registeredStudents.map(student => {
@@ -889,7 +867,7 @@ export const AdminPanel: React.FC = () => {
                     return <div key={student.uid} className="py-3 grid grid-cols-4 items-center gap-2">
                       <div><span className="font-bold block">{student.displayName || 'Student'}</span><span className="text-[11px] text-stone-400 font-mono">{student.email}</span></div>
                       <div>{student.classGrade || '—'} • {student.board || 'CBSE'}{student.stream && student.stream !== 'General' ? ` (${student.stream})` : ''}</div>
-                      <div className="font-bold text-orange-700">{results.length} Tests</div>
+                      <div className="font-bold text-orange-700">{results.length}<WebsiteText original={"Tests"} /></div>
                       <div className="font-bold text-emerald-700">{results[0] ? `${Math.round(results[0].percentage)}%` : '—'}</div>
                     </div>;
                   })}
@@ -903,14 +881,11 @@ export const AdminPanel: React.FC = () => {
       {/* Admin Tab 5: Enquiries */}
       {adminTab === 'enquiries' && (
         <div className="space-y-4">
-          <h3 className="text-sm font-bold text-stone-900 uppercase tracking-wider font-cinzel">
-            Student & Parent Enquiries Desk ({enquiriesList.length})
+          <h3 className="text-sm font-bold text-stone-900 uppercase tracking-wider font-cinzel"><WebsiteText original={"Student & Parent Enquiries Desk ("} />{enquiriesList.length})
           </h3>
 
           {enquiriesList.length === 0 ? (
-            <div className="p-8 text-center text-stone-500 bg-stone-50 rounded-2xl border text-xs">
-              No pending enquiries in inbox.
-            </div>
+            <div className="p-8 text-center text-stone-500 bg-stone-50 rounded-2xl border text-xs"><WebsiteText original={"No pending enquiries in inbox."} /></div>
           ) : (
             <div className="space-y-3">
               {enquiriesList.map((enq) => (
@@ -936,8 +911,7 @@ export const AdminPanel: React.FC = () => {
                     </span>
                   </div>
 
-                  <div className="font-semibold text-orange-900">
-                    Subject: {enq.subjectQuery} ({enq.classGrade})
+                  <div className="font-semibold text-orange-900"><WebsiteText original={"Subject:"} />{enq.subjectQuery} ({enq.classGrade})
                   </div>
 
                   <p className="text-stone-700 bg-stone-50 p-2.5 rounded-xl border border-stone-200 leading-relaxed">
@@ -948,9 +922,7 @@ export const AdminPanel: React.FC = () => {
                     <button
                       onClick={() => handleResolveEnquiry(enq.id)}
                       className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs transition-colors"
-                    >
-                      Mark as Replied & Resolved
-                    </button>
+                    ><WebsiteText original={"Mark as Replied & Resolved"} /></button>
                   )}
                 </div>
               ))}
@@ -965,4 +937,3 @@ export const AdminPanel: React.FC = () => {
     </div>
   );
 };
-

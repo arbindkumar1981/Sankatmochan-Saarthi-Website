@@ -1,3 +1,4 @@
+import { WebsiteText } from '../context/WebsiteContext';
 import React, { useEffect, useRef, useState } from 'react';
 import { getDocument, GlobalWorkerOptions, type PDFDocumentProxy } from 'pdfjs-dist';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
@@ -73,9 +74,9 @@ export function StudyPdfReader({ contentId }: { contentId: string }) {
     return () => { cancelled = true; render?.cancel(); };
   }, [pdf, page, width]);
   return <div ref={container} className="min-w-0 w-full"><ProtectedMaterial>
-    {loading && !error && <p role="status">Opening your PDF…</p>}
+    {loading && !error && <p role="status"><WebsiteText original={"Opening your PDF…"} /></p>}
     {error && <p role="alert" className="text-red-700 border rounded-xl p-3">{error}</p>}
-    {pdf && !error && <div className="flex items-center gap-3 mb-3"><button className="border rounded-lg p-2" disabled={page <= 1} onClick={() => setPage(page - 1)}>Previous</button><span>Page {page} / {pdf.numPages}</span><button className="border rounded-lg p-2" disabled={page >= pdf.numPages} onClick={() => setPage(page + 1)}>Next</button></div>}
+    {pdf && !error && <div className="flex items-center gap-3 mb-3"><button className="border rounded-lg p-2" disabled={page <= 1} onClick={() => setPage(page - 1)}><WebsiteText original={"Previous"} /></button><span><WebsiteText original={"Page"} />{page} / {pdf.numPages}</span><button className="border rounded-lg p-2" disabled={page >= pdf.numPages} onClick={() => setPage(page + 1)}><WebsiteText original={"Next"} /></button></div>}
     <canvas ref={canvas} aria-label={`Study PDF page ${page}`} className="max-w-full border rounded-lg" hidden={!pdf || Boolean(error)} />
   </ProtectedMaterial></div>;
 }

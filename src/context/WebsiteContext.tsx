@@ -1,7 +1,9 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { doc, onSnapshot, runTransaction } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { useAuth } from './AuthContext';
+import { DisplayLanguageContext } from './DisplayLanguageContext';
+import { resolveLocalizedCopy } from '../services/localizedCopy';
 import { DEFAULT_WEBSITE_CONFIG, validateWebsiteConfig, resolveCopy, type WebsiteConfig } from '../services/websiteConfig';
 
 interface WebsiteContextValue {
@@ -37,8 +39,10 @@ export function WebsiteProvider({ children }: { children: React.ReactNode }) {
 }
 export function useWebsite() {
   const context = useContext(WebsiteContext);
+  const language = useContext(DisplayLanguageContext);
+  const text = useCallback((original: string) => context ? resolveLocalizedCopy(context.config, original, language) : original, [context, language]);
   if (!context) throw new Error('WebsiteProvider is required.');
-  return context;
+  return { ...context, text };
 }
 export function WebsiteText({ original }: { original: string }) {
   const { text } = useWebsite(); return <>{text(original)}</>;

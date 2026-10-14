@@ -1,0 +1,33 @@
+name: Firebase rules verification
+on:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  rules:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: oven-sh/setup-bun@v2
+      - name: Install locked website SDK for root gRPC integration
+        run: bun install --frozen-lockfile
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install isolated emulator tooling
+        working-directory: tests/emulator
+        run: npm ci
+      - name: Verify scoped UUID upgrade and gaxios multipart compatibility
+        run: node --test tests/emulator/uuid-compat.test.mjs
+      - name: Verify real Firestore and Storage authorization rules locally
+        working-directory: tests/emulator
+        run: npm test
+      - name: Verify locked deployment CLI version
+        run: node tests/emulator/verify-cli.mjs
+      - name: ESLint source checks
+        run: node tests/emulator/node_modules/eslint/bin/eslint.js src

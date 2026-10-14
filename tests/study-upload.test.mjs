@@ -58,11 +58,12 @@ test('failed or invalid conversion never uploads original or unbranded content',
 
 test('legacy PPT and mismatched admin identity are rejected without conversion or upload', async () => {
   const savedFetch = globalThis.fetch;
-  globalThis.uploadState = { user: { ...identity, uid: 'other' }, saved: [] };
+  globalThis.uploadState = { user: identity, saved: [] };
   globalThis.fetch = async () => assert.fail('Rejected file must not reach converter');
   try {
     await assert.rejects(uploadBrandedStudyFile(new File(['x'], 'old.ppt'), 'admin', config), /Export older/);
-    await assert.rejects(uploadBrandedStudyFile(new File(['x'], 'notes.pptx'), 'admin', config), /Administrator login required/);
+    globalThis.uploadState.user = { ...identity, uid: 'other' };
+    await assert.rejects(uploadBrandedStudyFile(new File(['x'], 'notes.pptx'), 'admin', config), /Administrator login changed/);
     assert.deepEqual(globalThis.uploadState.saved, []);
   } finally { globalThis.fetch = savedFetch; delete globalThis.uploadState; }
 });

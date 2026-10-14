@@ -2,12 +2,17 @@ name: Deploy Website to Firebase
 
 on:
   workflow_dispatch:
+    inputs:
+      release_approved:
+        description: 'Production website and rules release explicitly approved by the Product Owner'
+        type: boolean
+        required: true
+        default: false
   push:
     branches: [main]
 
 permissions:
   contents: read
-  id-token: write
 
 concurrency:
   group: saarthi-firebase-production
@@ -34,7 +39,16 @@ jobs:
       - run: bun run lint
       - run: bun run build
 
+      - name: Install and verify locked deployment CLI before cloud authentication
+        run: |
+          npm ci --prefix tests/emulator --ignore-scripts
+          node tests/emulator/verify-cli.mjs
+
   deploy:
+    if: github.event_name == 'workflow_dispatch' && inputs.release_approved == true
+    permissions:
+      contents: read
+      id-token: write
     needs: test
     runs-on: ubuntu-latest
     environment: production
@@ -42,22 +56,37 @@ jobs:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
+
+      - name: Install locked deployment CLI before cloud authentication
+        run: |
+          npm ci --prefix tests/emulator --ignore-scripts
+          node tests/emulator/verify-cli.mjs
+
+      - name: Block vulnerable deployment tooling before cloud authentication
+        run: npm audit --prefix tests/emulator --audit-level=moderate
+
+      - name: Require independently verified backend candidate
+        env:
+          CANDIDATE_URL: ${{ vars.SAARTHI_VERIFIED_CANDIDATE_URL }}
+        run: |
+          node tests/emulator/verify-candidate.mjs
+          echo "VITE_SAARTHI_API_URL=$CANDIDATE_URL" >> "$GITHUB_ENV"
+
       - run: bun run build
 
       - id: auth
+        # Audit, candidate validation and build complete before credentials exist.
         uses: google-github-actions/auth@v3
         with:
           project_id: sankatmochan-509100
           workload_identity_provider: projects/247863708315/locations/global/workloadIdentityPools/github-saarthi/providers/github-saarthi-provider
           service_account: saarthi-github-deployer@sankatmochan-509100.iam.gserviceaccount.com
-          token_format: access_token
 
       - uses: google-github-actions/setup-gcloud@v3
 
       - name: Deploy hosting and Firestore rules
         run: |
-          npm install --global firebase-tools
-          firebase deploy --project "$FIREBASE_PROJECT_ID" --only hosting,firestore --non-interactive --token "${{ steps.auth.outputs.access_token }}"
+          node tests/emulator/node_modules/firebase-tools/lib/bin/firebase.js deploy --project "$FIREBASE_PROJECT_ID" --only hosting,firestore --non-interactive
 
       # Storage rules are intentionally deployed separately. The new
       # firebasestorage.app default bucket is already provisioned, but the
