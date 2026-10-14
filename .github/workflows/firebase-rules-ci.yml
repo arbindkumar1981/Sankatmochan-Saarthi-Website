@@ -19,6 +19,8 @@ jobs:
       - name: Install isolated emulator tooling
         working-directory: tests/emulator
         run: npm ci
+      - name: Verify scoped UUID upgrade and gaxios multipart compatibility
+        run: node --test tests/emulator/uuid-compat.test.mjs
       - name: Verify real Firestore and Storage authorization rules locally
         working-directory: tests/emulator
         run: npm test
