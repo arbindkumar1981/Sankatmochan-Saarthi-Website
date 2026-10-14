@@ -53,9 +53,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       const request = ++revision;
       setLoading(true);
-      setUser(currentUser);
+      setUser(currentUser?.isAnonymous ? null : currentUser);
       setProfile(null);
-      if (currentUser) {
+      if (currentUser && !currentUser.isAnonymous) {
         try {
           const userDocRef = doc(db, 'users', currentUser.uid);
           const snap = await getDoc(userDocRef);

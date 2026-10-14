@@ -2,6 +2,24 @@
 
 Paired draft PRs: website #51 and backend #79. No merge or production release is authorized.
 
+Latest follow-up: assessment API calls and every upload stage require the same
+authenticated account before returning data/publication metadata. Restored
+anonymous sessions do not register a student profile. Backend #79 canonicalizes
+the two audited legacy Class 10 chapter scopes without changing bank records or
+exposing answer keys; unrelated topics/boards/classes remain excluded. Reviewed
+generation rechecks publication/revision after model completion.
+
+The locked deployment CLI remains 15.33.0. Website/API/worker deployment jobs are
+proposed to require manual dispatch and `release_approved=true`, default false.
+Main pushes run checks; no rollout occurs from these jobs automatically. Actual
+candidate staging and rule/Hosting cutover require explicit approval and the
+remaining real-cloud checks. This flag is not an identity/authorization mechanism.
+
+The extended isolated Neon API test passed in 39.70 seconds, including legacy
+scope persistence and the admin knowledge import/review/publication/rejection
+sequence with fixture rollback. Firebase IO is mocked there; real OAuth,
+private Storage/PDF access and least-privilege cloud IAM remain UNVERIFIED.
+
 The browser no longer reads the answer bank, grades submissions, writes new scores or lets students set mastery. It starts server-owned attempts, sends selected options, shows backend results and obtains automatic exact-scope mastery. Retests reference server attempt IDs; historical Firestore scores remain visible but do not certify mastery.
 
 Admin-uploaded PDFs/notes are saved unpublished, imported into a review queue, reviewed for accuracy/curriculum/rights/privacy, and published by the backend using revision preconditions. Verified branded PDF objects cannot be overwritten or deleted/recreated through client Storage rules. Existing Phase-1 material is preserved. The Knowledge review section is in the content tab; server-reviewed materials cannot use the old client approval button.

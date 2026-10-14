@@ -10,8 +10,11 @@ export async function learningApi<T>(path: string, body?: unknown, signal?: Abor
   if (!api) throw new Error('Learning service is not configured.');
   const deadline = AbortSignal.timeout(path === '/generated-attempts' ? 600000 : 60000);
   const requestSignal = signal ? AbortSignal.any([signal, deadline]) : deadline;
-  const res = await fetch(`${api.replace(/\/$/, '')}/v1/website/learning${path}`, {method: body === undefined ? 'GET' : 'POST', headers: {Authorization: `Bearer ${await user.getIdToken()}`, 'Content-Type': 'application/json'}, ...(body === undefined ? {} : {body: JSON.stringify(body)}), signal: requestSignal});
+  const token = await user.getIdToken();
+  if (auth.currentUser !== user) throw new Error('Your account changed. Please try again.');
+  const res = await fetch(`${api.replace(/\/$/, '')}/v1/website/learning${path}`, {method: body === undefined ? 'GET' : 'POST', headers: {Authorization: `Bearer ${token}`, 'Content-Type': 'application/json'}, ...(body === undefined ? {} : {body: JSON.stringify(body)}), signal: requestSignal});
   const result = await res.json().catch(() => null);
+  if (auth.currentUser !== user) throw new Error('Your account changed. Please try again.');
   if (!res.ok || result === null) throw new Error(typeof result?.detail === 'string' ? result.detail : 'Learning service is unavailable. Please retry.');
   return result as T;
 }
