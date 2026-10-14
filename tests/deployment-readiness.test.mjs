@@ -4,13 +4,15 @@ import test from 'node:test';
 import {verifiedCandidate} from './emulator/verify-candidate.mjs';
 
 test('release rejects missing, default, external and injected candidate URLs', () => {
-  assert.throws(() => verifiedCandidate('https://saarthi-candidate-012345abcdef---api.run.app\n'));
-  assert.throws(() => verifiedCandidate('https://saarthi-candidate-ABCDEF012345---api.run.app'));
+  assert.throws(() => verifiedCandidate('https://sa-c-012345abcdef---' + 'a'.repeat(50) + '.a.run.app'));
+  assert.equal(verifiedCandidate('https://sa-c-012345abcdef---sankatmochan-saarthi-v3-git-abcdef.a.run.app'), 'https://sa-c-012345abcdef---sankatmochan-saarthi-v3-git-abcdef.a.run.app');
+  assert.throws(() => verifiedCandidate('https://sa-c-012345abcdef---api.run.app\n'));
+  assert.throws(() => verifiedCandidate('https://sa-c-ABCDEF012345---api.run.app'));
   assert.throws(() => verifiedCandidate('https://saarthi-release-candidate---api.run.app'));
-  for (const value of [undefined, '', 'https://default.run.app', 'https://example.com', 'http://saarthi-candidate-012345abcdef---api.run.app', 'https://saarthi-candidate-012345abcdef---api.run.app/?token=x', 'https://saarthi-candidate-012345abcdef---api.run.app\nOTHER=value']) {
+  for (const value of [undefined, '', 'https://default.run.app', 'https://example.com', 'http://sa-c-012345abcdef---api.run.app', 'https://sa-c-012345abcdef---api.run.app/?token=x', 'https://sa-c-012345abcdef---api.run.app\nOTHER=value']) {
     assert.throws(() => verifiedCandidate(value));
   }
-  assert.equal(verifiedCandidate('https://saarthi-candidate-012345abcdef---api-abc.a.run.app'), 'https://saarthi-candidate-012345abcdef---api-abc.a.run.app');
+  assert.equal(verifiedCandidate('https://sa-c-012345abcdef---api-abc.a.run.app'), 'https://sa-c-012345abcdef---api-abc.a.run.app');
 });
 
 test('dependency audit and candidate build finish before deployment credentials', () => {
