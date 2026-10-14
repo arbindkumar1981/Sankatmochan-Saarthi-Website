@@ -10,13 +10,13 @@ Fresh Google login implementation tests cover Student and designated Admin regis
 
 Release blockers:
 
-- Confirm deployed frontend Firebase project and database selection. Repository fallback names a non-default Firestore database; deployment configuration and Storage rule admin lookups target the default database. Storage rules cannot read named Firestore databases. No production identity or security configuration has been changed.
+- Production Hosting workflow explicitly selects the existing `sankatmochan-509100` project and default Firestore database, matching backend defaults and Storage rule admin lookups. Repository-only local fallback names a different database; local verification must use explicit isolated configuration. Storage rules cannot read named Firestore databases. No production identity or security configuration has been changed.
 - Backend #79, additive Neon schema and runtime configuration must be ready before this frontend/rules release. Do not merge while automatic main-branch production deployment is enabled without release approval.
 - Existing bank tests must have current exact curriculum IDs and valid answer keys. Legacy browser scores are preserved but deliberately excluded from verified summary/mastery.
 - Fresh real-cloud OAuth, complete Admin upload → review → publish → Student read, cross-instance submission races and actual deployed worker execution require verification in an existing isolated environment.
 - The admin results directory still reads historical Firestore results; new Neon attempts need an administrator reporting endpoint before that view can list all new attempts.
 - Scanned/image notes need readable academic text for knowledge review; interrupted uploads can leave private orphan objects. A retention/cleanup policy requires review.
-- Isolated emulator tooling has transitive dependency advisories. Patch/minor overrides are applied where compatible; do not use forced major upgrades or confuse this test-only dependency tree with the shipped browser bundle. Record the final audit result before release.
+- Isolated emulator tooling audit: 5 transitive advisories remain (3 high, 2 moderate): unpatched `braces` propagates through `chokidar`/`firebase-tools`, and older `uuid` through `gaxios`. Compatible grpc, OpenTelemetry and FTP fixes are locked. These tools run only local fixtures in CI without production credentials; do not use forced major upgrades or confuse this test-only dependency tree with the shipped browser bundle. Review/update tooling before release.
 
 Backend runbook: https://github.com/arbindkumar1981/Sankatmochan-Saarthi-v3/blob/codex/issue-50-cloud-run-repair/docs/secure-learning-release.md
 

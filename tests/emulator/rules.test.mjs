@@ -10,7 +10,7 @@ before(async()=>{
   // Always local-only: no production Firebase credentials or remote database.
   assert.equal(process.env.FIRESTORE_EMULATOR_HOST,'127.0.0.1:8080');
   assert.equal(process.env.FIREBASE_STORAGE_EMULATOR_HOST,'127.0.0.1:9199');
-  env=await initializeTestEnvironment({projectId:'demo-saarthi-release',firestore:{host:'127.0.0.1',port:8080,rules:await readFile('../../firestore.rules','utf8')},storage:{host:'127.0.0.1',port:9199,rules:await readFile('../../storage.rules','utf8')}});
+  env=await initializeTestEnvironment({projectId:'demo-saarthi-release',firestore:{host:'127.0.0.1',port:8080,rules:await readFile(new URL('../../firestore.rules',import.meta.url),'utf8')},storage:{host:'127.0.0.1',port:9199,rules:await readFile(new URL('../../storage.rules',import.meta.url),'utf8')}});
   await env.withSecurityRulesDisabled(async context=>{
     await setDoc(doc(context.firestore(),'admins','admin'),{fixture:true});
     await setDoc(doc(context.firestore(),'tests','test-private'),{questions:[{correctIndex:0}],approved:true,published:true});
