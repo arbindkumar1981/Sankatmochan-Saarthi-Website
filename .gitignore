@@ -3,6 +3,7 @@ build/
 dist/
 coverage/
 .admin-preview/
+.watcher-prototype/
 .DS_Store
 *.log
 .env*

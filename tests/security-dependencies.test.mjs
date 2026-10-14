@@ -8,7 +8,7 @@ const require = createRequire(import.meta.url);
 test('approved source-map and grpc versions resolve through their real consumers', () => {
   const firestore = createRequire(require.resolve('@firebase/firestore'));
   const css = createRequire(require.resolve('postcss'));
-  assert.equal(firestore('@grpc/grpc-js/package.json').version, '1.13.6');
+  assert.equal(firestore('@grpc/grpc-js/package.json').version, '1.13.7');
   assert.equal(css('source-map-js/package.json').version, '1.2.2');
 });
 

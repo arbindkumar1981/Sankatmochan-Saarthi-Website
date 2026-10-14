@@ -7,12 +7,12 @@ import {initializeApp, deleteApp} from 'firebase/app';
 import {getAuth, connectAuthEmulator, createUserWithEmailAndPassword, signOut} from 'firebase/auth';
 import {getFirestore, connectFirestoreEmulator, doc, setDoc, getDoc, updateDoc, runTransaction, onSnapshot, terminate} from 'firebase/firestore';
 
-test('website Firestore with grpc-js 1.13.6 preserves writes, transactions, watch and authorization', {timeout: 30000}, async () => {
+test('website Firestore with grpc-js 1.13.7 preserves writes, transactions, watch and authorization', {timeout: 30000}, async () => {
   assert.equal(process.env.FIREBASE_AUTH_EMULATOR_HOST, '127.0.0.1:9099');
   assert.equal(process.env.FIRESTORE_EMULATOR_HOST, '127.0.0.1:8080');
   const rootRequire = createRequire(import.meta.url);
   const firestoreRequire = createRequire(rootRequire.resolve('@firebase/firestore'));
-  assert.equal(firestoreRequire('@grpc/grpc-js/package.json').version, '1.13.6');
+  assert.equal(firestoreRequire('@grpc/grpc-js/package.json').version, '1.13.7');
   const clients = [];
   const denied = error => error.code === 'permission-denied';
   async function account() {

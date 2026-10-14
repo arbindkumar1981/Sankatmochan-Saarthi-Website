@@ -1,0 +1,102 @@
+{
+  "node": "v24.21.0",
+  "platform": "win32",
+  "baseline": "installed Firebase CLI chokidar 3.6.0",
+  "candidate": "isolated exact chokidar 4.0.3",
+  "results": [
+    {
+      "version": "4.0.3-reviewed-prototype",
+      "test": "api",
+      "status": "PASS",
+      "api": "CommonJS, FSWatcher, watch, add, close"
+    },
+    {
+      "version": "4.0.3-reviewed-prototype",
+      "test": "directory-lifecycle",
+      "status": "PASS",
+      "events": [
+        "add",
+        "change",
+        "unlink"
+      ],
+      "closedWithoutFurtherEvents": true
+    },
+    {
+      "version": "4.0.3-reviewed-prototype",
+      "test": "add-method",
+      "status": "PASS",
+      "addedFileChangeDetected": true
+    },
+    {
+      "version": "4.0.3-reviewed-prototype",
+      "test": "literal-firestore-rules",
+      "status": "PASS",
+      "literal": "firestore.rules",
+      "readUpdatedContent": true
+    },
+    {
+      "version": "4.0.3-reviewed-prototype",
+      "test": "literal-storage-rules",
+      "status": "PASS",
+      "literal": "storage.rules",
+      "readUpdatedContent": true
+    },
+    {
+      "version": "4.0.3-reviewed-prototype",
+      "test": "literal-database-rules-json",
+      "status": "PASS",
+      "literal": "database.rules.json",
+      "readUpdatedContent": true
+    },
+    {
+      "version": "4.0.3-reviewed-prototype",
+      "test": "literal-firestore-draft--rules",
+      "status": "PASS",
+      "literal": "firestore{draft}.rules",
+      "readUpdatedContent": true
+    },
+    {
+      "version": "4.0.3-reviewed-prototype",
+      "test": "glob-watch-path",
+      "status": "PASS",
+      "changed": [
+        "entry.js"
+      ]
+    },
+    {
+      "version": "4.0.3-reviewed-prototype",
+      "test": "functions-ignore-generated-output-js",
+      "status": "PASS",
+      "ignoredPattern": "**/generated/**",
+      "changed": [
+        "index.js"
+      ]
+    },
+    {
+      "version": "4.0.3-reviewed-prototype",
+      "test": "functions-ignore-spec-test-js",
+      "status": "PASS",
+      "ignoredPattern": "**/*.test.js",
+      "changed": [
+        "index.js"
+      ]
+    },
+    {
+      "version": "4.0.3-reviewed-prototype",
+      "test": "functions-ignore-package-lock-json",
+      "status": "PASS",
+      "ignoredPattern": "**/package-lock.json",
+      "changed": [
+        "index.js"
+      ]
+    },
+    {
+      "version": "4.0.3-reviewed-prototype",
+      "test": "functions-regex-ignore",
+      "status": "PASS",
+      "changed": [
+        "index.js"
+      ]
+    }
+  ]
+}

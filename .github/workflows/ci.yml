@@ -26,6 +26,9 @@ jobs:
       - name: Audit website dependencies
         run: bun audit
 
+      - name: Verify gRPC error disclosure is fixed directly
+        run: node tests/security-probes/grpc-disclosure.mjs .
+
       - name: TypeScript check
         run: bun run lint
 
