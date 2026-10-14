@@ -1,0 +1,24 @@
+name: Firebase rules verification
+on:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  rules:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install isolated emulator tooling
+        working-directory: tests/emulator
+        run: npm ci
+      - name: Verify real Firestore and Storage authorization rules locally
+        working-directory: tests/emulator
+        run: npm test

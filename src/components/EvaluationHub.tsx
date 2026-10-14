@@ -20,19 +20,22 @@ import {
 
 export const EvaluationHub: React.FC = () => {
   const { text: websiteText } = useWebsite();
-  const { testResults, mistakeRecords, updateMistakeStatus, language, setActiveTab, setActiveModule } = useCurriculum();
+  const { testResults, mistakeRecords, updateMistakeStatus, language, setActiveTab, setActiveModule, historyError } = useCurriculum();
   const { profile } = useAuth();
+  const [reviewError, setReviewError] = useState('');
 
   const [activeSubTab, setActiveSubTab] = useState<'report_cards' | 'mistake_book'>('report_cards');
-  const [selectedResult, setSelectedResult] = useState<TestResult | null>(testResults[0] || null);
-  const [mistakeFilter, setMistakeFilter] = useState<'all' | 'pending' | 'mastered'>('all');
+  const [selectedResultId, setSelectedResultId] = useState<string | null>(null);
+  const selectedResult = testResults.find(result => result.id === selectedResultId) ?? testResults[0] ?? null;
+  const [mistakeFilter, setMistakeFilter] = useState<'all' | 'pending' | 'reviewed'>('all');
 
   // Stats calculation
-  const totalTests = testResults.length;
+  const verifiedResults = testResults.filter(r => r.serverEvaluated);
+  const totalTests = verifiedResults.length;
   const avgPercentage = totalTests > 0
-    ? Math.round(testResults.reduce((acc, r) => acc + r.percentage, 0) / totalTests)
+    ? Math.round(verifiedResults.reduce((acc, r) => acc + r.percentage, 0) / totalTests)
     : 0;
-  const masteredMistakesCount = mistakeRecords.filter((m) => m.masteryStatus === 'mastered').length;
+  const masteredMistakesCount = mistakeRecords.filter((m) => m.masteryStatus === 'reviewed').length;
 
   const filteredMistakes = mistakeRecords.filter((m) => {
     if (mistakeFilter === 'all') return true;
@@ -41,6 +44,9 @@ export const EvaluationHub: React.FC = () => {
 
   return (
     <div className="flex-1 bg-white rounded-2xl border border-orange-200/90 shadow-sm p-4 sm:p-6 flex flex-col gap-6 min-w-0">
+      {reviewError && <p role="alert" className="text-red-700">{reviewError}</p>}
+      {historyError && <p role="alert" className="text-red-700">{historyError}</p>}
+      <p className="text-xs text-stone-600">Review marks your study progress. Mastery requires a server-evaluated retest score of at least 80%. Historical scores remain available; summary scores use server-evaluated attempts.</p>
       {/* Header */}
       <div className="border-b border-orange-100 pb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
@@ -110,11 +116,11 @@ export const EvaluationHub: React.FC = () => {
         </div>
 
         <div className="bg-teal-50/70 border border-teal-200 p-3.5 rounded-2xl shadow-xs">
-          <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wide"><WebsiteText original={"Mastered Errors"} /></span>
+          <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wide"><WebsiteText original={"Reviewed Errors"} /></span>
           <div className="text-xl sm:text-2xl font-black text-teal-700 font-cinzel mt-1">
             {masteredMistakesCount}
           </div>
-          <span className="text-[10px] text-teal-800 font-medium"><WebsiteText original={"Converted to strength"} /></span>
+          <span className="text-[10px] text-teal-800 font-medium"><WebsiteText original={"Explanations reviewed"} /></span>
         </div>
       </div>
 
@@ -146,7 +152,7 @@ export const EvaluationHub: React.FC = () => {
                     return (
                       <div
                         key={res.id}
-                        onClick={() => setSelectedResult(res)}
+                        onClick={() => setSelectedResultId(res.id)}
                         className={`cursor-pointer p-3.5 rounded-2xl border transition-all ${
                           isSelected
                             ? "bg-orange-50 border-orange-400 shadow-sm"
@@ -288,7 +294,7 @@ export const EvaluationHub: React.FC = () => {
                 <BookX className="w-5 h-5 text-red-600" />
                 <span><WebsiteText original={"The Sankatmochan Mistake Book"} /></span>
               </h3>
-              <p className="text-xs text-red-900 mt-0.5"><WebsiteText original={"Every incorrect test response is logged here. Review explanations and mark as "} /><strong><WebsiteText original={"Mastered"} /></strong><WebsiteText original={" once understood!"} /></p>
+              <p className="text-xs text-red-900 mt-0.5"><WebsiteText original={"Review each explanation, then mark it Reviewed. A retest measures mastery."} /></p>
             </div>
 
             {/* Filter buttons */}
@@ -305,14 +311,14 @@ export const EvaluationHub: React.FC = () => {
                 className={`px-2.5 py-1 rounded-lg font-semibold ${
                   mistakeFilter === 'pending' ? "bg-red-600 text-white" : "text-stone-600"
                 }`}
-              ><WebsiteText original={"Needs Review ("} />{mistakeRecords.filter((m) => m.masteryStatus !== 'mastered').length})
+              ><WebsiteText original={"Needs Review ("} />{mistakeRecords.filter((m) => m.masteryStatus === 'pending').length})
               </button>
               <button
-                onClick={() => setMistakeFilter('mastered')}
+                onClick={() => setMistakeFilter('reviewed')}
                 className={`px-2.5 py-1 rounded-lg font-semibold ${
-                  mistakeFilter === 'mastered' ? "bg-emerald-600 text-white" : "text-stone-600"
+                  mistakeFilter === 'reviewed' ? "bg-emerald-600 text-white" : "text-stone-600"
                 }`}
-              ><WebsiteText original={"Mastered ("} />{masteredMistakesCount})
+              ><WebsiteText original={"Reviewed ("} />{masteredMistakesCount})
               </button>
             </div>
           </div>
@@ -322,7 +328,7 @@ export const EvaluationHub: React.FC = () => {
           ) : (
             <div className="space-y-3">
               {filteredMistakes.map((m) => {
-                const isMastered = m.masteryStatus === 'mastered';
+                const isMastered = m.masteryStatus === 'reviewed';
 
                 return (
                   <div
@@ -339,19 +345,9 @@ export const EvaluationHub: React.FC = () => {
                       </span>
 
                       <div className="flex items-center gap-2">
-                        {isMastered ? (
-                          <span className="text-xs font-bold text-emerald-700 flex items-center gap-1 bg-emerald-100 px-2 py-0.5 rounded-full">
-                            <Check className="w-3.5 h-3.5" /><WebsiteText original={" Concept Mastered"} /></span>
-                        ) : (
-                          <button
-                            onClick={() => updateMistakeStatus(m.id, 'mastered')}
-                            className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs transition-colors flex items-center gap-1"
-                          >
-                            <Check className="w-3.5 h-3.5" /><WebsiteText original={" Mark as Mastered"} /></button>
-                        )}
                         {!isMastered && (
                           <button
-                            onClick={() => updateMistakeStatus(m.id, 'reviewed')}
+                            onClick={() => { void updateMistakeStatus(m.id, 'reviewed').catch(() => setReviewError('Unable to save review. Please retry.')); }}
                             className="px-2.5 py-1 bg-stone-100 hover:bg-stone-200 text-stone-700 font-semibold rounded-lg text-xs"
                           ><WebsiteText original={"Mark Reviewed"} /></button>
                         )}

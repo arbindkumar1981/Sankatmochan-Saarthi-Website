@@ -1,4 +1,17 @@
-import type { EvaluationTest, SubjectMeta, TestQuestion } from '../types';
+import type { EvaluationTest, SubjectMeta, TestQuestion, LearningContent } from '../types';
+
+export type AssessmentSelection = { board: string; classGrade: string; stream: string; subjectId: string; chapterId?: string; topicId?: string };
+export function matchesAssessment(test: EvaluationTest, selection: AssessmentSelection) {
+  return test.approved && test.published && test.board === selection.board && test.classGrade === selection.classGrade &&
+    test.stream === selection.stream && test.subjectId === selection.subjectId &&
+    (test.chapterId || '') === (selection.chapterId || '') && (test.topicId || '') === (selection.topicId || '');
+}
+export function scopedStyleSample(contents: LearningContent[], selection: AssessmentSelection, topicTitle?: string) {
+  return contents.find(c => c.approved && c.published && !c.deleted && c.status !== 'ARCHIVED' &&
+    c.contentType === 'detailed_notes' && c.board === selection.board && c.classGrade === selection.classGrade &&
+    c.stream === selection.stream && c.subjectId === selection.subjectId && c.chapterId === selection.chapterId &&
+    (selection.topicId ? c.topicId === selection.topicId || Boolean(topicTitle && c.topicTitle === topicTitle) : !c.topicId && !c.topicTitle) && c.bodyText)?.bodyText.slice(0, 4000) || '';
+}
 
 export function mapLegacyTest(test: EvaluationTest, legacy: SubjectMeta[], current: SubjectMeta[]): EvaluationTest {
   if (current.some(s => s.id === test.subjectId)) return test;

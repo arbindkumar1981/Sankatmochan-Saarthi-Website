@@ -23,7 +23,7 @@ const result = await build({
     export function renderContent(state){setIdentity({user:{uid:'student-a',isAnonymous:false},profile:{uid:'student-a'}});setCurriculum(state);return renderToStaticMarkup(<ContentArea/>);}
     export function renderLogin(tab){setIdentity({authModalOpen:true,authModalInitialTab:tab,closeAuthModal:()=>{},signInWithGoogle:async()=>{}});setCurriculum({language:'en'});return renderToStaticMarkup(<AuthModal/>);}` },
   plugins: [{ name: 'isolated-io', setup(builder) {
-    for (const [pattern, path] of [[/AuthContext$/, 'auth'], [/CurriculumContext$/, 'curriculum'], [/WebsiteContext$/, 'website'], [/services\/firebase$/, 'firebase'], [/^firebase\/firestore$/, 'firestore'], [/StudyPdfReader$/, 'pdfreader']]) {
+    for (const [pattern, path] of [[/AuthContext$/, 'auth'], [/CurriculumContext$/, 'curriculum'], [/WebsiteContext$/, 'website'], [/(services\/firebase|^\.\/firebase)$/, 'firebase'], [/^firebase\/firestore$/, 'firestore'], [/StudyPdfReader$/, 'pdfreader']]) {
       builder.onResolve({ filter: pattern }, () => ({ path, namespace: 'audit-mock' }));
     }
     builder.onLoad({ filter: /.*/, namespace: 'audit-mock' }, args => ({ contents: mocks[args.path], loader: 'js', resolveDir: root }));

@@ -83,6 +83,8 @@ export interface CaseStudyItem {
 }
 
 export interface LearningContent {
+  requiresServerReview?: boolean;
+  deleted?: boolean;
   id: string;
   /** Stable identity used to reuse the same approved asset instead of regenerating it. */
   canonicalKey?: string;
@@ -178,6 +180,7 @@ export interface TestQuestion {
 }
 
 export interface EvaluationTest {
+  questionCount?: number;
   id: string;
   title: string;
   hindiTitle?: string;
@@ -209,6 +212,9 @@ export interface TestResultAnswer {
 }
 
 export interface TestResult {
+  serverEvaluated?: boolean;
+  attemptKind?: 'TEST' | 'RETEST';
+  previousAttemptId?: string | null;
   id: string;
   studentUid: string;
   studentName: string;
@@ -218,6 +224,9 @@ export interface TestResult {
   board: BoardType;
   classGrade: ClassGrade;
   subjectId: string;
+  stream?: StreamType;
+  chapterId?: string;
+  topicId?: string;
   score: number;
   totalMarks: number;
   percentage: number;
@@ -237,6 +246,7 @@ export interface MistakeRecord {
   testId: string;
   subjectId: string;
   chapterId?: string;
+  topicId?: string;
   questionText: string;
   questionHindi?: string;
   options: string[];

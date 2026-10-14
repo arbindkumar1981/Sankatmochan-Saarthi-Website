@@ -1,5 +1,5 @@
 import { recordsForIdentity } from '../services/requestScope';
-import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useRef } from 'react';
 import {
   BoardType,
   ClassGrade,
@@ -20,23 +20,23 @@ import {
   ALL_SUBJECTS,
   INITIAL_LEARNING_CONTENTS,
   INITIAL_YOUTUBE_VIDEOS,
-  INITIAL_TESTS,
   INITIAL_NOTICES
 } from '../data/defaultCurriculum';
 import { db, handleFirestoreError, OperationType } from '../services/firebase';
 import { saveCanonicalContent } from '../services/contentLibrary';
 import { withUploadedTopics } from '../services/uploadedTopics';
 import { mapLegacyTest } from '../services/testAssessment';
+import { learningApi, learningHistory, assessmentScope } from '../services/learningApi';
 import { LEGACY_SUBJECTS } from '../data/defaultCurriculum';
 import {
   collection,
+  getDocs,
   setDoc,
   doc,
   query,
   where,
   onSnapshot,
   runTransaction,
-  writeBatch
 } from 'firebase/firestore';
 import { useAuth } from './AuthContext';
 import { useWebsite } from './WebsiteContext';
@@ -92,11 +92,14 @@ interface CurriculumContextType {
   notices: NoticeItem[];
   testResults: TestResult[];
   mistakeRecords: MistakeRecord[];
+  knowledgeImportStatus: string;
+  assessmentError: string;
+  historyError: string;
 
   babaImageUrl: string;
 
   // Actions
-  saveTestResult: (result: Omit<TestResult, 'id'>) => Promise<string>;
+  refreshLearningHistory: () => Promise<void>;
   updateMistakeStatus: (mistakeId: string, status: 'pending' | 'reviewed' | 'mastered') => Promise<void>;
   addNewLearningContent: (content: Omit<LearningContent, 'id'>) => Promise<void>;
   updateContentApproval: (contentId: string, approved: boolean, published: boolean) => Promise<void>;
@@ -110,6 +113,9 @@ const CurriculumContext = createContext<CurriculumContextType | undefined>(undef
 export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, profile, isAdmin } = useAuth();
   const { config } = useWebsite();
+  const [knowledgeImportStatus, setKnowledgeImportStatus] = useState('');
+  const [assessmentError, setAssessmentError] = useState('');
+  const [historyError, setHistoryError] = useState('');
 
   const [activeTab, setActiveTab] = useState<MainTabType>('learning');
   const [activeModule, setActiveModule] = useState<ContentModuleType>('detailed_notes');
@@ -216,9 +222,11 @@ export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   // Content States
   const [youtubeVideos, setYoutubeVideos] = useState<YouTubeVideoItem[]>(INITIAL_YOUTUBE_VIDEOS);
-  const [evaluationTests, setEvaluationTests] = useState<EvaluationTest[]>(INITIAL_TESTS);
+  const [evaluationTests, setEvaluationTests] = useState<EvaluationTest[]>([]);
   const [notices, setNotices] = useState<NoticeItem[]>(INITIAL_NOTICES);
   const recordIdentity = user?.uid || 'guest';
+  const identityRef = useRef(recordIdentity);
+  identityRef.current = recordIdentity;
   const [recordOwner, setRecordOwner] = useState(recordIdentity);
   const [testResults, setTestResults] = useState<TestResult[]>([]);
   const [mistakeRecords, setMistakeRecords] = useState<MistakeRecord[]>([]);
@@ -231,7 +239,7 @@ export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     try {
       const q = isAdmin
         ? query(collection(db, 'learning_contents'))
-        : query(collection(db, 'learning_contents'), where('approved', '==', true), where('published', '==', true));
+        : query(collection(db, 'learning_contents'), where('approved', '==', true), where('published', '==', true), where('board', '==', selectedBoard), where('classGrade', '==', selectedClass));
       const unsub = onSnapshot(
         q,
         (snapshot) => {
@@ -259,12 +267,12 @@ export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     } catch (e) {
       console.warn('Error connecting to learning_contents:', e);
     }
-  }, [isAdmin, user?.uid]);
+  }, [isAdmin, user?.uid, selectedBoard, selectedClass]);
 
   // Sync admin-published videos, tests and notices for every client.
   useEffect(() => {
     const videosQuery = isAdmin ? query(collection(db, 'youtube_videos')) : query(collection(db, 'youtube_videos'), where('approved', '==', true), where('published', '==', true));
-    const testsQuery = isAdmin ? query(collection(db, 'tests')) : query(collection(db, 'tests'), where('approved', '==', true), where('published', '==', true));
+    const testsQuery = query(collection(db, 'tests'));
     const noticesQuery = isAdmin ? query(collection(db, 'notices')) : query(collection(db, 'notices'), where('active', '==', true));
 
     const unsubVideos = onSnapshot(videosQuery, snap => {
@@ -274,12 +282,12 @@ export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       setYoutubeVideos(merged);
     }, err => console.warn('youtube_videos sync fallback:', err.message));
 
-    const unsubTests = onSnapshot(testsQuery, snap => {
+    const unsubTests = isAdmin ? onSnapshot(testsQuery, snap => {
       const remote = snap.docs.map(d => ({ id: d.id, ...d.data() } as EvaluationTest));
-      const merged = [...INITIAL_TESTS];
+      const merged: EvaluationTest[] = [];
       remote.forEach(item => { const i = merged.findIndex(x => x.id === item.id); if (i >= 0) merged[i] = item; else merged.push(item); });
       setEvaluationTests(merged);
-    }, err => console.warn('tests sync fallback:', err.message));
+    }, err => console.warn('tests sync unavailable:', err.message)) : () => {};
 
     const unsubNotices = onSnapshot(noticesQuery, snap => {
       const remote = snap.docs.map(d => ({ id: d.id, ...d.data() } as NoticeItem));
@@ -291,124 +299,54 @@ export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     return () => { unsubVideos(); unsubTests(); unsubNotices(); };
   }, [isAdmin]);
 
-  // Clear records immediately when identity changes; ignore late callbacks after unsubscribe.
   useEffect(() => {
-    let active = true;
-    setTestResults([]);
-    setMistakeRecords([]);
-    setRecordOwner(recordIdentity);
+    if (isAdmin || !user || user.isAnonymous || !selectedSubject || !selectedChapter) {
+      if (!isAdmin) setEvaluationTests([]);
+      return;
+    }
+    const controller = new AbortController();
+    setAssessmentError('');
+    void learningApi<EvaluationTest[]>('/tests', assessmentScope({board: selectedBoard, classGrade: selectedClass, stream: selectedStream, subjectId: selectedSubject.id, chapterId: selectedChapter.id, topicId: selectedTopic?.id}), controller.signal)
+      .then(tests => { if (!controller.signal.aborted) setEvaluationTests(tests); })
+      .catch(() => { if (!controller.signal.aborted) { setEvaluationTests([]); setAssessmentError('Published tests could not load. Reopen Test Yourself to retry.'); } });
+    return () => controller.abort();
+  }, [isAdmin, user?.uid, selectedBoard, selectedClass, selectedStream, selectedSubject?.id, selectedChapter?.id, selectedTopic?.id]);
+
+  // Preserve historical Firestore attempts, but all new attempts are server-owned in Neon.
+  useEffect(() => {
+    let cancelled = false;
+    setTestResults([]); setMistakeRecords([]); setRecordOwner(recordIdentity);
+    setHistoryError('');
     if (!user || user.isAnonymous) return;
+    void Promise.allSettled([
+      learningHistory(),
+      getDocs(query(collection(db, 'test_results'), where('studentUid', '==', user.uid))),
+      getDocs(query(collection(db, 'mistakes'), where('studentUid', '==', user.uid)))
+    ]).then(([history, oldResults, oldMistakes]) => {
+      if (cancelled) return;
+      if (history.status === 'rejected' || oldResults.status === 'rejected' || oldMistakes.status === 'rejected') setHistoryError('Some learning history could not load. Reload to retry; saved records are retained.');
+      setTestResults([...(history.status === 'fulfilled' ? history.value.results : []), ...(oldResults.status === 'fulfilled' ? oldResults.value.docs.map(d => ({...d.data(), id: d.id, serverEvaluated: false} as TestResult)) : [])]);
+      setMistakeRecords([...(history.status === 'fulfilled' ? history.value.mistakes : []), ...(oldMistakes.status === 'fulfilled' ? oldMistakes.value.docs.map(d => ({...d.data(), id: d.id, masteryStatus: d.data().masteryStatus === 'reviewed' ? 'reviewed' : 'pending'} as MistakeRecord)) : [])]);
+    }).catch(() => { if (!cancelled) console.warn('Learning history unavailable. Retry after signing in.'); });
+    return () => { cancelled = true; };
+  }, [user?.uid]);
 
-    try {
-      const q = query(collection(db, 'test_results'), where('studentUid', '==', user.uid));
-      const unsubResults = onSnapshot(
-        q,
-        (snap) => {
-          const list: TestResult[] = [];
-          snap.forEach((d) => list.push({ id: d.id, ...d.data() } as TestResult));
-          if (active) setTestResults(list);
-        },
-        (err) => {
-          console.warn('Error fetching test_results:', err.message);
-        }
-      );
-
-      const qMistakes = query(collection(db, 'mistakes'), where('studentUid', '==', user.uid));
-      const unsubMistakes = onSnapshot(
-        qMistakes,
-        (snap) => {
-          const list: MistakeRecord[] = [];
-          snap.forEach((d) => list.push({ id: d.id, ...d.data() } as MistakeRecord));
-          if (active) setMistakeRecords(list);
-        },
-        (err) => {
-          console.warn('Error fetching mistakes:', err.message);
-        }
-      );
-
-      return () => {
-        active = false;
-        unsubResults();
-        unsubMistakes();
-      };
-    } catch (e) {
-      console.warn('Firestore subscription error:', e);
-    }
-  }, [user]);
-
-  // Actions
-  const saveTestResult = async (resultData: Omit<TestResult, 'id'>): Promise<string> => {
-    const generatedId = 'res-' + Math.random().toString(36).substring(2, 9) + '-' + Date.now();
-    const newResult: TestResult = {
-      ...resultData,
-      studentUid: user && !user.isAnonymous ? user.uid : 'guest-108',
-      id: generatedId
-    };
-
-    // Calculate mistakes and save them to Mistake Book
-    const newMistakes: MistakeRecord[] = [];
-    resultData.answers.forEach((ans, idx) => {
-      if (!ans.isCorrect) {
-        const mistakeItem: MistakeRecord = {
-          id: 'mistake-' + Math.random().toString(36).substring(2, 9) + '-' + idx,
-          studentUid: newResult.studentUid,
-          testResultId: generatedId,
-          testId: resultData.testId,
-          subjectId: resultData.subjectId,
-          questionText: ans.questionText,
-          options: ans.options || [],
-          selectedOption: ans.selectedOption,
-          correctOption: ans.correctOption,
-          explanation: ans.explanation,
-          masteryStatus: 'pending',
-          createdAt: new Date().toISOString()
-        };
-        newMistakes.push(mistakeItem);
-      }
-    });
-
-    if (user && !user.isAnonymous) {
-      try {
-        const batch = writeBatch(db);
-        batch.set(doc(db, 'test_results', generatedId), newResult);
-        for (const m of newMistakes) {
-          batch.set(doc(db, 'mistakes', m.id), m);
-        }
-        await batch.commit();
-      } catch (err) {
-        handleFirestoreError(err, OperationType.CREATE, `test_results/${generatedId}`);
-        throw err;
-      }
-    } else {
-      // Local storage fallback for guest/offline
-      const currentRes = [...testResults, newResult];
-      setTestResults(currentRes);
-      localStorage.setItem('saarthi_guest_results', JSON.stringify(currentRes));
-
-      const currentMists = [...mistakeRecords, ...newMistakes];
-      setMistakeRecords(currentMists);
-      localStorage.setItem('saarthi_guest_mistakes', JSON.stringify(currentMists));
-    }
-
-    return generatedId;
+  const refreshLearningHistory = async () => {
+    const owner = recordIdentity;
+    const history = await learningHistory();
+    if (owner !== identityRef.current) return;
+    setHistoryError('');
+    setTestResults(previous => [...history.results, ...previous.filter(r => r.serverEvaluated === false)]);
+    setMistakeRecords(previous => [...history.mistakes, ...previous.filter(m => testResults.some(r => r.id === m.testResultId && r.serverEvaluated === false))]);
   };
 
-  const updateMistakeStatus = async (
-    mistakeId: string,
-    status: 'pending' | 'reviewed' | 'mastered'
-  ) => {
-    const updated = mistakeRecords.map(m => (m.id === mistakeId ? { ...m, masteryStatus: status } : m));
-    setMistakeRecords(updated);
-
-    if (user && !user.isAnonymous) {
-      try {
-        await setDoc(doc(db, 'mistakes', mistakeId), { masteryStatus: status, reviewedAt: new Date().toISOString() }, { merge: true });
-      } catch (err) {
-        handleFirestoreError(err, OperationType.UPDATE, `mistakes/${mistakeId}`);
-      }
-    } else {
-      localStorage.setItem('saarthi_guest_mistakes', JSON.stringify(updated));
-    }
+  const updateMistakeStatus = async (mistakeId: string, status: 'pending' | 'reviewed' | 'mastered') => {
+    if (status !== 'reviewed') throw new Error('Mastery requires a server-evaluated retest with at least 80%.');
+    const mistake = mistakeRecords.find(m => m.id === mistakeId);
+    const isServerAttempt = testResults.some(r => r.id === mistake?.testResultId && r.serverEvaluated);
+    if (isServerAttempt) await learningApi(`/mistakes/${encodeURIComponent(mistakeId)}/review`, {});
+    else await setDoc(doc(db, 'mistakes', mistakeId), {masteryStatus: 'reviewed', reviewedAt: new Date().toISOString()}, {merge: true});
+    setMistakeRecords(previous => previous.map(m => m.id === mistakeId ? {...m, masteryStatus: 'reviewed'} : m));
   };
 
   const requireAdmin = () => {
@@ -434,13 +372,22 @@ export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           language: content.language || 'en',
           version: content.version
         },
-        content
+        {...content, approved: false, published: false, requiresServerReview: Boolean(content.storagePath) || ['detailed_notes', 'revision_notes'].includes(content.contentType)}
       );
       setLearningContents(prev => {
         const existingIndex = prev.findIndex(c => c.id === item.id);
         if (existingIndex < 0) return [item, ...prev];
         return prev.map(c => (c.id === item.id ? item : c));
       });
+      if (content.storagePath || ['detailed_notes', 'revision_notes'].includes(content.contentType)) {
+        setKnowledgeImportStatus('Upload saved. Preparing a Knowledge Base review draft…');
+        try {
+          await learningApi('/knowledge/import', {contentId: item.id});
+          setKnowledgeImportStatus('Upload saved and added to the review queue. Admin verification is still required.');
+        } catch (error) {
+          setKnowledgeImportStatus(`Upload saved; KB draft needs retry: ${error instanceof Error ? error.message : 'Import unavailable.'} Use Import for KB review below.`);
+        }
+      }
     } catch (err) {
       handleFirestoreError(err, OperationType.CREATE, 'learning_contents/canonical');
       throw err;
@@ -452,6 +399,7 @@ export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     if (published && !approved) throw new Error('Approve content before publishing.');
     const item = learningContents.find(x=>x.id===contentId);
     if (!item || deletedAssetIds.has(`learning_contents/${contentId}`)) throw new Error('Restore deleted content in the manager first.');
+    if (item.requiresServerReview && (approved || published)) throw new Error('Review and publish this material in Knowledge review below.');
     const marker = await assetMarker('learning_contents',contentId);
     await runTransaction(db,async transaction=>{
       const reference=doc(db,'learning_contents',contentId);
@@ -539,12 +487,15 @@ export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         saveCurriculumSubject,
         learningContents: isAdmin ? learningContents : learningContents.filter(x => x.approved && x.published && !hiddenAssetIds.has(`learning_contents/${x.id}`)),
         youtubeVideos: isAdmin ? youtubeVideos : youtubeVideos.filter(x => x.approved && x.published && !hiddenAssetIds.has(`youtube_videos/${x.id}`)),
-        evaluationTests: (isAdmin ? evaluationTests : evaluationTests.filter(x => x.approved && x.published && !hiddenAssetIds.has(`tests/${x.id}`))).map(x => mapLegacyTest(x, LEGACY_SUBJECTS, curriculumSubjects)),
+        evaluationTests: (isAdmin ? evaluationTests : evaluationTests.filter(x => x.approved && x.published && !hiddenAssetIds.has(`tests/${x.id}`)).map(x => ({...x, questions: []}))).map(x => mapLegacyTest(x, LEGACY_SUBJECTS, curriculumSubjects)),
         notices: isAdmin ? notices : notices.filter(x => x.active && !hiddenAssetIds.has(`notices/${x.id}`)),
         testResults: recordsForIdentity(recordOwner, recordIdentity, testResults),
         mistakeRecords: recordsForIdentity(recordOwner, recordIdentity, mistakeRecords),
+        knowledgeImportStatus,
+        assessmentError,
+        historyError,
         babaImageUrl,
-        saveTestResult,
+        refreshLearningHistory,
         updateMistakeStatus,
         addNewLearningContent,
         updateContentApproval,

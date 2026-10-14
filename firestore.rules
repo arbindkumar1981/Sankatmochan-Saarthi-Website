@@ -81,13 +81,20 @@ service cloud.firestore {
         incoming().contentType is string &&
         incoming().version is number &&
         incoming().approved is bool &&
-        incoming().published is bool;
+        incoming().published is bool &&
+        ((!('storagePath' in incoming()) && incoming().contentType != 'detailed_notes' && incoming().contentType != 'revision_notes') || incoming().requiresServerReview == true) &&
+        (!('requiresServerReview' in incoming()) || incoming().requiresServerReview != true ||
+          (incoming().approved == false && incoming().published == false));
       allow update: if isAdmin() && isValidId(contentId) &&
         incoming().board == existing().board &&
         incoming().classGrade == existing().classGrade &&
         incoming().subjectId == existing().subjectId &&
         incoming().chapterId == existing().chapterId &&
-        incoming().contentType == existing().contentType;
+        incoming().contentType == existing().contentType &&
+        (!('requiresServerReview' in existing()) || incoming().requiresServerReview == existing().requiresServerReview) &&
+        (!('requiresServerReview' in existing()) || existing().requiresServerReview != true ||
+          ((incoming().approved == false && incoming().published == false) ||
+           incoming() == existing()));
       allow delete: if isAdmin() && isValidId(contentId);
     }
 
@@ -99,7 +106,8 @@ service cloud.firestore {
 
     // Evaluation Tests Collection
     match /tests/{testId} {
-      allow read: if (resource.data.published == true && resource.data.approved == true) || isAdmin();
+      // Students read sanitized questions through the authenticated assessment API.
+      allow read: if isAdmin();
       allow write: if isAdmin() && isValidId(testId);
     }
 
@@ -107,9 +115,7 @@ service cloud.firestore {
     match /test_results/{resultId} {
       allow get: if isSignedIn() && (resource.data.studentUid == request.auth.uid || isAdmin());
       allow list: if isSignedIn() && (resource.data.studentUid == request.auth.uid || isAdmin());
-      allow create: if isSignedIn() && isValidId(resultId) &&
-        incoming().studentUid == request.auth.uid &&
-        incoming().score is number && incoming().totalMarks is number;
+      allow create: if isAdmin();
       allow update: if isAdmin();
       allow delete: if isAdmin();
     }
@@ -118,10 +124,11 @@ service cloud.firestore {
     match /mistakes/{mistakeId} {
       allow get: if isSignedIn() && (resource.data.studentUid == request.auth.uid || isAdmin());
       allow list: if isSignedIn() && (resource.data.studentUid == request.auth.uid || isAdmin());
-      allow create: if isSignedIn() && isValidId(mistakeId) &&
-        incoming().studentUid == request.auth.uid;
-      allow update: if isSignedIn() && (resource.data.studentUid == request.auth.uid || isAdmin());
-      allow delete: if isSignedIn() && (resource.data.studentUid == request.auth.uid || isAdmin());
+      allow create: if isAdmin() && isValidId(mistakeId);
+      allow update: if isAdmin() || (isSignedIn() && resource.data.studentUid == request.auth.uid &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['masteryStatus', 'reviewedAt']) &&
+        incoming().masteryStatus == 'reviewed' && incoming().reviewedAt is string && incoming().reviewedAt.size() <= 40);
+      allow delete: if isAdmin();
     }
 
     // Motivational Notices & Circulars

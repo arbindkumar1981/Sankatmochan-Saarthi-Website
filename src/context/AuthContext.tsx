@@ -77,7 +77,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               uid: currentUser.uid,
               email: currentUser.email || '',
               displayName: currentUser.displayName || 'Student',
-              photoURL: currentUser.photoURL || undefined,
+              ...(currentUser.photoURL ? {photoURL: currentUser.photoURL} : {}),
               role: isDesignatedAdmin ? 'admin' : 'student',
               board: 'CBSE',
               classGrade: 'Class 10',
@@ -132,7 +132,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           uid: result.user.uid,
           email: result.user.email || '',
           displayName: result.user.displayName || 'Student',
-          photoURL: result.user.photoURL || undefined,
+          ...(result.user.photoURL ? {photoURL: result.user.photoURL} : {}),
           role: resolvedRole,
           board: 'CBSE',
           classGrade: 'Class 10',
@@ -176,6 +176,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const updateStudentPreferences = async (prefs: Partial<UserProfile>) => {
     if (!profile) return;
+    if (Object.keys(prefs).some(key => !['board', 'classGrade', 'stream', 'preferredLanguage'].includes(key))) {
+      throw new Error('Only curriculum and language preferences can be changed here.');
+    }
     const updated = { ...profile, ...prefs, updatedAt: new Date().toISOString() };
     setProfile(updated);
 

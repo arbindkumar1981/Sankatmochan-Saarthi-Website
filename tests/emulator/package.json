@@ -1,0 +1,17 @@
+{
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "firebase emulators:exec --config firebase.json --project demo-saarthi-release --only firestore,storage \"node --test rules.test.mjs\""
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "5.0.0",
+    "firebase": "12.19.0",
+    "firebase-tools": "15.33.0"
+  },
+  "overrides": {
+    "@grpc/grpc-js": "^1.13.6",
+    "@opentelemetry/core": "^2.8.0",
+    "basic-ftp": "^6.2.1"
+  }
+}

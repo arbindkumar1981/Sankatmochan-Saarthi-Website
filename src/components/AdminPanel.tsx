@@ -4,6 +4,7 @@ import { subjectsForSelection } from '../services/adminValidation';
 import { WebsiteSettingsManager } from './WebsiteSettingsManager';
 import { CurriculumManager } from './CurriculumManager';
 import { ManagedRecords } from './ManagedRecords';
+import { KnowledgeReview } from './KnowledgeReview';
 import React, { useEffect, useMemo, useState } from 'react';
 import { uploadBrandedStudyFile } from '../services/studyFileUpload';
 import { collection, doc, onSnapshot, setDoc } from 'firebase/firestore';
@@ -439,6 +440,7 @@ export const AdminPanel: React.FC = () => {
       {/* Admin Tab 1: Content Manager */}
       {adminTab === 'content' && (
         <div className="space-y-4">
+          <KnowledgeReview />
           <ManagedRecords collection="learning_contents" onScopeChange={scope => {
             if (scope.board) setContentBoard(scope.board);
             if (scope.classGrade) setContentClass(scope.classGrade);
