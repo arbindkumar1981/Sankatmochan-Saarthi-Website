@@ -46,7 +46,7 @@ export const EvaluationHub: React.FC = () => {
     <div className="flex-1 bg-white rounded-2xl border border-orange-200/90 shadow-sm p-4 sm:p-6 flex flex-col gap-6 min-w-0">
       {reviewError && <p role="alert" className="text-red-700">{reviewError}</p>}
       {historyError && <p role="alert" className="text-red-700">{historyError}</p>}
-      <p className="text-xs text-stone-600">Review marks your study progress. Mastery requires a server-evaluated retest score of at least 80%. Historical scores remain available; summary scores use server-evaluated attempts.</p>
+      <p className="text-xs text-stone-600"><WebsiteText original={"Review marks your study progress. Mastery requires a server-evaluated retest score of at least 80%. Historical scores remain available; summary scores use server-evaluated attempts."} /></p>
       {/* Header */}
       <div className="border-b border-orange-100 pb-4 flex flex-wrap items-center justify-between gap-3">
         <div>

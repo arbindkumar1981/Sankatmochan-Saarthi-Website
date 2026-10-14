@@ -40,6 +40,7 @@ import {
 } from 'firebase/firestore';
 import { useAuth } from './AuthContext';
 import { useWebsite } from './WebsiteContext';
+import { DisplayLanguageContext } from './DisplayLanguageContext';
 import { activeOptions } from '../services/websiteConfig';
 import { validateSubject, subjectsForSelection, mergeCurriculum, validateAdminRecord, assetMarker, assetVisibility } from '../services/adminValidation';
 
@@ -504,7 +505,7 @@ export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         addNewNotice
       }}
     >
-      {children}
+      <DisplayLanguageContext.Provider value={language}>{children}</DisplayLanguageContext.Provider>
     </CurriculumContext.Provider>
   );
 };

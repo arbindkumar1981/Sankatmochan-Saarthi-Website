@@ -166,7 +166,7 @@ export const AuthModal: React.FC = () => {
 
               {adminError && <p role="alert" className="text-sm text-red-700">{adminError}</p>}
               <p className="rounded-xl bg-orange-50 border border-orange-200 p-3 text-sm">
-                {language === 'hi' ? 'अध्ययन सामग्री, टेस्ट और सुरक्षित प्रगति के लिए Google खाते से साइन इन करें।' : 'Sign in with Google to access learning material, tests and securely saved progress.'}
+                {language === 'hi' ? 'अध्ययन सामग्री, टेस्ट और सुरक्षित प्रगति के लिए Google खाते से साइन इन करें।' : <WebsiteText original={"Sign in with Google to access learning material, tests and securely saved progress."} />}
               </p>
 
               <div className="bg-amber-50/70 border border-amber-200 p-2.5 rounded-xl text-[11px] text-amber-900 flex items-start gap-2">

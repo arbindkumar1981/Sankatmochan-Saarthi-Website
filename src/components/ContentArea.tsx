@@ -437,11 +437,11 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
 
       {customModule && <section className="space-y-3">
         <p className="whitespace-pre-wrap break-words">{language==='hi' ? displayContent.bodyHindi || displayContent.bodyText : displayContent.bodyText}</p>
-        {hasPublishedModuleContent && <button className="border rounded-xl px-3 py-2 text-sm" onClick={downloadGeneratedNotes}>Save to My Dashboard</button>}
+        {hasPublishedModuleContent && <button className="border rounded-xl px-3 py-2 text-sm" onClick={downloadGeneratedNotes}><WebsiteText original={"Save to My Dashboard"} /></button>}
         {studentGenerationError && <p role="alert">{studentGenerationError}</p>}
       </section>}
-      {matchedContent?.storagePath && matchedContent.attachmentType === 'application/pdf' ? <Suspense fallback={<p role="status">Opening PDF reader…</p>}><StudyPdfReader key={matchedContent.id} contentId={matchedContent.id} /></Suspense> : matchedContent?.attachmentUrl && <p className="border rounded-xl p-3 text-sm">{matchedContent.attachmentName || 'Study file'} — ask Admin to replace this file with a branded PDF.</p>}
-      {hasPublishedModuleContent && !customModule && <button className="border rounded-xl px-3 py-2 text-sm mb-3" onClick={downloadGeneratedNotes}>Save to My Dashboard</button>}
+      {matchedContent?.storagePath && matchedContent.attachmentType === 'application/pdf' ? <Suspense fallback={<p role="status"><WebsiteText original={"Opening PDF reader…"} /></p>}><StudyPdfReader key={matchedContent.id} contentId={matchedContent.id} /></Suspense> : matchedContent?.attachmentUrl && <p className="border rounded-xl p-3 text-sm">{matchedContent.attachmentName || 'Study file'}<WebsiteText original={"— ask Admin to replace this file with a branded PDF."} /></p>}
+      {hasPublishedModuleContent && !customModule && <button className="border rounded-xl px-3 py-2 text-sm mb-3" onClick={downloadGeneratedNotes}><WebsiteText original={"Save to My Dashboard"} /></button>}
 
       {/* Module 1 & 2: Detailed Notes & Revision Notes */}
       {(activeModule === 'detailed_notes' || activeModule === 'revision_notes') && (
@@ -474,7 +474,7 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
               ? displayContent.bodyHindi
               : displayContent.bodyText)}
           </div>
-          {studentDiagramPlans.length > 0 && <section aria-label="Diagram guidance" className="space-y-3">
+          {studentDiagramPlans.length > 0 && <section aria-label={websiteText("Diagram guidance")} className="space-y-3">
             <h3 className="font-bold text-sm">{websiteText('Diagram guidance — illustration not generated')}</h3>
             {studentDiagramPlans.map((plan, index) => <article key={index} className="rounded-xl border bg-sky-50 p-4">
               <h4 className="font-bold">{plan.title}</h4>
@@ -770,9 +770,9 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
         <div className="space-y-5">
           {assessmentError && <p role="alert">{assessmentError}</p>}
           {masteryError && <p role="status">{masteryError}</p>}
-          {mastery && <p className="border rounded-xl p-3">Mastery for this selection: {mastery.currentMastery === null ? 'No server-evaluated attempt yet' : `${mastery.currentMastery}% · ${mastery.mastered ? 'Target reached' : 'Review weak concepts and retest; target 80%'}`}</p>}
+          {mastery && <p className="border rounded-xl p-3"><WebsiteText original={"Mastery for this selection:"} />{mastery.currentMastery === null ? <WebsiteText original={"No server-evaluated attempt yet"} /> : `${mastery.currentMastery}% · ${mastery.mastered ? 'Target reached' : 'Review weak concepts and retest; target 80%'}`}</p>}
           {saveStatus && <p role="status" className="p-3 border rounded-xl">{saveStatus}</p>}
-          {secureAttempt && !testStarted && !testSubmitted && <button onClick={() => { void handleAutoSubmit(); }} className="border rounded-xl p-3">Retry submission with the same answers</button>}
+          {secureAttempt && !testStarted && !testSubmitted && <button onClick={() => { void handleAutoSubmit(); }} className="border rounded-xl p-3"><WebsiteText original={"Retry submission with the same answers"} /></button>}
           <div className="flex flex-wrap gap-2 justify-end"><button onClick={generateWithTeacher} disabled={studentGenerating || testStarted || (Boolean(secureAttempt) && !testSubmitted)} className="px-3 py-2 rounded-xl bg-orange-600 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5"><WandSparkles className="w-4 h-4"/>{studentGenerating ? websiteText("Generating…") : websiteText("Generate Test with Sankatmochansaarthi")}</button></div>
           {studentGenerationError && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs">{studentGenerationError}</div>}
           {studentGeneratedText && <div className="whitespace-pre-line bg-stone-50 border border-stone-200 rounded-2xl p-5 text-sm leading-relaxed">{studentGeneratedText}</div>}
@@ -942,7 +942,7 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
                 </div>
 
                 <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-                  <button onClick={()=>setActiveModule('detailed_notes')} className="px-5 py-2 bg-white text-orange-900 font-bold rounded-xl text-xs">Review this topic's learning material</button>
+                  <button onClick={()=>setActiveModule('detailed_notes')} className="px-5 py-2 bg-white text-orange-900 font-bold rounded-xl text-xs"><WebsiteText original={"Review this topic's learning material"} /></button>
                   <button
                     onClick={generateWithTeacher}
                     disabled={studentGenerating}

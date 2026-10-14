@@ -486,7 +486,7 @@ export const YouTubeLearner: React.FC = () => {
               </button>
             </div>
 
-            <p className="text-xs text-stone-500">Notes are saved in this browser, separately for each signed-in account.</p>
+            <p className="text-xs text-stone-500"><WebsiteText original={"Notes are saved in this browser, separately for each signed-in account."} /></p>
             {noteError && <p role="alert" className="text-xs text-red-700">{noteError}</p>}
             {savedNotes.length > 0 && (
               <div className="mt-3 space-y-1.5 max-h-36 overflow-y-auto pr-1">
