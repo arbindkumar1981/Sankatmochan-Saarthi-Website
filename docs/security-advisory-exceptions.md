@@ -3,7 +3,11 @@
 Reviewed 14 October 2026. Owner: Saarthi Developer Agent. Recheck by 28 October 2026,
   and whenever the Firebase CLI, emulator configuration or dependency lock changes.
 These are narrowly scoped development-tool exceptions, not a clean security audit.
-The current npm audit still reports three HIGH and two MODERATE package findings.
+Fresh npm audit still reports three HIGH and two MODERATE package findings and
+exits 1. The deployment job runs that audit before Google Cloud authentication,
+without continue-on-error or suppression. It therefore cannot currently deploy.
+This document is not an executable bypass or release acceptance; no exception
+approval input has been added.
 
 ## HIGH: braces, chokidar and firebase-tools
 
@@ -57,3 +61,16 @@ Thus these findings are not strictly test-only. Backend emulator snapshots use
 the identical locked tooling; backend cloud source excludes test tooling.
 Fresh advisory recheck on 14 October confirms no patched braces release and
 uuid fixes at 11.1.1/12.0.1/13.0.1. No dependency version changed in this audit.
+
+Registry review confirms latest current-major versions: firebase-tools 15.33.0,
+chokidar 3.6.0, braces 3.0.3, gaxios 6.7.1 and uuid 9.0.1. Firebase CLI still
+declares chokidar ^3.6.0, gaxios ^6.7.0 and Google auth ^9.11.0; gaxios declares
+uuid ^9.0.1. No compatible patched release was found. A scoped gaxios→uuid 11.1.1
+override requires explicit major-upgrade approval and CJS/v4/multipart/CLI/auth
+compatibility tests before adoption. It would address only the two MODERATE
+findings; unpatched braces would remain. Never force the suggested CLI 6.8 downgrade.
+
+Deployment uses the auth action's ADC file instead of an access token supplied
+to the CLI's legacy refresh-token flag. Real WIF/ADC deployment is UNVERIFIED and
+cannot be attempted while the audit gate fails. The reviewed existing command
+scope and trusted-path limitations above remain mandatory.
