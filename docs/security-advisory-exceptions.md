@@ -1,7 +1,7 @@
 # Isolated emulator dependency exceptions
 
 Reviewed 14 October 2026. Owner: Saarthi Developer Agent. Recheck by 28 October 2026,
-and whenever the Firebase CLI, emulator configuration or dependency lock changes.
+  and whenever the Firebase CLI, emulator configuration or dependency lock changes.
 These are narrowly scoped development-tool exceptions, not a clean security audit.
 The current npm audit still reports three HIGH and two MODERATE package findings.
 
@@ -39,5 +39,14 @@ watch globs, or run these tests with production credentials. Revoke the exceptio
 if those assumptions change. Keep audit failures visible; do not suppress advisory
 IDs or label the dependency audit PASS. Upgrade to a compatible upstream fix when
 available, rerun actual rule tests and ESLint, and remove this exception document.
-The production deployment CLI and its credentialed workflow require a separate
-audit before release; this exception does not cover them.
+The deployment workflow now installs this same locked CLI 15.33.0 tree with
+compatible grpc/OpenTelemetry/FTP overrides and disabled install scripts before
+cloud authentication. Its reviewed command is limited to `deploy --only hosting,firestore`.
+Hosting scans the generated `dist` directory with the fixed repository ignore
+patterns `**/.*` and `**/node_modules/**`; uploaded study documents live in Storage,
+not this directory. No arbitrary uploaded glob is accepted. The deploy code paths
+reviewed do not start emulator watchers, and gaxios retains the same v4-only use.
+This extends the exception to this exact locked command and trusted build paths,
+not to arbitrary CLI commands or credentialed untrusted checkouts. Revoke it if
+hosting paths/globs, CLI commands or dependency usage change. Credentials remain
+scoped to the existing deployer; the CLI exception does not approve any rollout.
