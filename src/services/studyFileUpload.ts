@@ -25,7 +25,9 @@ export async function uploadBrandedStudyFile(file: File, adminUid: string, confi
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 105000);
     try {
-      const response = await fetch(`${api.replace(/\/$/, '')}/v1/materials/convert-office`, { method: 'POST', headers: { Authorization: `Bearer ${await auth.currentUser.getIdToken()}`, 'Content-Type': 'application/octet-stream', 'X-Document-Format': extension }, body: file, signal: controller.signal });
+      const token = await uploader!.getIdToken();
+      requireUploader();
+      const response = await fetch(`${api.replace(/\/$/, '')}/v1/materials/convert-office`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/octet-stream', 'X-Document-Format': extension }, body: file, signal: controller.signal });
       if (!response.ok) { const error = await response.json().catch(() => ({})); throw new Error(error.detail || 'Office conversion failed. Retry or upload a PDF.'); }
       pdfSource = new Uint8Array(await response.arrayBuffer());
       if (pdfSource.byteLength > 50 * 1024 * 1024 || new TextDecoder().decode(pdfSource.slice(0, 5)) !== '%PDF-') throw new Error('Conversion did not return a valid PDF.');

@@ -34,3 +34,12 @@ test('anonymous upload is rejected before reading or storing files',async()=>{
   await assert.rejects(api.uploadBrandedStudyFile(new File(['x'],'fixture.pdf'),'admin',{name:'Fixture'}),/login changed/);
   assert.equal(globalThis.identityFixture.uploads.length,0);
 });
+test('account switch during Office token refresh prevents sending the document',async()=>{
+  setup();let calls=0;const prior=globalThis.fetch;
+  try{
+    globalThis.fetch=async()=>{calls++;};
+    globalThis.identityFixture.user.getIdToken=async()=>{globalThis.identityFixture.user=null;return 'fixture-token'};
+    await assert.rejects(api.uploadBrandedStudyFile(new File(['fixture'],'fixture.pptx'),'admin',{name:'Fixture'}),/login changed/);
+    assert.equal(calls,0);assert.equal(globalThis.identityFixture.uploads.length,0);
+  }finally{globalThis.fetch=prior;}
+});
