@@ -16,7 +16,7 @@ An uncontrolled major CLI/chokidar change is excluded by the project upgrade rul
 Exception justification: the Firestore and Storage watchers receive the fixed
 repository paths `firestore.rules` and `storage.rules`, not student input, uploaded
 filenames or request-supplied glob patterns. The emulator runner fixes the project
-to `demo-saarthi-release`, enables only Firestore/Storage, and binds both to
+to `demo-saarthi-release`, enables only Auth/Firestore/Storage, and binds all three to
 127.0.0.1. PR CI has read-only repository permissions, no cloud login step and no
 production secrets. The CLI is installed in `tests/emulator`, not the browser app.
 A malicious repository change can still crash the disposable CI process; this
@@ -50,3 +50,10 @@ This extends the exception to this exact locked command and trusted build paths,
 not to arbitrary CLI commands or credentialed untrusted checkouts. Revoke it if
 hosting paths/globs, CLI commands or dependency usage change. Credentials remain
 scoped to the existing deployer; the CLI exception does not approve any rollout.
+
+Exposure classification: CI/developer tooling and the reviewed credentialed
+Hosting/Firestore deployment command, not application runtime dependencies.
+Thus these findings are not strictly test-only. Backend emulator snapshots use
+the identical locked tooling; backend cloud source excludes test tooling.
+Fresh advisory recheck on 14 October confirms no patched braces release and
+uuid fixes at 11.1.1/12.0.1/13.0.1. No dependency version changed in this audit.
