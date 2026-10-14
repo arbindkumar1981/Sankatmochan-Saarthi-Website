@@ -1,5 +1,17 @@
 # Existing-resource verification
 
+Both Firebase projects are protected existing systems. The Founder confirmed
+`quick-xylopolist-tt3g1` is active AI Studio Starter tier with three named
+Enterprise Firestore databases, not empty staging. Do not modify or repurpose it
+or `sankatmochan-509100`, create resources, upgrade billing or change IAM.
+
+The paired bridge now uses actual emulator HTTP, backend approval/publication
+commits, a disposable localhost Postgres database and Student API PDF reads.
+It checks out a pinned reviewed backend commit in CI. Auth identity lookup and
+server-owner transport exist only in the test; production auth/IAM is unchanged.
+The demo-project/localhost/database guards prevent cloud fallback. This workflow
+provisions no cloud user, database, bucket or project.
+
 No Firebase/Google Cloud project, cloud user, hosting channel or paid resource is
 created. `firebase.emulators.json` uses Auth 9099, Firestore 8080 and Storage 9199,
 all on 127.0.0.1, under the non-cloud fixture ID `demo-saarthi-release`.
@@ -9,11 +21,15 @@ all on 127.0.0.1, under the non-cloud fixture ID `demo-saarthi-release`.
 the local Auth emulator, uses actual SDK sessions for profile/ownership rules,
 admin file upload, draft privacy and student access to published metadata. The
 fixture password is public test data; no real passwords or ID tokens are logged.
-The Admin designation exists only in emulator Firestore. Published metadata is
-written by a trusted test fixture, not by the backend approval endpoint.
+The Admin designation exists only in emulator Firestore. This individual rules
+test uses a trusted publication fixture; the following backend bridge exercises
+the real approval/publication endpoint against the same emulators.
 
-This is evidence of local Auth/Firestore/Storage integration, NOT real Google
-OAuth, backend knowledge review, private PDF proxy access or complete cloud E2E.
+The bridge is local API/PDF integration evidence, NOT real Google OAuth,
+effective cloud IAM or complete cloud E2E. See backend
+`docs/cloud-only-verification.md` for the narrow cloud-only gates and the
+strictly optional, unapproved staging proposal. Neither existing project is a
+staging candidate.
 The isolated Neon branch already exists. The backend opt-in test requires its
 credential through `SAARTHI_TEST_DATABASE_URL` and rejects all other hostnames;
 the root project's database URL did not match that branch and was not reused.
