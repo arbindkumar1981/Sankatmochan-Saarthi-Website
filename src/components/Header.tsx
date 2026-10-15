@@ -23,14 +23,14 @@ export const Header: React.FC = () => {
   return (
     <header className="bg-white border-b border-orange-200/80 shadow-sm sticky top-0 z-30">
       <div className="w-full mx-auto px-3 sm:px-4 py-2 sm:py-2.5 flex flex-wrap items-center justify-between gap-3">
-        <nav aria-label="Public website navigation" className="flex flex-col items-stretch gap-1 rounded-xl border border-orange-100 bg-amber-50/40 p-1.5">
+        <nav aria-label="Public website navigation" className="flex flex-wrap items-center gap-1 sm:gap-3">
           {([
             ['home', language === 'hi' ? 'होम' : 'Home'],
             ['courses', language === 'hi' ? 'कोर्स' : 'Courses'],
             ['contact', language === 'hi' ? 'संपर्क करें' : 'Contact Us']
           ] as const).map(([tab, label]) => (
             <button key={tab} type="button" onClick={() => setActiveTab(tab)} aria-current={activeTab === tab ? 'page' : undefined}
-              className={`w-full rounded-lg px-3 py-1.5 text-left text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-500 ${activeTab === tab ? 'bg-orange-600 text-white' : 'text-orange-900 hover:bg-orange-50'}`}>
+              className={`rounded-lg px-3 py-2 text-center text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-500 ${activeTab === tab ? 'bg-orange-600 text-white' : 'text-orange-900 hover:bg-orange-50'}`}>
               {label}
             </button>
           ))}
