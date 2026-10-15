@@ -247,8 +247,43 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
     return true;
   });
 
-  const questionBank = matchedTests.flatMap(test => test.questions.filter(q => q.options?.length >= 2 && q.correctIndex >= 0 && q.correctIndex < q.options.length).map(q => ({ ...q, id: `${test.id}:${q.id}` })));
-  const publishedPyqCount = learningContents.filter(item => item.contentType === 'pyqs' && item.approved && item.published && item.board === selectedBoard && item.classGrade === selectedClass && !!selectedSubject && matchesMaterialSelection(item, selectedSubject, selectedChapter || undefined)).reduce((n,item) => n + (item.pyqItems?.length || 0), 0);
+  // Question Bank is a separate learning module: do not limit its questions to published tests.
+  // Only structured, answer-keyed objective items can be used for automatic scoring.
+  const publishedBankContents = learningContents.filter(item =>
+    item.contentType === 'question_bank' && item.approved && item.published &&
+    item.board === selectedBoard && item.classGrade === selectedClass &&
+    !!selectedSubject && matchesMaterialSelection(item, selectedSubject, selectedChapter || undefined) &&
+    (!selectedTopic || matchesUploadedTopic(item, selectedTopic))
+  );
+  const bankQuestionsFromContent = publishedBankContents.flatMap(item => {
+    try {
+      const parsed: unknown = JSON.parse(item.bodyText);
+      const entries = Array.isArray(parsed) ? parsed : parsed && typeof parsed === 'object' && 'questions' in parsed ? (parsed as {questions: unknown}).questions : [];
+      if (!Array.isArray(entries)) return [];
+      return entries.flatMap((entry, index): TestQuestion[] => {
+        if (!entry || typeof entry !== 'object') return [];
+        const q = entry as Partial<TestQuestion>;
+        if (typeof q.questionText !== 'string' || !q.questionText.trim() || !Array.isArray(q.options) || q.options.length < 2 ||
+            q.options.some(option => typeof option !== 'string' || !option.trim()) ||
+            !Number.isInteger(q.correctIndex) || q.correctIndex! < 0 || q.correctIndex! >= q.options.length ||
+            typeof q.explanation !== 'string' || !q.explanation.trim()) return [];
+        return [{ id: `${item.id}:${q.id || index}`, questionText: q.questionText, options: q.options,
+          correctIndex: q.correctIndex!, explanation: q.explanation, marks: typeof q.marks === 'number' && q.marks > 0 ? q.marks : 1,
+          ...(q.questionHindi ? {questionHindi: q.questionHindi} : {}) }];
+      });
+    } catch { return []; }
+  });
+  const questionBank = [...bankQuestionsFromContent, ...matchedTests.flatMap(test =>
+    test.questions.filter(q => q.options?.length >= 2 && q.correctIndex >= 0 && q.correctIndex < q.options.length)
+      .map(q => ({ ...q, id: `${test.id}:${q.id}` }))
+  )].filter((question, index, all) => all.findIndex(other =>
+    other.questionText.trim().toLowerCase() === question.questionText.trim().toLowerCase()) === index);
+  const publishedPyqCount = learningContents.filter(item =>
+    item.contentType === 'pyqs' && item.approved && item.published &&
+    item.board === selectedBoard && item.classGrade === selectedClass &&
+    !!selectedSubject && matchesMaterialSelection(item, selectedSubject, selectedChapter || undefined) &&
+    (!selectedTopic || matchesUploadedTopic(item, selectedTopic))
+  ).reduce((n, item) => n + (item.pyqItems?.length || 0), 0);
   const [testSource, setTestSource] = useState<'published' | 'bank'>('published');
   const [bankQuestionCount, setBankQuestionCount] = useState(10);
   const [bankVariant, setBankVariant] = useState(0);
@@ -512,7 +547,7 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
               {studentGeneratedText && <button onClick={downloadGeneratedNotes} className="px-3 py-2 rounded-xl bg-stone-900 text-white text-xs font-bold flex items-center gap-1.5"><Download className="w-4 h-4"/><WebsiteText original={"Save to My Dashboard"} /></button>}
             </div>
           </div>
-          {studentGenerationError && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs">{studentGenerationError}</div>}
+          {studentGenerationError && <div role="alert" className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs">{studentGenerationError}</div>}
           <div className="bg-amber-50/50 border border-amber-200/80 rounded-xl p-4 text-xs text-amber-950 font-serif leading-relaxed flex items-center justify-between">
             <span className="flex items-center gap-2 font-medium">
               <Sparkles className="w-4 h-4 text-orange-600 shrink-0" />
@@ -839,7 +874,7 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
           {studentGenerationError && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs">{studentGenerationError}</div>}
           {studentGeneratedText && <div className="whitespace-pre-line bg-stone-50 border border-stone-200 rounded-2xl p-5 text-sm leading-relaxed">{studentGeneratedText}</div>}
           {!activeTest && (
-            <div className="p-8 text-center text-stone-500 bg-stone-50 rounded-2xl border border-stone-200"><WebsiteText original={"No published test is available for this subject/chapter selection yet."} /></div>
+            <div className="p-8 text-center text-stone-500 bg-stone-50 rounded-2xl border border-stone-200">{testSource === 'bank' ? 'No approved objective questions with verified answer keys are available in the Question Bank for this selection. Ask an admin to publish structured MCQs.' : 'No published test is available for this selection. Choose Question bank or request verified questions from an admin.'}</div>
           )}
           {activeTest && !testStarted && !testSubmitted && (
             <div className="bg-gradient-to-br from-amber-50 via-orange-50 to-white border-2 border-orange-300 rounded-3xl p-6 sm:p-8 text-center max-w-2xl mx-auto shadow-md">
