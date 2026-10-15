@@ -213,7 +213,7 @@ export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     if (!classes.some(x => x.id === selectedClass)) setSelectedClass(classes[0].id);
     if (!streams.some(x => x.id === selectedStream)) setSelectedStream(streams[0].id);
     if (!config.modules.some(x => x.id === activeModule && !x.deleted)) setActiveModule(activeOptions(config.modules)[0].id as ContentModuleType);
-    if (activeTab !== 'admin' && activeTab !== 'materials' && !config.navigation.some(x => x.id === activeTab && !x.deleted) && !config.pages.some(x => `page:${x.id}` === activeTab && !x.deleted)) setActiveTab((activeOptions(config.navigation)[0]?.id || `page:${config.pages.find(x => !x.deleted)?.id || ''}`) as MainTabType);
+    if (!['home', 'courses', 'contact', 'admin', 'materials'].includes(activeTab) && !config.navigation.some(x => x.id === activeTab && !x.deleted) && !config.pages.some(x => `page:${x.id}` === activeTab && !x.deleted)) setActiveTab((activeOptions(config.navigation)[0]?.id || `page:${config.pages.find(x => !x.deleted)?.id || ''}`) as MainTabType);
   }, [config, selectedBoard, selectedClass, selectedStream, activeModule, activeTab]);
 
   // Content States
