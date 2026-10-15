@@ -247,9 +247,19 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
     return true;
   });
 
+  const questionBank = matchedTests.flatMap(test => test.questions.filter(q => q.options?.length >= 2 && q.correctIndex >= 0 && q.correctIndex < q.options.length).map(q => ({ ...q, id: `${test.id}:${q.id}` })));
+  const publishedPyqCount = learningContents.filter(item => item.contentType === 'pyqs' && item.approved && item.published && item.board === selectedBoard && item.classGrade === selectedClass && !!selectedSubject && matchesMaterialSelection(item, selectedSubject, selectedChapter || undefined)).reduce((n,item) => n + (item.pyqItems?.length || 0), 0);
+  const [testSource, setTestSource] = useState<'published' | 'bank'>('published');
+  const [bankQuestionCount, setBankQuestionCount] = useState(10);
+  const [bankVariant, setBankVariant] = useState(0);
+  const bankTest: EvaluationTest | undefined = questionBank.length ? (() => {
+    const questions = [...questionBank.slice(bankVariant % questionBank.length), ...questionBank.slice(0, bankVariant % questionBank.length)].slice(0, bankQuestionCount);
+    const totalMarks = questions.reduce((sum, q) => sum + q.marks, 0);
+    return { id: `bank-${bankVariant}`, title: 'Question Bank Practice Test', testType: 'chapter', board: selectedBoard, classGrade: selectedClass, stream: selectedStream, subjectId: selectedSubject?.id || '', chapterId: selectedChapter?.id, durationMinutes: Math.max(5, questions.length * 2), totalMarks, passingMarks: Math.ceil(totalMarks * 0.8), questions, approved: true, published: true, createdAt: new Date().toISOString() };
+  })() : undefined;
   // Never serve an unrelated fallback test from another subject/chapter.
   const [generatedTest, setGeneratedTest] = useState<EvaluationTest>();
-  const testCandidate = (generatedScope === selectionKey ? generatedTest : undefined) || matchedTests[0];
+  const testCandidate = (generatedScope === selectionKey ? generatedTest : undefined) || (testSource === 'bank' ? bankTest : matchedTests[0]);
   const activeTest: EvaluationTest | undefined = testCandidate ? { ...testCandidate, totalMarks: testCandidate.questions.reduce((sum, q) => sum + q.marks, 0) } : undefined;
   const submitting = useRef(false);
   const [saveStatus, setSaveStatus] = useState('');
@@ -264,6 +274,7 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
     setIsFlipped(false);
     setTestStarted(false);
     setTestSubmitted(false);
+    setTestSource('published'); setBankVariant(0);
     setGeneratedTest(undefined);
     setSaveStatus('');
     setCurrentQuestionIndex(0);
@@ -816,6 +827,13 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
       {/* Module 9: Test Yourself (Interactive Objective Testing Engine) */}
       {activeModule === 'test_yourself' && (
         <div className="space-y-5">
+          <div className="rounded-xl border border-orange-200 bg-orange-50 p-4 space-y-3">
+            <h3 className="font-bold">Test Generator — Question Bank & Previous Year Questions</h3>
+            <label htmlFor="test-source" className="text-sm">Question source</label>
+            <select id="test-source" value={testSource} disabled={testStarted} onChange={e => { setTestSource(e.target.value as 'published' | 'bank'); setTestSubmitted(false); }} className="ml-2 rounded border p-2 text-sm"><option value="published">Published test ({matchedTests.length})</option><option value="bank">Question bank ({questionBank.length} MCQs)</option></select>
+            {testSource === 'bank' && <div className="flex flex-wrap items-center gap-2"><label htmlFor="bank-count" className="text-sm">Questions</label><select id="bank-count" value={bankQuestionCount} disabled={testStarted} onChange={e => setBankQuestionCount(Number(e.target.value))} className="rounded border p-2 text-sm">{[5,10,20,30].map(n => <option key={n} value={n}>{n}</option>)}</select><button type="button" disabled={testStarted || questionBank.length < 2} onClick={() => { setBankVariant(v => v + 1); setTestSubmitted(false); }} className="rounded border bg-white px-3 py-2 text-sm disabled:opacity-50">New question set</button></div>}
+            <p className="text-xs text-stone-700">Verified previous-year questions: {publishedPyqCount}. Open Previous Year Questions to review solutions. Descriptive PYQs cannot be automatically graded as MCQs.</p>
+          </div>
           {saveStatus && <p role="status" className="p-3 border rounded-xl">{saveStatus}</p>}
           <div className="flex flex-wrap gap-2 justify-end"><button onClick={generateWithTeacher} disabled={studentGenerating} className="px-3 py-2 rounded-xl bg-orange-600 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5"><WandSparkles className="w-4 h-4"/>{studentGenerating ? websiteText("Generating…") : websiteText("Generate Test with Sankatmochansaarthi")}</button></div>
           {studentGenerationError && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs">{studentGenerationError}</div>}
