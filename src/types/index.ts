@@ -198,6 +198,8 @@ export interface EvaluationTest {
 }
 
 export interface TestResultAnswer {
+  writtenAnswer?: string;
+  answerType?: 'objective' | 'descriptive';
   options?: string[];
   questionId: string;
   questionText: string;

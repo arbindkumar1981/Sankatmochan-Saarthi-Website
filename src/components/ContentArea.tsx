@@ -284,6 +284,132 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
     !!selectedSubject && matchesMaterialSelection(item, selectedSubject, selectedChapter || undefined) &&
     (!selectedTopic || matchesUploadedTopic(item, selectedTopic))
   ).reduce((n, item) => n + (item.pyqItems?.length || 0), 0);
+  // Topic Test uses existing approved descriptive questions, not invented AI content.
+  // Every item needs an answer and an explicit concept tag for coverage checks.
+  const descriptivePool = [
+    ...publishedBankContents.flatMap(item => {
+      try {
+        const data: unknown = JSON.parse(item.bodyText);
+        const items = Array.isArray(data) ? data : data && typeof data === 'object' && 'questions' in data ? (data as { questions: unknown }).questions : [];
+        if (!Array.isArray(items)) return [];
+        return items.flatMap((entry, index) => {
+          if (!entry || typeof entry !== 'object') return [];
+          const q = entry as Record<string, unknown>;
+          const question = typeof q.question === 'string' ? q.question : typeof q.questionText === 'string' ? q.questionText : '';
+          const answer = typeof q.answer === 'string' ? q.answer : typeof q.solution === 'string' ? q.solution : '';
+          const concept = typeof q.concept === 'string' ? q.concept : typeof q.conceptTag === 'string' ? q.conceptTag : '';
+          const marks = q.marks === 2 ? 2 : q.marks === 1 ? 1 : 0;
+          if (!question.trim() || !answer.trim() || !concept.trim() || !marks || Array.isArray(q.options)) return [];
+          return [{ id: `${item.id}:${index}`, question, answer, concept, marks }];
+        });
+      } catch { return []; }
+    }),
+    ...learningContents.filter(item => item.contentType === 'pyqs' && item.approved && item.published &&
+      item.board === selectedBoard && item.classGrade === selectedClass && !!selectedSubject &&
+      matchesMaterialSelection(item, selectedSubject, selectedChapter || undefined) &&
+      (!selectedTopic || matchesUploadedTopic(item, selectedTopic)))
+      .flatMap(item => (item.pyqItems || []).flatMap(pyq => {
+        const tagged = pyq as typeof pyq & { concept?: string };
+        if (!pyq.question?.trim() || !pyq.solution?.trim() || !tagged.concept?.trim() ||
+          ![1, 2].includes(pyq.marks) || (pyq as typeof pyq & { options?: string[] }).options?.length) return [];
+        return [{ id: `pyq:${item.id}:${pyq.id}`, question: pyq.question,
+          answer: pyq.solution, concept: tagged.concept, marks: pyq.marks }];
+      }))
+  ].filter((q, index, all) => all.findIndex(other => other.question.trim().toLowerCase() === q.question.trim().toLowerCase()) === index);
+  const [writtenEvaluating, setWrittenEvaluating] = useState(false);
+  const [writtenEvaluation, setWrittenEvaluation] = useState<{
+    score: number; pending: number; saved: boolean; message: string;
+    answers: { id: string; marks: number; awarded: number; status: 'correct' | 'unanswered' | 'review'; concept: string; feedback?: string }[];
+  } | null>(null);
+  const [descriptiveVariant, setDescriptiveVariant] = useState(0);
+  const [descriptiveStarted, setDescriptiveStarted] = useState(false);
+  const [descriptiveSubmitted, setDescriptiveSubmitted] = useState(false);
+  const [writtenAnswers, setWrittenAnswers] = useState<Record<string, string>>({});
+  const topicConcepts = [...new Set(descriptivePool.map(q => q.concept.trim().toLowerCase()))];
+  const descriptiveQuestions = (() => {
+    const rotated = descriptivePool.length ? [...descriptivePool.slice(descriptiveVariant % descriptivePool.length),
+      ...descriptivePool.slice(0, descriptiveVariant % descriptivePool.length)] : [];
+    const chosen: typeof descriptivePool = [];
+    const covered = new Set<string>();
+    let marks = 0;
+    // Prioritize unseen concepts and only use a combination totaling exactly 20.
+    for (const q of rotated) {
+      if (marks + q.marks > 20 || covered.has(q.concept.trim().toLowerCase())) continue;
+      chosen.push(q); marks += q.marks; covered.add(q.concept.trim().toLowerCase());
+    }
+    for (const q of rotated) {
+      if (marks === 20) break;
+      if (chosen.includes(q) || marks + q.marks > 20) continue;
+      chosen.push(q); marks += q.marks;
+    }
+    return marks === 20 && topicConcepts.every(concept => chosen.some(q => q.concept.trim().toLowerCase() === concept))
+      ? chosen : [];
+  })();
+  const normalizeWritten = (value: string) => value.normalize('NFKC').toLocaleLowerCase()
+    .replace(/[^\\p{L}\\p{N}]+/gu, ' ').trim().replace(/\\s+/g, ' ');
+  const evaluateWrittenAnswers = async () => {
+    if (!profile || !user || !descriptiveQuestions.length || writtenEvaluating) return;
+    setWrittenEvaluating(true);
+    setWrittenEvaluation(null);
+    try {
+      const api = import.meta.env.VITE_SAARTHI_API_URL;
+      if (!api) throw new Error('AI evaluation backend is not configured.');
+      const token = await user.getIdToken();
+      const res = await fetch(`${api}/v1/website/test/evaluate`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ questions: descriptiveQuestions.map(q => ({
+          question_id: q.id, question: q.question, model_answer: q.answer,
+          student_answer: writtenAnswers[q.id] || '', concept: q.concept, marks: q.marks
+        })) })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(typeof data.detail === 'string' ? data.detail : 'AI evaluation failed.');
+      if (!Array.isArray(data.grades) || data.grades.length !== descriptiveQuestions.length || data.total_marks !== 20)
+        throw new Error('Incomplete evaluation; no marks issued.');
+      const gradeMap = new Map<string, { awarded: number; feedback: string }>(
+        data.grades.map((grade: { question_id: string; awarded: number; feedback: string }) =>
+          [grade.question_id, { awarded: grade.awarded, feedback: grade.feedback }])
+      );
+      const evaluations = descriptiveQuestions.map(q => {
+        const grade = gradeMap.get(q.id);
+        if (!grade || !Number.isInteger(grade.awarded) || grade.awarded < 0 || grade.awarded > q.marks)
+          throw new Error('Invalid AI marks; no Report Card saved.');
+        return { id: q.id, marks: q.marks, awarded: grade.awarded,
+          status: grade.awarded === q.marks ? 'correct' as const : grade.awarded === 0 ? 'unanswered' as const : 'review' as const,
+          concept: q.concept, feedback: grade.feedback };
+      });
+      const score = evaluations.reduce((sum, item) => sum + item.awarded, 0);
+      const answers: TestResultAnswer[] = descriptiveQuestions.map((q, idx) => ({
+        questionId: q.id, questionText: q.question, selectedOption: evaluations[idx].awarded > 0 ? 0 : -1,
+        correctOption: 0, isCorrect: evaluations[idx].awarded === q.marks,
+        explanation: `${q.answer} — AI feedback: ${evaluations[idx].feedback}`,
+        marksAwarded: evaluations[idx].awarded, writtenAnswer: writtenAnswers[q.id] || '',
+        answerType: 'descriptive'
+      }));
+      setDescriptiveSubmitted(true); setDescriptiveStarted(false);
+      setWrittenEvaluation({ score, pending: 0, saved: false,
+        message: 'AI evaluation complete. Saving Report Card…', answers: evaluations });
+      await saveTestResult({
+        studentUid: profile.uid, studentName: profile.displayName || 'Student',
+        testId: `written-${selectedChapter?.id || 'topic'}-${descriptiveVariant}`,
+        testTitle: `${selectedTopic?.title || selectedChapter?.title || 'Topic'} — Written Topic Test`,
+        testType: 'topic', board: selectedBoard, classGrade: selectedClass,
+        subjectId: selectedSubject?.id || '', score, totalMarks: 20,
+        percentage: Math.round(score * 5),
+        accuracy: Math.round(evaluations.filter(e => e.awarded === e.marks).length / evaluations.length * 100),
+        timeTakenSeconds: 3600 - testTimeRemaining, answers,
+        strengths: [...new Set(evaluations.filter(e => e.awarded === e.marks).map(e => e.concept))],
+        weaknesses: [...new Set(evaluations.filter(e => e.awarded < e.marks).map(e => e.concept))],
+        remarks: 'AI evaluated against approved Question Bank/PYQ answer keys; 60-minute, 20-mark written Topic Test.',
+        createdAt: new Date().toISOString()
+      });
+      setWrittenEvaluation(prev => prev ? { ...prev, saved: true,
+        message: 'AI evaluation completed and Report Card saved. View Test & Report Card.' } : prev);
+    } catch (error) {
+      setWrittenEvaluation(prev => prev ? { ...prev, message: 'AI graded the test but Report Card saving failed. Retry saving before leaving.' } : prev);
+      setStudentGenerationError(error instanceof Error ? error.message : 'AI evaluation unavailable. Please retry.');
+    } finally { setWrittenEvaluating(false); }
+  };
   const [testSource, setTestSource] = useState<'published' | 'bank'>('published');
   const [bankQuestionCount, setBankQuestionCount] = useState(10);
   const [bankVariant, setBankVariant] = useState(0);
@@ -309,6 +435,7 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
     setIsFlipped(false);
     setTestStarted(false);
     setTestSubmitted(false);
+    setDescriptiveStarted(false); setDescriptiveSubmitted(false); setWrittenAnswers({}); setDescriptiveVariant(0); setWrittenEvaluation(null);
     setTestSource('published'); setBankVariant(0);
     setGeneratedTest(undefined);
     setSaveStatus('');
@@ -337,6 +464,13 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
     weaknesses: string[];
     answers: TestResultAnswer[];
   } | null>(null);
+
+  useEffect(() => {
+    if (!descriptiveStarted || descriptiveSubmitted) return;
+    if (testTimeRemaining <= 0) { void evaluateWrittenAnswers(); return; }
+    const interval = window.setInterval(() => setTestTimeRemaining(t => Math.max(0, t - 1)), 1000);
+    return () => window.clearInterval(interval);
+  }, [descriptiveStarted, descriptiveSubmitted, testTimeRemaining]);
 
   // Timer effect for test
   useEffect(() => {
@@ -862,6 +996,37 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
       {/* Module 9: Test Yourself (Interactive Objective Testing Engine) */}
       {activeModule === 'test_yourself' && (
         <div className="space-y-5">
+          <section className="rounded-2xl border-2 border-orange-300 bg-amber-50 p-5 space-y-4" aria-label="20-mark descriptive topic test">
+            <h3 className="text-lg font-extrabold">Topic Test / Test Yourself — Written Answers</h3>
+            <p className="text-sm font-semibold">Time: 60 minutes · Maximum marks: 20 · One-word, one-line, very short and short answers</p>
+            <p className="text-xs text-stone-700">Source: approved Question Bank and Previous Year Questions. Concept coverage is checked from explicit concept tags. AI checks written answers against approved model answers and generates the Report Card automatically.</p>
+            {!descriptiveStarted && !descriptiveSubmitted && <>
+              <p className="text-sm">Eligible descriptive questions: {descriptivePool.length} · Tagged concepts: {topicConcepts.length} · Selected questions: {descriptiveQuestions.length}</p>
+              {!descriptiveQuestions.length && <p role="status" className="text-sm text-red-800">A complete 20-mark paper covering every tagged concept cannot be formed from the approved questions. Publish additional 1/2-mark descriptive questions with answers and concept tags.</p>}
+              <div className="flex flex-wrap gap-2">
+                <button type="button" disabled={!descriptiveQuestions.length} onClick={() => { setDescriptiveStarted(true); setDescriptiveSubmitted(false); setWrittenAnswers({}); setWrittenEvaluation(null); setTestTimeRemaining(3600); }} className="rounded-lg bg-orange-700 px-4 py-2 text-white font-bold disabled:opacity-50">Start 60-minute Topic Test</button>
+                <button type="button" disabled={!descriptivePool.length} onClick={() => setDescriptiveVariant(v => v + 1)} className="rounded-lg border border-orange-300 bg-white px-4 py-2 disabled:opacity-50">New Paper</button>
+              </div>
+            </>}
+            {descriptiveStarted && !descriptiveSubmitted && <>
+              <p className="font-bold" role="timer">Time left: {Math.floor(testTimeRemaining / 60)}:{String(testTimeRemaining % 60).padStart(2, '0')} · 20 marks</p>
+              {descriptiveQuestions.map((q, index) => <div key={q.id} className="rounded-xl border bg-white p-4 space-y-2">
+                <label htmlFor={`written-${index}`} className="block font-semibold text-sm">Q{index + 1}. {q.question} ({q.marks} {q.marks === 1 ? 'mark' : 'marks'})</label>
+                <textarea id={`written-${index}`} rows={q.marks === 1 ? 2 : 4} value={writtenAnswers[q.id] || ''} onChange={e => setWrittenAnswers(prev => ({ ...prev, [q.id]: e.target.value }))} className="w-full rounded-lg border p-3 text-sm" placeholder="Write your answer here..." />
+              </div>)}
+              <button type="button" disabled={writtenEvaluating} onClick={() => void evaluateWrittenAnswers()} className="rounded-lg bg-orange-700 px-5 py-2 text-white font-bold">{writtenEvaluating ? 'AI Evaluating…' : 'Submit & AI Evaluate'}</button>
+            </>}
+            {descriptiveSubmitted && <div className="space-y-3">
+              <p role="status" className="font-bold">{writtenEvaluation?.message}</p>
+              <p className="font-bold">AI Score: {writtenEvaluation?.score || 0}/20 · Report Card: {writtenEvaluation?.saved ? 'Saved' : 'Not saved'}</p>
+              {descriptiveQuestions.map((q, index) => <div key={q.id} className="rounded-lg border bg-white p-3 text-sm">
+                <p className="font-bold">Q{index + 1}. {q.question} ({q.marks} marks)</p>
+                <p>Your answer: {writtenAnswers[q.id] || 'Not attempted'}</p><p>Evaluation: {writtenEvaluation?.answers.find(a => a.id === q.id)?.status || 'pending'} · Awarded: {writtenEvaluation?.answers.find(a => a.id === q.id)?.awarded || 0}/{q.marks} · AI feedback: {writtenEvaluation?.answers.find(a => a.id === q.id)?.feedback || ''}</p>
+                <p className="mt-2 text-green-800">Model answer: {q.answer}</p>
+              </div>)}
+              <button type="button" onClick={() => { setDescriptiveSubmitted(false); setWrittenEvaluation(null); setWrittenAnswers({}); setDescriptiveVariant(v => v + 1); }} className="rounded-lg border bg-white px-4 py-2">Prepare Another Paper</button>
+            </div>}
+          </section>
           <div className="rounded-xl border border-orange-200 bg-orange-50 p-4 space-y-3">
             <h3 className="font-bold">Test Generator — Question Bank & Previous Year Questions</h3>
             <label htmlFor="test-source" className="text-sm">Question source</label>
