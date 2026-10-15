@@ -75,6 +75,7 @@ export const VerticalNav: React.FC = () => {
     ['materials', 'learning', 'youtube', 'evaluation'].includes(id) ? 'student' : 'public';
   const sections = [
     { id: 'student', label: language === 'hi' ? 'विद्यार्थी डैशबोर्ड' : 'Student Dashboard' },
+    { id: 'public', label: language === 'hi' ? 'अन्य पृष्ठ और सूचनाएँ' : 'More Pages & Notices' },
     ...(isAdmin ? [{ id: 'admin', label: language === 'hi' ? 'प्रशासक डैशबोर्ड' : 'Admin Dashboard' }] : []),
   ];
   return (
@@ -94,6 +95,9 @@ export const VerticalNav: React.FC = () => {
         return (
           <button
             key={item.id}
+            type="button"
+            title={websiteText(item.label)}
+            aria-label={websiteText(item.label)}
             aria-current={isActive ? "page" : undefined}
             onClick={() => setActiveTab(item.id)}
             className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all relative whitespace-nowrap lg:whitespace-normal group ${
