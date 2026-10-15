@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../services/firebase';
 import { NavigationManager } from './NavigationManager';
+import { AdminAuditViewer } from './AdminAuditViewer';
 
 const field = 'w-full min-w-0 border rounded-lg p-2 text-sm bg-white';
 const button = 'border rounded-lg px-3 py-2 text-xs font-semibold hover:bg-orange-50 disabled:opacity-50';
@@ -63,7 +64,8 @@ export function WebsiteSettingsManager() {
   };
   return <section className="space-y-4">
     <h3 className="text-lg font-bold">Website & Menu Controls</h3>
-    <div className="flex flex-wrap gap-2">{[['menus', 'Navigation & Icons'], ['branding', 'Name, Logo & Banner'], ['boards', 'Boards'], ['classes', 'Classes'], ['streams', 'Streams'], ['quotes', 'Quotes'], ['text', 'Website Text']].map(([key,label]) => <button key={key} className={`${button} ${section === key ? 'bg-orange-100' : ''}`} aria-pressed={section === key} onClick={() => setSection(key)}>{label}</button>)}</div>
+    <div className="flex flex-wrap gap-2">{[['menus', 'Navigation & Icons'], ['branding', 'Name, Logo & Banner'], ['boards', 'Boards'], ['classes', 'Classes'], ['streams', 'Streams'], ['quotes', 'Quotes'], ['text', 'Website Text'], ['audit', 'Change History']].map(([key,label]) => <button key={key} className={`${button} ${section === key ? 'bg-orange-100' : ''}`} aria-pressed={section === key} onClick={() => setSection(key)}>{label}</button>)}</div>
+    {section === 'audit' && <AdminAuditViewer />}
     {section === 'menus' && <fieldset disabled={busy}><NavigationManager draft={draft} update={update} /></fieldset>}
     {section === 'branding' && <div className="space-y-3">
       <label className="block text-sm">Website name<input className={field} value={draft.name} maxLength={120} onChange={e => update({ name: e.target.value })} /></label>
