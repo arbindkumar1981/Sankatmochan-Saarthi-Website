@@ -67,6 +67,9 @@ export interface PYQItem {
   solution: string;
   solutionHindi?: string;
   repeatedFrequency?: string;
+  /** Optional verified objective-answer metadata for auto-graded PYQ tests. */
+  options?: string[];
+  correctIndex?: number;
 }
 
 export interface CaseStudyItem {
