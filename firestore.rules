@@ -124,6 +124,20 @@ service cloud.firestore {
       allow delete: if isSignedIn() && (resource.data.studentUid == request.auth.uid || isAdmin());
     }
 
+    // Append-only website administration audit trail. Client cannot edit or remove events.
+    match /admin_audit_logs/{logId} {
+      allow get, list: if isAdmin();
+      allow create: if isAdmin() && isValidId(logId) &&
+        incoming().keys().hasOnly(['action', 'actorUid', 'target', 'previousRevision', 'revision', 'createdAt']) &&
+        incoming().actorUid == request.auth.uid &&
+        incoming().action == 'website_config.update' &&
+        incoming().target == 'curriculum_nodes/_website_config' &&
+        incoming().previousRevision is int &&
+        incoming().revision == incoming().previousRevision + 1 &&
+        incoming().createdAt is string && incoming().createdAt.size() <= 40;
+      allow update, delete: if false;
+    }
+
     // Motivational Notices & Circulars
     match /notices/{noticeId} {
       allow read: if resource.data.active == true || isAdmin();

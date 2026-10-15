@@ -44,6 +44,9 @@ export function StudentRecordsManager({ students, results, mistakes }: Props) {
   const selected = students.find(s => s.uid === selectedUid);
   const selectedAttempts = selected ? attemptsByStudent.get(selected.uid) || [] : [];
   const selectedMistakes = selected ? mistakes.filter(item => item.studentUid === selected.uid).sort((a,b) => (b.createdAt || '').localeCompare(a.createdAt || '')) : [];
+  const completed = results.filter(item => typeof item.percentage === 'number' && Number.isFinite(item.percentage));
+  const meanScore = completed.length ? Math.round(completed.reduce((total, item) => total + (item.percentage || 0), 0) / completed.length) : null;
+  const activeStudentCount = new Set(results.map(item => item.studentUid).filter(Boolean)).size;
   const percent = (value: unknown) => typeof value === 'number' && Number.isFinite(value) ? `${Math.round(value)}%` : '—';
 
   return <section className="space-y-4" aria-label="Student records manager">
@@ -54,6 +57,15 @@ export function StudentRecordsManager({ students, results, mistakes }: Props) {
       </div>
       <span className="rounded-lg bg-stone-100 px-3 py-2 text-xs font-semibold">{matching.length} of {students.length} students</span>
     </div>
+    <div className="grid grid-cols-2 gap-3 md:grid-cols-4" aria-label="Student progress overview">
+      {[
+        ['Registered students', String(students.length)],
+        ['Students with tests', String(activeStudentCount)],
+        ['Recorded attempts', String(results.length)],
+        ['Average test score', meanScore === null ? '—' : `${meanScore}%`]
+      ].map(([label, value]) => <div key={label} className="rounded-xl border bg-white p-3"><p className="text-xs text-stone-600">{label}</p><p className="text-xl font-bold text-stone-900">{value}</p></div>)}
+    </div>
+    <p className="text-xs text-stone-500">These metrics use recorded tests, not topic mastery. Students without tests are excluded from average score.</p>
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
       <label className="sm:col-span-2 text-xs font-semibold">Find student
         <input aria-label="Search students" className="mt-1 w-full rounded-lg border bg-white p-2 text-sm" placeholder="Name, email or student ID" value={query} onChange={e => setQuery(e.target.value)} />

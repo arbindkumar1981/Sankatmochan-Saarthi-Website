@@ -30,7 +30,16 @@ export function WebsiteProvider({ children }: { children: React.ReactNode }) {
       const reference = doc(db, 'curriculum_nodes', '_website_config');
       const current = await transaction.get(reference);
       if (Number(current.data()?.revision || 0) !== expectedRevision) throw new Error('Another admin updated the website. Reload settings before saving your changes.');
-      transaction.set(reference, { kind: 'website_config', config: validated, revision: expectedRevision + 1, updatedAt: new Date().toISOString() });
+      const now = new Date().toISOString();
+      transaction.set(reference, { kind: 'website_config', config: validated, revision: expectedRevision + 1, updatedAt: now });
+      transaction.set(doc(db, 'admin_audit_logs', crypto.randomUUID()), {
+        action: 'website_config.update',
+        actorUid: user.uid,
+        target: 'curriculum_nodes/_website_config',
+        previousRevision: expectedRevision,
+        revision: expectedRevision + 1,
+        createdAt: now
+      });
     });
   };
   return <WebsiteContext.Provider value={{ config, revision, syncError, save, text: original => resolveCopy(config, original) }}>{children}</WebsiteContext.Provider>;
