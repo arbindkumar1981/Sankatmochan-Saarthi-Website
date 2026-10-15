@@ -42,6 +42,36 @@ export function PublicHome() {
         </div>
       </div>
     </div>
+    <section className="overflow-hidden rounded-3xl border border-blue-100 bg-white shadow-sm">
+      <div className="grid items-center gap-0 lg:grid-cols-[1fr_1fr]">
+        <div className="p-6 sm:p-9">
+          <p className="text-xs font-extrabold uppercase tracking-[.2em] text-blue-700">{hi ? 'संकटमोचन सार्थी का उद्देश्य' : 'THE SAARTHI MISSION'}</p>
+          <h2 className="mt-3 text-2xl font-extrabold leading-tight text-slate-900 sm:text-3xl">{hi ? 'सिर्फ पढ़ना नहीं — समझना, अभ्यास करना और आगे बढ़ना' : 'Not just studying. Understanding, practising and growing.'}</h2>
+          <p className="mt-4 max-w-xl text-sm leading-7 text-slate-600">{hi ? 'हमारा लक्ष्य है कि कक्षा IX से XII तक हर विद्यार्थी अपनी भाषा में कठिन विषयों को आसानी से समझे, गलतियों से सीखे और अपनी अगली पढ़ाई का सही रास्ता जाने।' : 'Our goal is to help every Class IX–XII student understand difficult topics in a familiar language, learn from mistakes and know what to study next.'}</p>
+          <div className="mt-6 grid grid-cols-2 gap-3">
+            {[
+              [hi ? 'अपनी भाषा में' : 'Your language', hi ? 'सरल और विस्तृत समझ' : 'Clear explanations'],
+              [hi ? 'अपनी गति से' : 'Your pace', hi ? 'जब चाहें, तब सीखें' : 'Learn step by step'],
+              [hi ? 'अपनी गलतियों से' : 'Your mistakes', hi ? 'कमजोर टॉपिक सुधारें' : 'Improve weak topics'],
+              [hi ? 'अपनी प्रगति' : 'Your progress', hi ? 'अगला कदम पहचानें' : 'Know the next step']
+            ].map(([heading, detail]) => <div key={heading} className="rounded-xl bg-blue-50 p-3"><CheckCircle2 className="mb-2 h-5 w-5 text-blue-700"/><p className="text-sm font-extrabold text-slate-900">{heading}</p><p className="mt-1 text-xs leading-5 text-slate-600">{detail}</p></div>)}
+          </div>
+          <button type="button" onClick={() => setActiveTab('courses')} className="mt-6 inline-flex items-center gap-2 rounded-xl bg-blue-700 px-5 py-3 text-sm font-bold text-white hover:bg-blue-800">{hi ? 'अपनी कक्षा चुनें' : 'Choose your class'} <ArrowRight className="h-4 w-4"/></button>
+        </div>
+        <div className="bg-gradient-to-br from-[#102b62] via-[#16439a] to-[#3285ce] p-6 sm:p-10">
+          <svg role="img" aria-label={hi ? 'सार्थी की सीखने की यात्रा का चित्र' : 'Saarthi learning journey illustration'} viewBox="0 0 600 420" className="h-auto w-full" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="520" cy="55" r="105" fill="#ffffff" opacity=".07"/><circle cx="55" cy="365" r="115" fill="#ffffff" opacity=".07"/>
+            <rect x="52" y="54" width="496" height="312" rx="30" fill="#ffffff" opacity=".13"/>
+            <rect x="87" y="85" width="426" height="246" rx="22" fill="#ffffff"/>
+            <text x="300" y="125" textAnchor="middle" fill="#1d4ed8" fontWeight="900" fontSize="25">SAARTHI</text>
+            <text x="300" y="150" textAnchor="middle" fill="#64748b" fontSize="13" fontWeight="700">YOUR PERSONAL LEARNING JOURNEY</text>
+            <path d="M135 238 H465" stroke="#93c5fd" strokeWidth="8" strokeLinecap="round"/>
+            {['LEARN','PRACTISE','TEST','GROW'].map((step, i) => <g key={step}><circle cx={145+i*103} cy="238" r="32" fill={i===3?'#fbbf24':'#2563eb'}/><text x={145+i*103} y="245" textAnchor="middle" fontSize="21" fontWeight="900" fill="#ffffff">{i+1}</text><text x={145+i*103} y="294" textAnchor="middle" fontSize="12" fontWeight="800" fill="#1e3a8a">{step}</text></g>)}
+            <rect x="204" y="342" width="192" height="36" rx="18" fill="#fbbf24"/><text x="300" y="365" textAnchor="middle" fontWeight="900" fontSize="16" fill="#172554">CLASSES IX–XII</text>
+          </svg>
+        </div>
+      </div>
+    </section>
     <div>
       <div className="mb-5 flex flex-wrap items-end justify-between gap-3"><div><p className="text-xs font-extrabold uppercase tracking-widest text-blue-700">{hi ? 'अपनी कक्षा चुनें' : 'FIND YOUR CLASS'}</p><h2 className="mt-1 text-2xl font-extrabold text-slate-900">{hi ? 'कक्षा 9 से 12 तक की पढ़ाई' : 'Explore learning by class'}</h2></div><button type="button" onClick={() => setActiveTab('courses')} className="inline-flex items-center gap-1 text-sm font-bold text-blue-700 hover:underline">{hi ? 'सभी कोर्स' : 'All courses'} <ArrowRight className="h-4 w-4" /></button></div>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{grades.map((grade, i) => <button type="button" key={grade} onClick={() => setActiveTab('courses')} className="group rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-400 hover:shadow-md"><div className="mb-4 flex items-center justify-between"><span className="rounded-xl bg-blue-50 p-3 text-blue-700"><Layers3 className="h-6 w-6" /></span><ArrowRight className="h-5 w-5 text-slate-400 transition group-hover:translate-x-1 group-hover:text-blue-700" /></div><h3 className="text-xl font-extrabold text-slate-900">{hi ? 'कक्षा' : 'Class'} {romanGrades[i]}</h3><p className="mt-2 text-sm text-slate-600">{hi ? 'विषय • अध्याय • अभ्यास' : 'Subjects • Chapters • Practice'}</p></button>)}</div>
