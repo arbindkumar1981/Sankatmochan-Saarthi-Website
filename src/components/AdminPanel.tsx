@@ -75,7 +75,7 @@ export const AdminPanel: React.FC = () => {
 
   const [adminTab, setAdminTab] = useState<
     'content' | 'videos' | 'tests' | 'notices' | 'students' | 'enquiries' | 'settings' | 'curriculum'
-  >('curriculum');
+  >('settings');
 
   const [adminOperationError, setAdminOperationError] = useState('');
   const adminSubmit = (action: (e: React.FormEvent) => Promise<void>) => async (e: React.FormEvent) => {
@@ -422,19 +422,28 @@ export const AdminPanel: React.FC = () => {
 
       </div>
 
-      {/* One organized control panel; only the selected manager is opened. */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3" aria-label="Admin control panel">
-        {([
-          ['settings', 'Website Settings', 'Names, icons, pages, logo and menu order', ImageIcon],
-          ['curriculum', 'Curriculum Manager', 'Boards, subjects, chapters and topics', BookOpen],
-          ['content', 'Content Manager', 'Upload, approve, publish and restore', FileText],
-          ['videos', 'Video Manager', 'Curated lectures and links', Youtube],
-          ['tests', 'Question & Test Manager', 'Questions, tests and evaluation', CheckSquare],
-          ['notices', 'Notice Manager', 'Student notices and announcements', BellRing],
-          ['students', 'Students', 'Student records and learning progress', Users],
-          ['enquiries', 'Enquiries', 'Questions and contact requests', Inbox]
-        ] as const).map(([key, label, description, Icon]) => <button key={key} aria-pressed={adminTab === key} onClick={() => setAdminTab(key)} className={`flex flex-col gap-2 border rounded-xl p-3 text-left ${adminTab === key ? 'bg-orange-50 border-orange-500 text-orange-900' : 'bg-white border-stone-200 text-stone-700 hover:bg-orange-50'}`}><Icon className="w-5 h-5" /><span className="font-bold text-sm">{label}</span><span className="text-xs text-stone-500">{description}</span></button>)}
-      </div>
+      {/* Compact, task-oriented navigation: keep all existing managers and their permissions. */}
+      <nav className="rounded-xl border border-stone-200 bg-white p-3" aria-label="Admin control panel">
+        <p className="mb-2 text-xs font-semibold text-stone-600">Manage website sections — Add / Edit / Hide / Restore</p>
+        <div className="flex flex-wrap gap-2">
+          {([
+            ['settings', 'Website & Pages', ImageIcon],
+            ['curriculum', 'Curriculum', BookOpen],
+            ['content', 'Study Materials', FileText],
+            ['videos', 'Videos', Youtube],
+            ['tests', 'Questions & Tests', CheckSquare],
+            ['notices', 'Notices', BellRing],
+            ['students', 'Students', Users],
+            ['enquiries', 'Enquiries', Inbox]
+          ] as const).map(([key, label, Icon]) => (
+            <button key={key} type="button" aria-pressed={adminTab === key}
+              onClick={() => setAdminTab(key)}
+              className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold transition-colors ${adminTab === key ? 'border-orange-500 bg-orange-50 text-orange-900' : 'border-stone-200 text-stone-700 hover:bg-stone-50'}`}>
+              <Icon className="h-4 w-4" aria-hidden="true" />{label}
+            </button>
+          ))}
+        </div>
+      </nav>
       {adminTab === 'curriculum' && <CurriculumManager />}
       {/* Admin Tab 1: Content Manager */}
       {adminTab === 'content' && (
