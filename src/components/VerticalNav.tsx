@@ -24,8 +24,6 @@ export const VerticalNav: React.FC = () => {
   const { config } = useWebsite();
 
   const navItems = [
-    { id: 'home' as MainTabType, label: language === 'hi' ? 'होम' : 'Home', sub: '', icon: BookOpen, accent: 'from-orange-500 to-amber-500' },
-    { id: 'courses' as MainTabType, label: language === 'hi' ? 'कोर्स' : 'Courses', sub: '', icon: BookOpen, accent: 'from-orange-500 to-amber-500' },
     { id: 'materials' as MainTabType, label: 'My Dashboard — Saved Materials', sub: '', icon: BookOpen, accent: 'from-orange-500 to-amber-500' },
     {
       id: 'learning' as MainTabType,
@@ -57,20 +55,6 @@ export const VerticalNav: React.FC = () => {
       accent: 'from-emerald-500 to-teal-600',
       count: testResults.length > 0 ? testResults.length : undefined
     },
-    {
-      id: 'about' as MainTabType,
-      label: language === 'hi' ? 'हमारे विषय में' : 'About Us',
-      sub: language === 'hi' ? 'संकटमोचन विद्यापीठ प्रेरणा' : 'Spiritual & Academic Vision',
-      icon: Info,
-      accent: 'from-orange-600 to-amber-700'
-    },
-    {
-      id: 'contact' as MainTabType,
-      label: language === 'hi' ? 'संपर्क करें' : 'Contact Us',
-      sub: language === 'hi' ? 'पूछताछ व मार्गदर्शन' : 'Help & Academic Support',
-      icon: PhoneCall,
-      accent: 'from-stone-600 to-stone-800'
-    }
   ];
 
   if (isAdmin) {
@@ -84,13 +68,12 @@ export const VerticalNav: React.FC = () => {
     });
   }
 
-  const navigationItems = [...navItems.filter(item => item.id === 'home' || item.id === 'courses').map(item => ({ ...item, menuIcon: undefined })), ...managedNavigation(config.navigation).filter(option => !option.deleted && (option.id !== 'admin' || isAdmin)).flatMap(option => { const item = navItems.find(x => x.id === option.id); return item ? [{ ...item, menuIcon: option.icon, label: language === 'hi' ? option.hindiLabel || option.label : option.label, sub: language === 'hi' ? option.hindiSubtitle ?? option.subtitle ?? item.sub : option.subtitle ?? item.sub }] : []; }), ...config.pages.filter(p => !p.deleted).map(p => ({ id: `page:${p.id}` as MainTabType, label: language === 'hi' ? p.hindiTitle || p.title : p.title, sub: '', menuIcon: p.icon, accent: 'from-orange-600 to-amber-700', badge: undefined, count: undefined }))];
+  const navigationItems = [...managedNavigation(config.navigation).filter(option => !option.deleted && !['home', 'courses', 'contact', 'about'].includes(option.id) && (option.id !== 'admin' || isAdmin)).flatMap(option => { const item = navItems.find(x => x.id === option.id); return item ? [{ ...item, menuIcon: option.icon, label: language === 'hi' ? option.hindiLabel || option.label : option.label, sub: language === 'hi' ? option.hindiSubtitle ?? option.subtitle ?? item.sub : option.subtitle ?? item.sub }] : []; }), ...config.pages.filter(p => !p.deleted).map(p => ({ id: `page:${p.id}` as MainTabType, label: language === 'hi' ? p.hindiTitle || p.title : p.title, sub: '', menuIcon: p.icon, accent: 'from-orange-600 to-amber-700', badge: undefined, count: undefined }))];
   // Group existing destinations without changing their stable IDs or stored navigation settings.
   const sectionFor = (id: MainTabType) =>
     id === 'admin' ? 'admin' :
     ['materials', 'learning', 'youtube', 'evaluation'].includes(id) ? 'student' : 'public';
   const sections = [
-    { id: 'public', label: language === 'hi' ? 'सार्वजनिक वेबसाइट' : 'Public Website' },
     { id: 'student', label: language === 'hi' ? 'विद्यार्थी डैशबोर्ड' : 'Student Dashboard' },
     ...(isAdmin ? [{ id: 'admin', label: language === 'hi' ? 'प्रशासक डैशबोर्ड' : 'Admin Dashboard' }] : []),
   ];
