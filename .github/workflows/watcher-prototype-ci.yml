@@ -49,6 +49,20 @@ jobs:
         run: |
           npm audit --prefix .watcher-prototype --json | tee .watcher-prototype/audit.json
           npm ls --prefix .watcher-prototype firebase-tools chokidar braces
+      - name: Validate candidate working emulator lock without committing it
+        run: |
+          npm install --prefix tests/emulator --save-dev "$PWD/.watcher-prototype/firebase-tools-15.33.0-prototype.0.tgz" --ignore-scripts --no-fund
+          npm ci --prefix tests/emulator --ignore-scripts --no-fund
+          npm audit --prefix tests/emulator --audit-level=high
+          node -e 'const l=require("./tests/emulator/package-lock.json");const p=l.packages; if(p["node_modules/firebase-tools"].version!=="15.33.0-prototype.0" || p["node_modules/chokidar"].version!=="4.0.3" || Object.keys(p).some(x=>x.endsWith("/braces"))) process.exit(1); console.log("PASS: candidate consumer lock uses adapted CLI and no braces")'
+          node tests/emulator/node_modules/firebase-tools/lib/bin/firebase.js --version
+      - name: Save candidate consumer lock for review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: candidate-emulator-lock-${{ matrix.os }}
+          path: tests/emulator/package-lock.json
+          retention-days: 7
       - name: Verify watcher and pattern compatibility
         run: |
           export WEBSITE_ROOT="$PWD"
