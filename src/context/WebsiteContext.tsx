@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { doc, collection, onSnapshot, runTransaction } from 'firebase/firestore';
+import { doc, onSnapshot, runTransaction } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { useAuth } from './AuthContext';
 import { DEFAULT_WEBSITE_CONFIG, validateWebsiteConfig, resolveCopy, type WebsiteConfig } from '../services/websiteConfig';
@@ -32,7 +32,7 @@ export function WebsiteProvider({ children }: { children: React.ReactNode }) {
       if (Number(current.data()?.revision || 0) !== expectedRevision) throw new Error('Another admin updated the website. Reload settings before saving your changes.');
       const now = new Date().toISOString();
       transaction.set(reference, { kind: 'website_config', config: validated, revision: expectedRevision + 1, updatedAt: now });
-      transaction.set(doc(collection(db, 'admin_audit_logs')), {
+      transaction.set(doc(db, 'admin_audit_logs', crypto.randomUUID()), {
         action: 'website_config.update',
         actorUid: user.uid,
         target: 'curriculum_nodes/_website_config',
