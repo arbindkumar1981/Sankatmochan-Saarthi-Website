@@ -15,7 +15,12 @@ old browser-generated settings log; deploy the server capture before switching
 the website or there will be a capture gap. The new viewer does not prove that
 capture is active merely because its query succeeds or returns no events.
 
-Deploy companion rules, indexes and `expiresAt` TTL after emulator verification.
+After emulator verification and release approval, prepare companion indexes and
+`expiresAt` TTL, verify server capture, and switch to the new Website before
+enforcing the companion deny-write rules. The old Website includes a legacy audit
+write in its settings transaction: denying that write first breaks admin saves.
+The cutover is incomplete until the deny-write rules are enforced and verified;
+committed rules/TTL configuration is not evidence of a deployed policy.
 Coordinate the companion Backend `docs/master-admin-operations.md` runbook:
 runtime IAM, cloud provisioning, delivered alerts, a READY daily backup and an
 isolated nonproduction restore drill are release gates, not completed by this PR.
