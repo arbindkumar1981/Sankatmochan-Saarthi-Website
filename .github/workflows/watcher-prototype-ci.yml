@@ -63,6 +63,17 @@ jobs:
           name: candidate-emulator-lock-${{ matrix.os }}
           path: tests/emulator/package-lock.json
           retention-days: 7
+      - name: Generate and audit reproducible working emulator lock candidate
+        run: node tests/watcher-prototype/build-working-lock.cjs
+      - name: Upload generated working lock candidate
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reviewed-working-emulator-lock-${{ matrix.os }}
+          path: |
+            tests/emulator/package.json
+            tests/emulator/package-lock.json
+          retention-days: 14
       - name: Verify watcher and pattern compatibility
         run: |
           export WEBSITE_ROOT="$PWD"
