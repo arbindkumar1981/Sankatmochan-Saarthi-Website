@@ -19,11 +19,13 @@ import {
 
 export const VerticalNav: React.FC = () => {
   const { text: websiteText } = useWebsite();
-  const { activeTab, setActiveTab, language, testResults } = useCurriculum();
+  const { activeTab, setActiveTab, activeModule, setActiveModule, language, testResults } = useCurriculum();
   const { isAdmin } = useAuth();
   const { config } = useWebsite();
 
   const navItems = [
+    { id: 'home' as MainTabType, label: language === 'hi' ? 'होम' : 'Home', sub: '', icon: BookOpen, accent: 'from-orange-500 to-amber-500' },
+    { id: 'courses' as MainTabType, label: language === 'hi' ? 'कोर्स' : 'Courses', sub: '', icon: BookOpen, accent: 'from-orange-500 to-amber-500' },
     { id: 'materials' as MainTabType, label: 'My Dashboard — Saved Materials', sub: '', icon: BookOpen, accent: 'from-orange-500 to-amber-500' },
     {
       id: 'learning' as MainTabType,
@@ -82,6 +84,16 @@ export const VerticalNav: React.FC = () => {
     });
   }
 
+  const navigationItems = [...navItems.filter(item => item.id === 'home' || item.id === 'courses').map(item => ({ ...item, menuIcon: undefined })), ...managedNavigation(config.navigation).filter(option => !option.deleted && (option.id !== 'admin' || isAdmin)).flatMap(option => { const item = navItems.find(x => x.id === option.id); return item ? [{ ...item, menuIcon: option.icon, label: language === 'hi' ? option.hindiLabel || option.label : option.label, sub: language === 'hi' ? option.hindiSubtitle ?? option.subtitle ?? item.sub : option.subtitle ?? item.sub }] : []; }), ...config.pages.filter(p => !p.deleted).map(p => ({ id: `page:${p.id}` as MainTabType, label: language === 'hi' ? p.hindiTitle || p.title : p.title, sub: '', menuIcon: p.icon, accent: 'from-orange-600 to-amber-700', badge: undefined, count: undefined }))];
+  // Group existing destinations without changing their stable IDs or stored navigation settings.
+  const sectionFor = (id: MainTabType) =>
+    id === 'admin' ? 'admin' :
+    ['materials', 'learning', 'youtube', 'evaluation'].includes(id) ? 'student' : 'public';
+  const sections = [
+    { id: 'public', label: language === 'hi' ? 'सार्वजनिक वेबसाइट' : 'Public Website' },
+    { id: 'student', label: language === 'hi' ? 'विद्यार्थी डैशबोर्ड' : 'Student Dashboard' },
+    ...(isAdmin ? [{ id: 'admin', label: language === 'hi' ? 'प्रशासक डैशबोर्ड' : 'Admin Dashboard' }] : []),
+  ];
   return (
     <nav className="w-full bg-white rounded-2xl border border-orange-200/90 shadow-sm p-2.5 sm:p-3 flex flex-col gap-1.5 overflow-visible shrink-0 scrollbar-none">
       <div className="hidden lg:block px-3 py-2 border-b border-orange-100 mb-1">
@@ -90,7 +102,10 @@ export const VerticalNav: React.FC = () => {
         </span>
       </div>
 
-      {[...managedNavigation(config.navigation).filter(option => !option.deleted && (option.id !== 'admin' || isAdmin)).flatMap(option => { const item = navItems.find(x => x.id === option.id); return item ? [{ ...item, menuIcon: option.icon, label: language === 'hi' ? option.hindiLabel || option.label : option.label, sub: language === 'hi' ? option.hindiSubtitle ?? option.subtitle ?? item.sub : option.subtitle ?? item.sub }] : []; }), ...config.pages.filter(p => !p.deleted).map(p => ({ id: `page:${p.id}` as MainTabType, label: language === 'hi' ? p.hindiTitle || p.title : p.title, sub: '', menuIcon: p.icon, accent: 'from-orange-600 to-amber-700', badge: undefined, count: undefined }))].map((item) => {
+      {sections.map(section => <React.Fragment key={section.id}>
+        <h2 className="mt-3 px-3 pt-2 text-[11px] font-bold uppercase tracking-wider text-orange-900 border-t border-orange-100 first:mt-0 first:border-t-0">{websiteText(section.label)}</h2>
+        {section.id === 'student' && <button type="button" aria-current={activeTab === 'learning' && ['cbqs', 'case_studies', 'test_yourself', 'pyqs'].includes(activeModule) ? 'page' : undefined} onClick={() => { setActiveModule('test_yourself'); setActiveTab('learning'); }} className="mx-1 flex items-center gap-3 rounded-xl border border-orange-100 px-3 py-3 text-left text-sm font-semibold text-stone-700 hover:bg-orange-50 focus-visible:ring-2 focus-visible:ring-orange-500"><MenuIcon icon="test" className="h-4 w-4" /><span>{language === 'hi' ? 'अभ्यास और टेस्ट' : 'Practice & Tests'}</span></button>}
+        {navigationItems.filter(item => sectionFor(item.id) === section.id).map((item) => {
         const isActive = activeTab === item.id;
 
         return (
@@ -143,6 +158,7 @@ export const VerticalNav: React.FC = () => {
           </button>
         );
       })}
+      </React.Fragment>)}
     </nav>
   );
 };
