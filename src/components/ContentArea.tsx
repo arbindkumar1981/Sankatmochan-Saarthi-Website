@@ -316,6 +316,10 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
           answer: pyq.solution, concept: tagged.concept, marks: pyq.marks }];
       }))
   ].filter((q, index, all) => all.findIndex(other => other.question.trim().toLowerCase() === q.question.trim().toLowerCase()) === index);
+  const [writtenEvaluation, setWrittenEvaluation] = useState<{
+    score: number; pending: number; saved: boolean; message: string;
+    answers: { id: string; marks: number; awarded: number; status: 'correct' | 'unanswered' | 'review'; concept: string }[];
+  } | null>(null);
   const [descriptiveVariant, setDescriptiveVariant] = useState(0);
   const [descriptiveStarted, setDescriptiveStarted] = useState(false);
   const [descriptiveSubmitted, setDescriptiveSubmitted] = useState(false);
@@ -340,6 +344,51 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
     return marks === 20 && topicConcepts.every(concept => chosen.some(q => q.concept.trim().toLowerCase() === concept))
       ? chosen : [];
   })();
+  const normalizeWritten = (value: string) => value.normalize('NFKC').toLocaleLowerCase()
+    .replace(/[^\\p{L}\\p{N}]+/gu, ' ').trim().replace(/\\s+/g, ' ');
+  const evaluateWrittenAnswers = async () => {
+    if (!profile || !descriptiveQuestions.length) return;
+    const evaluations = descriptiveQuestions.map(q => {
+      const submitted = normalizeWritten(writtenAnswers[q.id] || '');
+      const accepted = q.answer.split(/\\s*\\|\\s*/).map(normalizeWritten).filter(Boolean);
+      const status: 'correct' | 'unanswered' | 'review' =
+        !submitted ? 'unanswered' : accepted.includes(submitted) ? 'correct' : 'review';
+      return { id: q.id, marks: q.marks, awarded: status === 'correct' ? q.marks : 0,
+        status, concept: q.concept };
+    });
+    const score = evaluations.reduce((sum, item) => sum + item.awarded, 0);
+    const pending = evaluations.filter(item => item.status === 'review').length;
+    setDescriptiveSubmitted(true); setDescriptiveStarted(false);
+    setWrittenEvaluation({ score, pending, saved: false, message: pending
+      ? 'Exact answers were automatically checked. Other written answers need teacher review; no official final score has been issued.'
+      : 'All answers were checked automatically against the approved answer key. Saving official Report Card…', answers: evaluations });
+    if (pending) return;
+    const answers: TestResultAnswer[] = descriptiveQuestions.map((q, idx) => ({
+      questionId: q.id, questionText: q.question, selectedOption: evaluations[idx].status === 'correct' ? 0 : -1,
+      correctOption: 0, isCorrect: evaluations[idx].status === 'correct', explanation: q.answer,
+      marksAwarded: evaluations[idx].awarded,
+      writtenAnswer: writtenAnswers[q.id] || '', answerType: 'descriptive'
+    }));
+    const timeTaken = 3600 - testTimeRemaining;
+    try {
+      await saveTestResult({
+        studentUid: profile.uid, studentName: profile.displayName || 'Student',
+        testId: `written-${selectedChapter?.id || 'topic'}-${descriptiveVariant}`,
+        testTitle: `${selectedTopic?.title || selectedChapter?.title || 'Topic'} — Written Topic Test`,
+        testType: 'topic', board: selectedBoard, classGrade: selectedClass,
+        subjectId: selectedSubject?.id || '', score, totalMarks: 20,
+        percentage: Math.round(score * 5), accuracy: Math.round(evaluations.filter(e => e.status === 'correct').length / evaluations.length * 100),
+        timeTakenSeconds: timeTaken, answers,
+        strengths: [...new Set(evaluations.filter(e => e.status === 'correct').map(e => e.concept))],
+        weaknesses: [...new Set(evaluations.filter(e => e.status === 'unanswered').map(e => e.concept))],
+        remarks: 'Auto-verified against approved exact answer keys; 60-minute written Topic Test.',
+        createdAt: new Date().toISOString()
+      });
+      setWrittenEvaluation(prev => prev ? { ...prev, saved: true, message: 'Official Report Card saved. View it in Test & Report Card.' } : prev);
+    } catch {
+      setWrittenEvaluation(prev => prev ? { ...prev, message: 'Evaluation complete, but Report Card could not be saved. Please check connection.' } : prev);
+    }
+  };
   const [testSource, setTestSource] = useState<'published' | 'bank'>('published');
   const [bankQuestionCount, setBankQuestionCount] = useState(10);
   const [bankVariant, setBankVariant] = useState(0);
@@ -365,7 +414,7 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
     setIsFlipped(false);
     setTestStarted(false);
     setTestSubmitted(false);
-    setDescriptiveStarted(false); setDescriptiveSubmitted(false); setWrittenAnswers({}); setDescriptiveVariant(0);
+    setDescriptiveStarted(false); setDescriptiveSubmitted(false); setWrittenAnswers({}); setDescriptiveVariant(0); setWrittenEvaluation(null);
     setTestSource('published'); setBankVariant(0);
     setGeneratedTest(undefined);
     setSaveStatus('');
@@ -397,7 +446,7 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
 
   useEffect(() => {
     if (!descriptiveStarted || descriptiveSubmitted) return;
-    if (testTimeRemaining <= 0) { setDescriptiveStarted(false); setDescriptiveSubmitted(true); return; }
+    if (testTimeRemaining <= 0) { void evaluateWrittenAnswers(); return; }
     const interval = window.setInterval(() => setTestTimeRemaining(t => Math.max(0, t - 1)), 1000);
     return () => window.clearInterval(interval);
   }, [descriptiveStarted, descriptiveSubmitted, testTimeRemaining]);
@@ -934,7 +983,7 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
               <p className="text-sm">Eligible descriptive questions: {descriptivePool.length} · Tagged concepts: {topicConcepts.length} · Selected questions: {descriptiveQuestions.length}</p>
               {!descriptiveQuestions.length && <p role="status" className="text-sm text-red-800">A complete 20-mark paper covering every tagged concept cannot be formed from the approved questions. Publish additional 1/2-mark descriptive questions with answers and concept tags.</p>}
               <div className="flex flex-wrap gap-2">
-                <button type="button" disabled={!descriptiveQuestions.length} onClick={() => { setDescriptiveStarted(true); setDescriptiveSubmitted(false); setWrittenAnswers({}); setTestTimeRemaining(3600); }} className="rounded-lg bg-orange-700 px-4 py-2 text-white font-bold disabled:opacity-50">Start 60-minute Topic Test</button>
+                <button type="button" disabled={!descriptiveQuestions.length} onClick={() => { setDescriptiveStarted(true); setDescriptiveSubmitted(false); setWrittenAnswers({}); setWrittenEvaluation(null); setTestTimeRemaining(3600); }} className="rounded-lg bg-orange-700 px-4 py-2 text-white font-bold disabled:opacity-50">Start 60-minute Topic Test</button>
                 <button type="button" disabled={!descriptivePool.length} onClick={() => setDescriptiveVariant(v => v + 1)} className="rounded-lg border border-orange-300 bg-white px-4 py-2 disabled:opacity-50">New Paper</button>
               </div>
             </>}
@@ -944,16 +993,17 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
                 <label htmlFor={`written-${index}`} className="block font-semibold text-sm">Q{index + 1}. {q.question} ({q.marks} {q.marks === 1 ? 'mark' : 'marks'})</label>
                 <textarea id={`written-${index}`} rows={q.marks === 1 ? 2 : 4} value={writtenAnswers[q.id] || ''} onChange={e => setWrittenAnswers(prev => ({ ...prev, [q.id]: e.target.value }))} className="w-full rounded-lg border p-3 text-sm" placeholder="Write your answer here..." />
               </div>)}
-              <button type="button" onClick={() => { setDescriptiveSubmitted(true); setDescriptiveStarted(false); }} className="rounded-lg bg-orange-700 px-5 py-2 text-white font-bold">Submit for Self-Review</button>
+              <button type="button" onClick={() => void evaluateWrittenAnswers()} className="rounded-lg bg-orange-700 px-5 py-2 text-white font-bold">Submit for Self-Review</button>
             </>}
             {descriptiveSubmitted && <div className="space-y-3">
-              <p role="status" className="font-bold">Submitted for self-review · 20 marks · Teacher evaluation is required for an official score or Report Card.</p>
+              <p role="status" className="font-bold">{writtenEvaluation?.message}</p>
+              <p className="font-bold">Automatically confirmed: {writtenEvaluation?.score || 0}/20 · Awaiting teacher review: {writtenEvaluation?.pending || 0} answer(s)</p>
               {descriptiveQuestions.map((q, index) => <div key={q.id} className="rounded-lg border bg-white p-3 text-sm">
                 <p className="font-bold">Q{index + 1}. {q.question} ({q.marks} marks)</p>
-                <p>Your answer: {writtenAnswers[q.id] || 'Not attempted'}</p>
+                <p>Your answer: {writtenAnswers[q.id] || 'Not attempted'}</p><p>Evaluation: {writtenEvaluation?.answers.find(a => a.id === q.id)?.status || 'pending'} · Awarded: {writtenEvaluation?.answers.find(a => a.id === q.id)?.awarded || 0}/{q.marks}</p>
                 <p className="mt-2 text-green-800">Model answer: {q.answer}</p>
               </div>)}
-              <button type="button" onClick={() => { setDescriptiveSubmitted(false); setWrittenAnswers({}); setDescriptiveVariant(v => v + 1); }} className="rounded-lg border bg-white px-4 py-2">Prepare Another Paper</button>
+              <button type="button" onClick={() => { setDescriptiveSubmitted(false); setWrittenEvaluation(null); setWrittenAnswers({}); setDescriptiveVariant(v => v + 1); }} className="rounded-lg border bg-white px-4 py-2">Prepare Another Paper</button>
             </div>}
           </section>
           <div className="rounded-xl border border-orange-200 bg-orange-50 p-4 space-y-3">
