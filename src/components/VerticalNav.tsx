@@ -24,6 +24,8 @@ export const VerticalNav: React.FC = () => {
   const { config } = useWebsite();
 
   const navItems = [
+    { id: 'home' as MainTabType, label: language === 'hi' ? 'होम' : 'Home', sub: '', icon: BookOpen, accent: 'from-orange-500 to-amber-500' },
+    { id: 'courses' as MainTabType, label: language === 'hi' ? 'कोर्स' : 'Courses', sub: '', icon: BookOpen, accent: 'from-orange-500 to-amber-500' },
     { id: 'materials' as MainTabType, label: 'My Dashboard — Saved Materials', sub: '', icon: BookOpen, accent: 'from-orange-500 to-amber-500' },
     {
       id: 'learning' as MainTabType,
@@ -82,7 +84,7 @@ export const VerticalNav: React.FC = () => {
     });
   }
 
-  const navigationItems = [...managedNavigation(config.navigation).filter(option => !option.deleted && (option.id !== 'admin' || isAdmin)).flatMap(option => { const item = navItems.find(x => x.id === option.id); return item ? [{ ...item, menuIcon: option.icon, label: language === 'hi' ? option.hindiLabel || option.label : option.label, sub: language === 'hi' ? option.hindiSubtitle ?? option.subtitle ?? item.sub : option.subtitle ?? item.sub }] : []; }), ...config.pages.filter(p => !p.deleted).map(p => ({ id: `page:${p.id}` as MainTabType, label: language === 'hi' ? p.hindiTitle || p.title : p.title, sub: '', menuIcon: p.icon, accent: 'from-orange-600 to-amber-700', badge: undefined, count: undefined }))];
+  const navigationItems = [...navItems.filter(item => item.id === 'home' || item.id === 'courses'), ...managedNavigation(config.navigation).filter(option => !option.deleted && (option.id !== 'admin' || isAdmin)).flatMap(option => { const item = navItems.find(x => x.id === option.id); return item ? [{ ...item, menuIcon: option.icon, label: language === 'hi' ? option.hindiLabel || option.label : option.label, sub: language === 'hi' ? option.hindiSubtitle ?? option.subtitle ?? item.sub : option.subtitle ?? item.sub }] : []; }), ...config.pages.filter(p => !p.deleted).map(p => ({ id: `page:${p.id}` as MainTabType, label: language === 'hi' ? p.hindiTitle || p.title : p.title, sub: '', menuIcon: p.icon, accent: 'from-orange-600 to-amber-700', badge: undefined, count: undefined }))];
   // Group existing destinations without changing their stable IDs or stored navigation settings.
   const sectionFor = (id: MainTabType) =>
     id === 'admin' ? 'admin' :
