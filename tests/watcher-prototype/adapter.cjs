@@ -1,4 +1,4 @@
-// ISOLATED PROTOTYPE: not loaded by either working repository or release workflow.
+// Scoped Firebase CLI adapter based on reviewed PR #53; used by the vendored CLI.
 const {EventEmitter} = require('node:events');
 const path = require('node:path');
 const chokidar = require('chokidar');
@@ -14,7 +14,9 @@ class FSWatcher extends EventEmitter {
     this.records = new Map();
     this.closed = false;
     const ignored = options.ignored ? anymatch(options.ignored, undefined, {dot: true}) : undefined;
-    this.raw = new chokidar.FSWatcher({...options, ...(ignored ? {ignored} : {})});
+    // anymatch accepts additional callback arguments as an array. Passing the
+    // matcher directly loses Stats because its second parameter is returnIndex.
+    this.raw = new chokidar.FSWatcher({...options, ...(ignored ? {ignored: (file, stats) => ignored([file, stats])} : {})});
     this.raw.on('all', (event, file, stats) => {
       if (!this.closed && this.matches(file, event.endsWith('Dir'))) {
         this.emit(event, file, stats);

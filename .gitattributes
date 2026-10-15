@@ -1,0 +1,2 @@
+tests/watcher-prototype/*.cjs text eol=lf
+vendor/firebase-cli/*.tgz binary

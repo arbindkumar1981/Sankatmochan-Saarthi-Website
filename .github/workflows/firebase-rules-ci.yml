@@ -22,6 +22,10 @@ jobs:
       - name: Install isolated emulator tooling
         working-directory: tests/emulator
         run: npm ci
+      - name: Audit working emulator tooling
+        run: npm audit --prefix tests/emulator --audit-level=high
+      - name: Verify working CLI provenance
+        run: node tests/watcher-prototype/verify-working.cjs
       - name: Verify scoped UUID upgrade and gaxios multipart compatibility
         run: node --test tests/emulator/uuid-compat.test.mjs
       - name: Verify real Firestore and Storage authorization rules locally

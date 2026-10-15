@@ -1,0 +1,25 @@
+// Verify the checked-in artifact and the actual installed consumer graph.
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const crypto = require('node:crypto');
+const root = path.resolve(__dirname, '../..');
+const consumer = fs.existsSync(path.join(root, 'tests/emulator/package.json')) ? 'tests/emulator' : 'tests/firebase_emulator';
+const read = name => JSON.parse(fs.readFileSync(path.join(root, name), 'utf8'));
+const provenance = read('vendor/firebase-cli/provenance.json');
+const integrity = file => 'sha512-' + crypto.createHash('sha512').update(fs.readFileSync(file)).digest('base64');
+const artifact = 'vendor/firebase-cli/firebase-tools-15.33.0-saarthi.1.tgz';
+assert.equal(integrity(path.join(root, artifact)), provenance.artifactIntegrity);
+const manifest = read(`${consumer}/package.json`);
+const lock = read(`${consumer}/package-lock.json`);
+assert.equal(manifest.devDependencies['firebase-tools'], `file:../../${artifact}`);
+assert.equal(lock.packages[''].devDependencies['firebase-tools'], manifest.devDependencies['firebase-tools']);
+assert.equal(lock.packages['node_modules/firebase-tools'].integrity, provenance.artifactIntegrity);
+assert.equal(lock.packages['node_modules/firebase-tools'].version, '15.33.0-saarthi.1');
+assert.equal(read(`${consumer}/node_modules/firebase-tools/package.json`).version, '15.33.0-saarthi.1');
+assert.equal(lock.packages['node_modules/chokidar'].version, '4.0.3');
+assert.ok(!Object.entries(lock.packages).some(([key, value]) => key.endsWith('/braces') || (key.endsWith('/chokidar') && value.version.startsWith('3.'))));
+const adapter = fs.readFileSync(path.join(__dirname, 'adapter.cjs'));
+assert.deepEqual(fs.readFileSync(path.join(root, consumer, 'node_modules/firebase-tools/lib/reviewed-watcher-prototype.cjs')), adapter);
+assert.equal(crypto.createHash('sha256').update(adapter).digest('hex'), provenance.adapterSHA256);
+console.log('PASS: immutable vendor artifact, installed adapter and working lock graph');
