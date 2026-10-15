@@ -12,7 +12,7 @@ permissions:
   contents: read
 jobs:
   prototype:
-    if: github.head_ref == 'codex/issue-50-deployment-verification'
+    if: github.head_ref == 'codex/issue-50-deployment-verification' || github.head_ref == 'fix/watcher-raw-event-prototype-20261015'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -50,6 +50,7 @@ jobs:
           cd .watcher-prototype
           node ../tests/watcher-prototype/compatibility.cjs
           node ../tests/watcher-prototype/extended.cjs
+          node ../tests/watcher-prototype/raw-contract.cjs
       - name: Verify real synthetic Firebase integration with adapted CLI
         run: >-
           node .watcher-prototype/node_modules/firebase-tools/lib/bin/firebase.js emulators:exec
