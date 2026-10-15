@@ -18,11 +18,23 @@ import {
 export const Header: React.FC = () => {
   const { config, text: websiteText } = useWebsite();
   const { user, profile, isAdmin, openAuthModal, signOut } = useAuth();
-  const { selectedClass, language, toggleLanguage } = useCurriculum();
+  const { selectedClass, language, toggleLanguage, activeTab, setActiveTab } = useCurriculum();
 
   return (
     <header className="bg-white border-b border-orange-200/80 shadow-sm sticky top-0 z-30">
       <div className="w-full mx-auto px-3 sm:px-4 py-2 sm:py-2.5 flex flex-wrap items-center justify-between gap-3">
+        <nav aria-label="Public website navigation" className="flex flex-wrap items-center gap-1 sm:gap-2">
+          {([
+            ['home', language === 'hi' ? 'होम' : 'Home'],
+            ['courses', language === 'hi' ? 'कोर्स' : 'Courses'],
+            ['contact', language === 'hi' ? 'संपर्क करें' : 'Contact Us']
+          ] as const).map(([tab, label]) => (
+            <button key={tab} type="button" onClick={() => setActiveTab(tab)} aria-current={activeTab === tab ? 'page' : undefined}
+              className={`rounded-lg px-3 py-2 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-500 ${activeTab === tab ? 'bg-orange-600 text-white' : 'text-orange-900 hover:bg-orange-50'}`}>
+              {label}
+            </button>
+          ))}
+        </nav>
         {/* Right Actions: Language Switcher + Student Sign In / Admin Login together */}
         <div className="ml-auto flex flex-wrap items-center gap-2 sm:gap-3">
           {/* Language Switcher */}
