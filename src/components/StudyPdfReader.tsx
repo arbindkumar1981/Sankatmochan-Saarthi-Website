@@ -13,6 +13,7 @@ export function StudyPdfReader({ contentId }: { contentId: string }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [width, setWidth] = useState(600);
+  const [retryKey, setRetryKey] = useState(0);
   const container = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
@@ -50,7 +51,7 @@ export function StudyPdfReader({ contentId }: { contentId: string }) {
       } finally { clearTimeout(timer); if (active) setLoading(false); }
     })();
     return () => { active = false; controller.abort(); clearTimeout(timer); void task?.destroy(); if (canvas.current) { canvas.current.width = 0; canvas.current.height = 0; } };
-  }, [contentId, user?.uid]);
+  }, [contentId, user?.uid, retryKey]);
   useEffect(() => {
     if (!pdf || !canvas.current) return;
     let cancelled = false;
@@ -73,8 +74,8 @@ export function StudyPdfReader({ contentId }: { contentId: string }) {
     return () => { cancelled = true; render?.cancel(); };
   }, [pdf, page, width]);
   return <div ref={container} className="min-w-0 w-full"><ProtectedMaterial>
-    {loading && !error && <p role="status">Opening your PDF…</p>}
-    {error && <p role="alert" className="text-red-700 border rounded-xl p-3">{error}</p>}
+    {loading && !error && <div role="status" className="rounded-xl border border-orange-100 bg-orange-50 p-4 text-sm text-stone-700">Opening your PDF… This can take up to 60 seconds.</div>}
+    {error && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4"><p className="text-red-700">{error}</p><button type="button" className="mt-3 rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white" onClick={() => setRetryKey(key => key + 1)}>Retry PDF</button></div>}
     {pdf && !error && <div className="flex items-center gap-3 mb-3"><button className="border rounded-lg p-2" disabled={page <= 1} onClick={() => setPage(page - 1)}>Previous</button><span>Page {page} / {pdf.numPages}</span><button className="border rounded-lg p-2" disabled={page >= pdf.numPages} onClick={() => setPage(page + 1)}>Next</button></div>}
     <canvas ref={canvas} aria-label={`Study PDF page ${page}`} className="max-w-full border rounded-lg" hidden={!pdf || Boolean(error)} />
   </ProtectedMaterial></div>;
