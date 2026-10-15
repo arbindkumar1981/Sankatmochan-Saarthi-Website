@@ -31,6 +31,8 @@ async function observe(chokidar, watched, opts, action) {
   try {
     await until(() => ready || error, 'watcher readiness timed out');
     if (error) throw error;
+    // Separate initial stat timestamps from same-size writes on Windows filesystems.
+    await delay(100);
     await action(watcher, events);
     if (error) throw error;
     return events;
