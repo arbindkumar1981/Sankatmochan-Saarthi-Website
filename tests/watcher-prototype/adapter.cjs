@@ -21,6 +21,10 @@ class FSWatcher extends EventEmitter {
         this.emit('all', event, file, stats);
       }
     });
+    // Forward low-level events without changing the high-level glob filtering.
+    this.raw.on('raw', (...args) => {
+      if (!this.closed) this.emit('raw', ...args);
+    });
     this.raw.on('ready', () => this.emit('ready'));
     this.raw.on('error', error => this.emit('error', error));
   }

@@ -12,8 +12,15 @@ permissions:
   contents: read
 jobs:
   prototype:
-    if: github.head_ref == 'codex/issue-50-deployment-verification'
-    runs-on: ubuntu-latest
+    if: github.head_ref == 'codex/issue-50-deployment-verification' || github.head_ref == 'fix/watcher-raw-event-prototype-20261015'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
@@ -42,6 +49,31 @@ jobs:
         run: |
           npm audit --prefix .watcher-prototype --json | tee .watcher-prototype/audit.json
           npm ls --prefix .watcher-prototype firebase-tools chokidar braces
+      - name: Validate candidate working emulator lock without committing it
+        run: |
+          npm install --prefix tests/emulator --save-dev "$PWD/.watcher-prototype/firebase-tools-15.33.0-prototype.0.tgz" --ignore-scripts --no-fund
+          npm ci --prefix tests/emulator --ignore-scripts --no-fund
+          npm audit --prefix tests/emulator --audit-level=high
+          node -e 'const l=require("./tests/emulator/package-lock.json");const p=l.packages; if(p["node_modules/firebase-tools"].version!=="15.33.0-prototype.0" || p["node_modules/chokidar"].version!=="4.0.3" || Object.keys(p).some(x=>x.endsWith("/braces"))) process.exit(1); console.log("PASS: candidate consumer lock uses adapted CLI and no braces")'
+          node tests/emulator/node_modules/firebase-tools/lib/bin/firebase.js --version
+      - name: Save candidate consumer lock for review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: candidate-emulator-lock-${{ matrix.os }}
+          path: tests/emulator/package-lock.json
+          retention-days: 7
+      - name: Generate and audit reproducible working emulator lock candidate
+        run: node tests/watcher-prototype/build-working-lock.cjs
+      - name: Upload generated working lock candidate
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reviewed-working-emulator-lock-${{ matrix.os }}
+          path: |
+            tests/emulator/package.json
+            tests/emulator/package-lock.json
+          retention-days: 14
       - name: Verify watcher and pattern compatibility
         run: |
           export WEBSITE_ROOT="$PWD"
@@ -50,6 +82,7 @@ jobs:
           cd .watcher-prototype
           node ../tests/watcher-prototype/compatibility.cjs
           node ../tests/watcher-prototype/extended.cjs
+          node ../tests/watcher-prototype/raw-contract.cjs
       - name: Verify real synthetic Firebase integration with adapted CLI
         run: >-
           node .watcher-prototype/node_modules/firebase-tools/lib/bin/firebase.js emulators:exec
@@ -65,7 +98,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: isolated-watcher-prototype-evidence
+          name: isolated-watcher-prototype-evidence-${{ matrix.os }}
           path: |
             .watcher-prototype/provenance.json
             .watcher-prototype/audit.json
