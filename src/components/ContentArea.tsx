@@ -273,7 +273,23 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
       });
     } catch { return []; }
   });
-  const questionBank = [...bankQuestionsFromContent, ...matchedTests.flatMap(test =>
+  // Previous-year questions with an explicitly reviewed objective answer key
+  // can be auto-graded. Never infer MCQ options from descriptive solutions.
+  const pyqQuestions = learningContents.filter(item =>
+    item.contentType === 'pyqs' && item.approved && item.published &&
+    item.board === selectedBoard && item.classGrade === selectedClass &&
+    !!selectedSubject && matchesMaterialSelection(item, selectedSubject, selectedChapter || undefined) &&
+    (!selectedTopic || matchesUploadedTopic(item, selectedTopic))
+  ).flatMap(item => (item.pyqItems || []).flatMap(pyq => {
+    if (!Array.isArray(pyq.options) || pyq.options.length < 2 ||
+        !pyq.options.every(option => typeof option === 'string' && option.trim()) ||
+        !Number.isInteger(pyq.correctIndex) || pyq.correctIndex! < 0 ||
+        pyq.correctIndex! >= pyq.options.length || !pyq.question?.trim() || !pyq.solution?.trim()) return [];
+    return [{ id: `pyq:${item.id}:${pyq.id}`, questionText: pyq.question,
+      questionHindi: pyq.questionHindi, options: pyq.options, correctIndex: pyq.correctIndex!,
+      explanation: pyq.solution, marks: pyq.marks || 1 }] as TestQuestion[];
+  }));
+  const questionBank = [...bankQuestionsFromContent, ...pyqQuestions, ...matchedTests.flatMap(test =>
     test.questions.filter(q => q.options?.length >= 2 && q.correctIndex >= 0 && q.correctIndex < q.options.length)
       .map(q => ({ ...q, id: `${test.id}:${q.id}` }))
   )].filter((question, index, all) => all.findIndex(other =>
@@ -284,7 +300,7 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
     !!selectedSubject && matchesMaterialSelection(item, selectedSubject, selectedChapter || undefined) &&
     (!selectedTopic || matchesUploadedTopic(item, selectedTopic))
   ).reduce((n, item) => n + (item.pyqItems?.length || 0), 0);
-  const [testSource, setTestSource] = useState<'published' | 'bank'>('published');
+  const [testSource, setTestSource] = useState<'published' | 'bank'>('bank');
   const [bankQuestionCount, setBankQuestionCount] = useState(10);
   const [bankVariant, setBankVariant] = useState(0);
   const bankTest: EvaluationTest | undefined = questionBank.length ? (() => {
@@ -309,7 +325,7 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
     setIsFlipped(false);
     setTestStarted(false);
     setTestSubmitted(false);
-    setTestSource('published'); setBankVariant(0);
+    setTestSource('bank'); setBankVariant(0);
     setGeneratedTest(undefined);
     setSaveStatus('');
     setCurrentQuestionIndex(0);
@@ -865,12 +881,19 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
           <div className="rounded-xl border border-orange-200 bg-orange-50 p-4 space-y-3">
             <h3 className="font-bold">Test Generator — Question Bank & Previous Year Questions</h3>
             <label htmlFor="test-source" className="text-sm">Question source</label>
-            <select id="test-source" value={testSource} disabled={testStarted} onChange={e => { setTestSource(e.target.value as 'published' | 'bank'); setTestSubmitted(false); }} className="ml-2 rounded border p-2 text-sm"><option value="published">Published test ({matchedTests.length})</option><option value="bank">Question bank ({questionBank.length} MCQs)</option></select>
+            <select id="test-source" value={testSource} disabled={testStarted} onChange={e => { setTestSource(e.target.value as 'published' | 'bank'); setTestSubmitted(false); }} className="ml-2 rounded border p-2 text-sm"><option value="published">Published test ({matchedTests.length})</option><option value="bank">Question Bank + PYQ ({questionBank.length} MCQs)</option></select>
             {testSource === 'bank' && <div className="flex flex-wrap items-center gap-2"><label htmlFor="bank-count" className="text-sm">Questions</label><select id="bank-count" value={bankQuestionCount} disabled={testStarted} onChange={e => setBankQuestionCount(Number(e.target.value))} className="rounded border p-2 text-sm">{[5,10,20,30].map(n => <option key={n} value={n}>{n}</option>)}</select><button type="button" disabled={testStarted || questionBank.length < 2} onClick={() => { setBankVariant(v => v + 1); setTestSubmitted(false); }} className="rounded border bg-white px-3 py-2 text-sm disabled:opacity-50">New question set</button></div>}
-            <p className="text-xs text-stone-700">Verified previous-year questions: {publishedPyqCount}. Open Previous Year Questions to review solutions. Descriptive PYQs cannot be automatically graded as MCQs.</p>
+            <p className="text-xs text-stone-700">Previous-year questions: {publishedPyqCount} (auto-gradable: {pyqQuestions.length}). Only approved MCQs with answer keys are included. No online official-source lookup is needed to assemble a test from published questions.</p>
           </div>
           {saveStatus && <p role="status" className="p-3 border rounded-xl">{saveStatus}</p>}
-          <div className="flex flex-wrap gap-2 justify-end"><button onClick={generateWithTeacher} disabled={studentGenerating} className="px-3 py-2 rounded-xl bg-orange-600 disabled:opacity-50 text-white text-xs font-bold flex items-center gap-1.5"><WandSparkles className="w-4 h-4"/>{studentGenerating ? websiteText("Generating…") : websiteText("Generate Test with Sankatmochansaarthi")}</button></div>
+          <div className="flex flex-wrap gap-2 justify-end">
+            <button type="button" disabled={testStarted || questionBank.length === 0} onClick={() => {
+              setTestSource('bank'); setBankVariant(v => v + 1); setGeneratedTest(undefined);
+              setTestStarted(false); setTestSubmitted(false); setSelectedAnswers({}); setStudentGenerationError('');
+            }} className="px-4 py-2 rounded-xl bg-orange-600 disabled:opacity-50 text-white text-xs font-bold">
+              Generate Test from Question Bank & PYQs ({questionBank.length})
+            </button>
+          </div>
           {studentGenerationError && <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs">{studentGenerationError}</div>}
           {studentGeneratedText && <div className="whitespace-pre-line bg-stone-50 border border-stone-200 rounded-2xl p-5 text-sm leading-relaxed">{studentGeneratedText}</div>}
           {!activeTest && (
