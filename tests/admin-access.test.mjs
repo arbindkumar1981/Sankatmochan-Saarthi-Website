@@ -49,11 +49,15 @@ test('authenticated admin saves only public config with an incremented revision'
   api.render({user:{uid:'admin',isAnonymous:false},isAdmin:true});
   const next=settings();next.name='Updated Website';
   await api.handle().save(next,0);
-  assert.equal(api.state().writes.length,1);
+  assert.equal(api.state().writes.length,2);
   assert.equal(api.state().writes[0].reference,'curriculum_nodes/_website_config');
   assert.equal(api.state().writes[0].data.revision,1);
   assert.equal(api.state().writes[0].data.config.name,'Updated Website');
   assert.equal('user' in api.state().writes[0].data,false);
+  assert.equal(api.state().writes[1].reference.startsWith('admin_audit_logs/'),true);
+  assert.equal(api.state().writes[1].data.actorUid,'admin');
+  assert.equal(api.state().writes[1].data.action,'website_config.update');
+  assert.equal(api.state().writes[1].data.revision,1);
 });
 
 test('stale admin edits are rejected atomically', async () => {
