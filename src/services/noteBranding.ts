@@ -6,7 +6,6 @@ export async function brandPdf(source: Uint8Array, branding: BrandingImages): Pr
   const original = await PDFDocument.load(source);
   if (!original.getPageCount() || original.getPageCount() > 500) throw new Error('Use a PDF with 1–500 pages. Split larger notes before uploading.');
   const output = await PDFDocument.create();
-  const logo = await output.embedPng(branding.logo);
   const watermark = await output.embedPng(branding.watermark);
   const font = await output.embedFont(StandardFonts.Helvetica);
   for (const [index, sourcePage] of original.getPages().entries()) {
@@ -15,13 +14,12 @@ export async function brandPdf(source: Uint8Array, branding: BrandingImages): Pr
     const rotated = angle === 90 || angle === 270;
     const width = rotated ? sourcePage.getHeight() : sourcePage.getWidth();
     const height = rotated ? sourcePage.getWidth() : sourcePage.getHeight();
-    const page = output.addPage([width + 32, height + 88]);
+    const page = output.addPage([width + 32, height + 32]);
     const x = 16 + (angle === 270 ? sourcePage.getHeight() : angle === 180 ? sourcePage.getWidth() : 0);
-    const y = 28 + (angle === 180 ? sourcePage.getHeight() : angle === 90 ? sourcePage.getWidth() : 0);
+    const y = 16 + (angle === 180 ? sourcePage.getHeight() : angle === 90 ? sourcePage.getWidth() : 0);
     // PDF /Rotate is clockwise; the drawing transform uses counterclockwise angles.
     page.drawPage(embedded, { x, y, rotate: degrees(-angle) });
-    const logoWidth = Math.min(180, width * 0.45, 44 * logo.width / logo.height);
-    page.drawImage(logo, { x: 16, y: height + 36, width: logoWidth, height: logoWidth * logo.height / logo.width });
+    // The website header already carries the Saarthi logo. Do not repeat it in study PDFs.
     const watermarkWidth = width * 0.75;
     page.drawImage(watermark, { x: (page.getWidth() - watermarkWidth) / 2, y: (page.getHeight() - watermarkWidth * watermark.height / watermark.width) / 2, width: watermarkWidth, height: watermarkWidth * watermark.height / watermark.width, opacity: 0.12 });
     page.drawText(`Page ${index + 1} / ${original.getPageCount()}`, { x: 16, y: 10, size: 9, font });
