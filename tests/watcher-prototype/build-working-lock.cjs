@@ -8,7 +8,7 @@ const target = path.join(root, 'tests/emulator');
 const artifact = path.join(root, '.watcher-prototype/firebase-tools-15.33.0-prototype.0.tgz');
 if (!fs.existsSync(artifact)) throw new Error('Build the verified vendor artifact first');
 const run = (args, cwd = root) => {
-  const result = spawnSync(process.execPath, [path.join(path.dirname(process.execPath), 'node_modules/npm/bin/npm-cli.js'), ...args], {cwd, stdio:'inherit'});
+  const result = spawnSync('npm', args, {cwd, stdio:'inherit', shell: process.platform === 'win32'});
   if (result.error) throw result.error;
   if (result.status !== 0) throw new Error('npm ' + args.join(' ') + ' failed: ' + result.status);
 };
