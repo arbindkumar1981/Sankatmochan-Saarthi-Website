@@ -19,7 +19,7 @@ export function TopicMasteryDashboard() {
     setLoading(true);
     adminRead<TopicProgressPage>(`/topic-mastery?${search}`, controller.signal)
       .then(result => { if (!controller.signal.aborted) { setPage(result); setPageKey(viewKey); } })
-      .catch(() => { if (!controller.signal.aborted) setError('Topic mastery is unavailable. Check backend access and retry.'); })
+      .catch(() => { if (!controller.signal.aborted) setError('Topic mastery is unavailable. Please retry or contact support.'); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
   }, [search, user, isAdmin, refresh, viewKey]);
@@ -27,7 +27,7 @@ export function TopicMasteryDashboard() {
   const score = (value: number | null) => value === null ? 'Not measured' : `${value}%`;
   return <section className="space-y-3 rounded-xl border bg-white p-4" aria-label="Topic mastery dashboard">
     <h3 className="font-bold">Topic-wise student mastery</h3>
-    <p className="text-xs text-stone-600">Existing academic records from Neon. Mastery is the stored 0–100 mastery score; the target is 80%. Average test score is a separate assessment metric. Missing mastery stays “Not measured”. Firebase student identities are not automatically matched to Neon records.</p>
+    <p className="text-xs text-stone-600">Mastery uses existing academic progress records on a scale of 0–100; the target is 80%. Average test score is a separate assessment metric. Missing mastery stays “Not measured”. The academic student directory is separate from website accounts.</p>
     <form className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5" onSubmit={event => { event.preventDefault(); setSearch(new URLSearchParams(filters).toString()); setRefresh(value => value + 1); }}>
       {([['student', 'Student name or academic ID'], ['subject', 'Subject'], ['board', 'Board code'], ['class_level', 'Class']] as const).map(([key, label]) => <label key={key} className="text-xs">{label}<input aria-label={`Mastery ${label}`} className="mt-1 w-full rounded border p-2" maxLength={key === 'board' || key === 'class_level' ? 40 : 128} value={filters[key]} onChange={event => setFilters(previous => ({ ...previous, [key]: event.target.value }))} /></label>)}
       <button type="submit" className="self-end rounded border p-2 text-sm" disabled={loading}>Apply filters / Refresh</button>
