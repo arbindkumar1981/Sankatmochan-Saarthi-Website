@@ -8,6 +8,7 @@ import { VerticalNav } from './components/VerticalNav';
 import { LearningSidebar } from './components/LearningSidebar';
 import { ContentArea } from './components/ContentArea';
 import { MyMaterials } from './components/MyMaterials';
+import { PublicHome, PublicCourses } from './components/PublicPages';
 import { ProtectedMaterial } from './components/ProtectedMaterial';
 import { YouTubeLearner } from './components/YouTubeLearner';
 import { NoticeBoardView } from './components/NoticeBoardView';
@@ -22,7 +23,7 @@ import { Sparkles, Heart, Shield, Flame } from 'lucide-react';
 const MainAppContent: React.FC = () => {
   const { text: websiteText } = useWebsite();
   const { activeTab, language } = useCurriculum();
-  const { isAdmin } = useAuth();
+  const { isAdmin, user, loading, openAuthModal } = useAuth();
   const { config } = useWebsite();
   const [navigationOpen, setNavigationOpen] = React.useState(false);
   const page = config.pages.find(p => `page:${p.id}` === activeTab && !p.deleted);
@@ -48,19 +49,22 @@ const MainAppContent: React.FC = () => {
           </div>
 
           {/* Active Workspace View Routing */}
-          {activeTab === 'learning' && (
+          {activeTab === 'home' && <PublicHome />}
+          {activeTab === 'courses' && <PublicCourses />}
+          {!loading && !user && ['learning', 'materials', 'youtube', 'evaluation'].includes(activeTab) && <section className="flex-1 rounded-2xl border border-orange-200 bg-white p-8"><h2 className="text-xl font-bold">{language === 'hi' ? 'विद्यार्थी प्रवेश आवश्यक है' : 'Student sign-in required'}</h2><p className="mt-2 text-stone-600">{language === 'hi' ? 'अध्ययन और प्रगति के लिए साइन इन करें।' : 'Sign in to access learning and progress.'}</p><button type="button" onClick={() => openAuthModal('student')} className="mt-4 rounded-lg bg-orange-600 px-4 py-2 text-white">{language === 'hi' ? 'छात्र प्रवेश' : 'Student sign in'}</button></section>}
+          {activeTab === 'learning' && !!user && (
             <div className="flex-1 min-w-0 w-full flex flex-col gap-3 items-stretch">
               {/* Content and Interactive Test Area */}
               <ProtectedMaterial><ContentArea /></ProtectedMaterial>
             </div>
           )}
 
-          {activeTab === 'youtube' && <YouTubeLearner />}
+          {activeTab === 'youtube' && !!user && <YouTubeLearner />}
 
           {activeTab === 'notices' && <NoticeBoardView />}
 
-          {activeTab === 'evaluation' && <EvaluationHub />}
-          {activeTab === 'materials' && <MyMaterials />}
+          {activeTab === 'evaluation' && !!user && <EvaluationHub />}
+          {activeTab === 'materials' && !!user && <MyMaterials />}
 
           {activeTab === 'about' && <AboutUsView />}
 
