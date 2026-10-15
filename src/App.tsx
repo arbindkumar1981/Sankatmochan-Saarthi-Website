@@ -24,11 +24,11 @@ const MainAppContent: React.FC = () => {
   const { activeTab, language } = useCurriculum();
   const { isAdmin, user, loading, openAuthModal } = useAuth();
   const { config } = useWebsite();
-  const [navigationOpen, setNavigationOpen] = React.useState(false);
+  const [navigationOpen, setNavigationOpen] = React.useState(true);
   const page = config.pages.find(p => `page:${p.id}` === activeTab && !p.deleted);
 
   return (
-    <div className="min-h-screen flex flex-col bg-amber-50/30 text-stone-800 font-sans selection:bg-orange-500 selection:text-white">
+    <div className="min-h-screen flex flex-col bg-[#f6f8fc] text-slate-800 font-sans selection:bg-orange-500 selection:text-white">
       {/* 1. Revered Baba Neem Karoli Ji's Photo Banner at the Top of Every Page */}
       <BabaBanner />
 
@@ -36,13 +36,13 @@ const MainAppContent: React.FC = () => {
       <Header />
 
       {/* 3. Main Workspace Container with Vertical Navigation */}
-      <main className="flex-1 w-full mx-auto p-3 sm:p-5 flex flex-col gap-4">
-        <button type="button" aria-expanded={navigationOpen} aria-controls="workspace-navigation" onClick={() => setNavigationOpen(open => !open)} className="self-start rounded-lg border border-orange-200 bg-white px-3 py-2 text-sm font-semibold text-orange-900 focus-visible:ring-2 focus-visible:ring-orange-500">
+      <main className="flex-1 w-full max-w-[1600px] mx-auto p-3 sm:p-5 lg:p-6 flex flex-col gap-4">
+        {!['home', 'courses', 'contact'].includes(activeTab) && <button type="button" aria-expanded={navigationOpen} aria-controls="workspace-navigation" onClick={() => setNavigationOpen(open => !open)} className="self-start rounded-lg border border-orange-200 bg-white px-3 py-2 text-sm font-semibold text-orange-900 focus-visible:ring-2 focus-visible:ring-orange-500">
           {websiteText(navigationOpen ? (language === 'hi' ? 'नेविगेशन छिपाएँ' : 'Hide navigation') : (language === 'hi' ? 'पाठ्यक्रम और नेविगेशन खोलें' : 'Open curriculum & navigation'))}
-        </button>
-        <div className="flex flex-col lg:flex-row gap-3 items-start">
+        </button>}
+        <div className="flex flex-col lg:flex-row gap-4 items-start">
           {/* Vertical Navigation Bar */}
-          <div className="w-full lg:w-72 shrink-0" hidden={!navigationOpen} id="workspace-navigation">
+          <div className="w-full lg:w-72 shrink-0 lg:sticky lg:top-20" hidden={!navigationOpen || ['home', 'courses', 'contact'].includes(activeTab)} id="workspace-navigation">
             <details open><summary className="cursor-pointer py-2 text-xs font-bold text-orange-900">{websiteText(language === 'hi' ? 'मार्गदर्शन मेनू' : 'Guidance Navigation')}</summary><VerticalNav /></details>
             {activeTab === 'learning' && <LearningSidebar />}
           </div>
