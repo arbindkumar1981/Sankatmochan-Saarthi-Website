@@ -15,7 +15,8 @@ import {
   ChevronRight,
   Filter,
   Flame,
-  Check
+  Check,
+  ClipboardList
 } from 'lucide-react';
 
 export const EvaluationHub: React.FC = () => {
@@ -26,6 +27,8 @@ export const EvaluationHub: React.FC = () => {
   const [activeSubTab, setActiveSubTab] = useState<'report_cards' | 'mistake_book'>('report_cards');
   const [selectedResult, setSelectedResult] = useState<TestResult | null>(testResults[0] || null);
   const [mistakeFilter, setMistakeFilter] = useState<'all' | 'pending' | 'mastered'>('all');
+
+  const openTestGenerator = () => { setActiveModule('test_yourself'); setActiveTab('learning'); };
 
   // Stats calculation
   const totalTests = testResults.length;
@@ -55,6 +58,10 @@ export const EvaluationHub: React.FC = () => {
           </p>
         </div>
 
+        <button type="button" onClick={openTestGenerator} className="inline-flex items-center gap-2 rounded-xl bg-orange-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-orange-700 focus-visible:ring-2 focus-visible:ring-orange-500" aria-label={language === 'hi' ? 'टेस्ट जनरेटर खोलें' : 'Open Test Generator'}>
+          <ClipboardList className="h-4 w-4" />
+          {language === 'hi' ? 'टेस्ट जनरेटर / टेस्ट दें' : 'Test Generator / Take Test'}
+        </button>
         {/* Tab Toggle: Report Cards vs Mistake Book */}
         <div className="flex items-center gap-1.5 bg-stone-100 p-1 rounded-xl">
           <button
@@ -128,8 +135,7 @@ export const EvaluationHub: React.FC = () => {
               <p className="text-xs text-stone-500 mt-1 max-w-sm mx-auto"><WebsiteText original={"Head over to the Curriculum Learning Hub and choose "} /><strong><WebsiteText original={"\"Test Yourself\""} /></strong><WebsiteText original={" on any chapter to start your first evaluation!"} /></p>
               <button
                 onClick={() => {
-                  setActiveTab('learning');
-                  setActiveModule('test_yourself');
+                  openTestGenerator();
                 }}
                 className="mt-4 px-5 py-2.5 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-xl text-xs shadow-md transition-all"
               ><WebsiteText original={"Go to Test Yourself"} /></button>
