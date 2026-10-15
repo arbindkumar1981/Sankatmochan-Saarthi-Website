@@ -82,6 +82,16 @@ export const VerticalNav: React.FC = () => {
     });
   }
 
+  const navigationItems = [...managedNavigation(config.navigation).filter(option => !option.deleted && (option.id !== 'admin' || isAdmin)).flatMap(option => { const item = navItems.find(x => x.id === option.id); return item ? [{ ...item, menuIcon: option.icon, label: language === 'hi' ? option.hindiLabel || option.label : option.label, sub: language === 'hi' ? option.hindiSubtitle ?? option.subtitle ?? item.sub : option.subtitle ?? item.sub }] : []; }), ...config.pages.filter(p => !p.deleted).map(p => ({ id: `page:${p.id}` as MainTabType, label: language === 'hi' ? p.hindiTitle || p.title : p.title, sub: '', menuIcon: p.icon, accent: 'from-orange-600 to-amber-700', badge: undefined, count: undefined }))];
+  // Group existing destinations without changing their stable IDs or stored navigation settings.
+  const sectionFor = (id: MainTabType) =>
+    id === 'admin' ? 'admin' :
+    ['materials', 'learning', 'youtube', 'evaluation'].includes(id) ? 'student' : 'public';
+  const sections = [
+    { id: 'public', label: language === 'hi' ? 'सार्वजनिक वेबसाइट' : 'Public Website' },
+    { id: 'student', label: language === 'hi' ? 'विद्यार्थी डैशबोर्ड' : 'Student Dashboard' },
+    ...(isAdmin ? [{ id: 'admin', label: language === 'hi' ? 'प्रशासक डैशबोर्ड' : 'Admin Dashboard' }] : []),
+  ];
   return (
     <nav className="w-full bg-white rounded-2xl border border-orange-200/90 shadow-sm p-2.5 sm:p-3 flex flex-col gap-1.5 overflow-visible shrink-0 scrollbar-none">
       <div className="hidden lg:block px-3 py-2 border-b border-orange-100 mb-1">
@@ -90,7 +100,9 @@ export const VerticalNav: React.FC = () => {
         </span>
       </div>
 
-      {[...managedNavigation(config.navigation).filter(option => !option.deleted && (option.id !== 'admin' || isAdmin)).flatMap(option => { const item = navItems.find(x => x.id === option.id); return item ? [{ ...item, menuIcon: option.icon, label: language === 'hi' ? option.hindiLabel || option.label : option.label, sub: language === 'hi' ? option.hindiSubtitle ?? option.subtitle ?? item.sub : option.subtitle ?? item.sub }] : []; }), ...config.pages.filter(p => !p.deleted).map(p => ({ id: `page:${p.id}` as MainTabType, label: language === 'hi' ? p.hindiTitle || p.title : p.title, sub: '', menuIcon: p.icon, accent: 'from-orange-600 to-amber-700', badge: undefined, count: undefined }))].map((item) => {
+      {sections.map(section => <React.Fragment key={section.id}>
+        <h2 className="mt-3 px-3 pt-2 text-[11px] font-bold uppercase tracking-wider text-orange-900 border-t border-orange-100 first:mt-0 first:border-t-0">{websiteText(section.label)}</h2>
+        {navigationItems.filter(item => sectionFor(item.id) === section.id).map((item) => {
         const isActive = activeTab === item.id;
 
         return (
@@ -143,6 +155,7 @@ export const VerticalNav: React.FC = () => {
           </button>
         );
       })}
+      </React.Fragment>)}
     </nav>
   );
 };
