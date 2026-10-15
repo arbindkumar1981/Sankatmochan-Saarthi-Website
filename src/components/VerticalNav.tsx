@@ -19,7 +19,7 @@ import {
 
 export const VerticalNav: React.FC = () => {
   const { text: websiteText } = useWebsite();
-  const { activeTab, setActiveTab, language, testResults } = useCurriculum();
+  const { activeTab, setActiveTab, activeModule, setActiveModule, language, testResults } = useCurriculum();
   const { isAdmin } = useAuth();
   const { config } = useWebsite();
 
@@ -104,6 +104,7 @@ export const VerticalNav: React.FC = () => {
 
       {sections.map(section => <React.Fragment key={section.id}>
         <h2 className="mt-3 px-3 pt-2 text-[11px] font-bold uppercase tracking-wider text-orange-900 border-t border-orange-100 first:mt-0 first:border-t-0">{websiteText(section.label)}</h2>
+        {section.id === 'student' && <button type="button" aria-current={activeTab === 'learning' && ['cbqs', 'case_studies', 'test_yourself', 'pyqs'].includes(activeModule) ? 'page' : undefined} onClick={() => { setActiveModule('test_yourself'); setActiveTab('learning'); }} className="mx-1 flex items-center gap-3 rounded-xl border border-orange-100 px-3 py-3 text-left text-sm font-semibold text-stone-700 hover:bg-orange-50 focus-visible:ring-2 focus-visible:ring-orange-500"><MenuIcon icon="test" className="h-4 w-4" /><span>{language === 'hi' ? 'अभ्यास और टेस्ट' : 'Practice & Tests'}</span></button>}
         {navigationItems.filter(item => sectionFor(item.id) === section.id).map((item) => {
         const isActive = activeTab === item.id;
 
