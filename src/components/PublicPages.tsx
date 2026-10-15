@@ -36,7 +36,7 @@ export function PublicCourses() {
     <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       {classes.map(grade => <article key={grade} className="rounded-xl border border-orange-200 bg-amber-50/40 p-4">
         <h2 className="text-lg font-bold">{grade}</h2>
-        <p className="mt-2 text-sm text-stone-600">{subjects.filter(s => s.classGrade === grade).length} {hi ? 'विषय' : 'subjects'}</p>
+        <p className="mt-2 text-sm text-stone-600">{subjects.filter(s => s.classes?.includes(grade as never)).length} {hi ? 'विषय' : 'subjects'}</p>
         <button type="button" className="mt-4 rounded-lg bg-orange-600 px-4 py-2 text-sm font-bold text-white" onClick={() => user ? setActiveTab('learning') : openAuthModal('student')}>{hi ? 'अध्ययन करें' : 'Study now'}</button>
       </article>)}
     </div>
