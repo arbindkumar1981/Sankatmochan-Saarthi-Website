@@ -56,8 +56,44 @@ export function PublicCourses() {
   const { user, openAuthModal } = useAuth();
   const hi = language === 'hi';
   const subjects = allCurriculumSubjects.filter(s => !s.deleted);
+  const [selectedClass, setSelectedClass] = React.useState<number | null>(null);
+  const classDescriptions = [
+    { en: 'Build strong foundations with clear concepts, step-by-step notes and regular practice.', hi: 'आसान भाषा में मजबूत नींव, चरणबद्ध नोट्स और नियमित अभ्यास।' },
+    { en: 'Prepare for board examinations with NCERT-based explanations, revision and topic tests.', hi: 'NCERT आधारित समझ, रिवीजन और टॉपिक टेस्ट से बोर्ड की तैयारी।' },
+    { en: 'Understand stream subjects deeply and prepare for higher-level study with guided practice.', hi: 'अपने स्ट्रीम के विषयों को गहराई से समझें और मार्गदर्शित अभ्यास करें।' },
+    { en: 'Strengthen board preparation and build confidence for the next academic step.', hi: 'बोर्ड की तैयारी मजबूत करें और आगे की पढ़ाई के लिए आत्मविश्वास बढ़ाएँ।' }
+  ];
   return <section className="flex-1 w-full min-w-0 space-y-6">
     <div className="rounded-3xl bg-gradient-to-r from-[#102b62] to-[#2467c3] px-6 py-9 text-white sm:px-9"><p className="text-xs font-bold uppercase tracking-widest text-blue-200">{hi ? 'पाठ्यक्रम' : 'OUR COURSES'}</p><h1 className="mt-2 text-3xl font-extrabold">{hi ? 'अपनी कक्षा चुनें, सीखना शुरू करें' : 'Find the right learning path'}</h1><p className="mt-3 max-w-2xl text-sm leading-6 text-blue-100">{hi ? 'कक्षा 9–12 के विषय, अध्याय, नोट्स और अभ्यास एक जगह।' : 'Explore subjects, chapters, notes and practice for Classes IX–XII.'}</p></div>
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{grades.map((grade, index) => <article key={grade} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"><span className="inline-flex rounded-xl bg-blue-100 p-3 text-blue-700"><GraduationCap className="h-7 w-7" /></span><h2 className="mt-4 text-2xl font-extrabold text-slate-900">{hi ? 'कक्षा' : 'Class'} {romanGrades[index]}</h2><p className="mt-2 text-sm text-slate-600">{subjects.filter(s => s.classes?.includes(grade as never)).length} {hi ? 'उपलब्ध विषय' : 'available subjects'}</p><button type="button" className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-700 px-4 py-3 text-sm font-bold text-white hover:bg-blue-800" onClick={() => user ? setActiveTab('learning') : openAuthModal('student')}>{hi ? 'अध्ययन करें' : 'Start studying'} <ArrowRight className="h-4 w-4" /></button></article>)}</div>
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{grades.map((grade, index) => <button type="button" key={grade} aria-expanded={selectedClass === index} onClick={() => setSelectedClass(index)} className={`rounded-2xl border bg-white p-6 text-left shadow-sm transition hover:-translate-y-1 hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-600 ${selectedClass === index ? 'border-blue-600 ring-2 ring-blue-100' : 'border-slate-200'}`}><span className="inline-flex rounded-xl bg-blue-100 p-3 text-blue-700"><GraduationCap className="h-7 w-7" /></span><h2 className="mt-4 text-2xl font-extrabold text-slate-900">{hi ? 'कक्षा' : 'Class'} {romanGrades[index]}</h2><p className="mt-2 text-sm text-slate-600">{subjects.filter(s => s.classes?.includes(grade as never)).length} {hi ? 'उपलब्ध विषय' : 'available subjects'}</p><span className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-700 px-4 py-3 text-sm font-bold text-white">{hi ? 'कक्षा के बारे में देखें' : 'Explore this class'} <ArrowRight className="h-4 w-4" /></span></button>)}</div>
+    {selectedClass !== null && <section aria-live="polite" className="overflow-hidden rounded-3xl border border-blue-200 bg-white shadow-lg">
+      <div className="grid lg:grid-cols-2">
+        <div className="bg-gradient-to-br from-[#102b62] via-[#16439a] to-[#287ac9] p-5 sm:p-8">
+          <svg role="img" aria-label={hi ? 'सार्थी के अध्ययन उद्देश्य का चित्र' : 'Saarthi learning mission illustration'} viewBox="0 0 640 380" className="h-auto w-full" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="518" cy="66" r="80" fill="#ffffff" opacity=".07"/><circle cx="105" cy="320" r="115" fill="#ffffff" opacity=".07"/>
+            <rect x="45" y="55" width="550" height="270" rx="24" fill="#ffffff" opacity=".12"/>
+            <rect x="85" y="92" width="280" height="193" rx="15" fill="#ffffff"/>
+            <rect x="105" y="112" width="240" height="35" rx="8" fill="#dbeafe"/>
+            <text x="225" y="136" textAnchor="middle" fontSize="20" fontWeight="800" fill="#1d4ed8">SAARTHI</text>
+            <path d="M110 174 Q168 146 225 174 Q282 146 340 174 L340 253 Q282 230 225 258 Q168 230 110 253Z" fill="#93c5fd"/>
+            <path d="M225 174 V258" stroke="#1e40af" strokeWidth="5"/>
+            <path d="M128 194 L204 194 M128 213 L204 213 M247 194 L321 194 M247 213 L321 213" stroke="#ffffff" strokeWidth="6" strokeLinecap="round"/>
+            <circle cx="463" cy="172" r="78" fill="#fbbf24"/>
+            <text x="463" y="157" textAnchor="middle" fontSize="18" fontWeight="800" fill="#172554">CLASS</text>
+            <text x="463" y="203" textAnchor="middle" fontSize="49" fontWeight="900" fill="#172554">{romanGrades[selectedClass]}</text>
+            <rect x="388" y="267" width="156" height="36" rx="18" fill="#ffffff"/>
+            <text x="466" y="290" textAnchor="middle" fontSize="16" fontWeight="700" fill="#1e40af">LEARN • GROW</text>
+          </svg>
+        </div>
+        <div className="flex flex-col justify-center p-6 sm:p-9">
+          <p className="text-xs font-extrabold uppercase tracking-widest text-blue-700">{hi ? 'हमारी वेबसाइट और उद्देश्य' : 'OUR WEBSITE & MISSION'}</p>
+          <h2 className="mt-3 text-3xl font-extrabold text-slate-900">{hi ? 'कक्षा' : 'Class'} {romanGrades[selectedClass]} — Sankatmochan Saarthi</h2>
+          <p className="mt-4 text-base leading-7 text-slate-700">{hi ? classDescriptions[selectedClass].hi : classDescriptions[selectedClass].en}</p>
+          <p className="mt-3 text-sm leading-6 text-slate-600">{hi ? 'हमारा उद्देश्य है कि हर विद्यार्थी सरल नोट्स, वीडियो, अभ्यास, टेस्ट, गलतियों की समीक्षा और अपनी प्रगति देखकर आत्मविश्वास के साथ आगे बढ़े।' : 'Our mission is to help every student learn confidently through simple notes, videos, practice, tests, mistake review and clear progress tracking.'}</p>
+          <div className="mt-5 flex flex-wrap gap-2">{(hi ? ['समझें', 'अभ्यास', 'टेस्ट', 'प्रगति'] : ['Understand', 'Practise', 'Test', 'Progress']).map(item => <span key={item} className="rounded-full bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-800">{item}</span>)}</div>
+          <button type="button" onClick={() => user ? setActiveTab('learning') : openAuthModal('student')} className="mt-7 inline-flex items-center justify-center gap-2 rounded-xl bg-blue-700 px-5 py-3 font-bold text-white hover:bg-blue-800">{hi ? 'पढ़ाई शुरू करें' : 'Start learning'} <ArrowRight className="h-4 w-4" /></button>
+        </div>
+      </div>
+    </section>}
   </section>;
 }
