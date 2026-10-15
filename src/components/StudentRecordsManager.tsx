@@ -12,13 +12,16 @@ interface StudentResult {
   totalMarks?: number;
 }
 
+interface StudentMistake { id: string; studentUid?: string; questionText?: string; question?: string; topicTitle?: string; concept?: string; createdAt?: string; reason?: string; }
+
 interface Props {
   students: UserProfile[];
   results: StudentResult[];
+  mistakes: StudentMistake[];
 }
 
 /** Read-only directory. Academic records are never mutated from this view. */
-export function StudentRecordsManager({ students, results }: Props) {
+export function StudentRecordsManager({ students, results, mistakes }: Props) {
   const [query, setQuery] = useState('');
   const [grade, setGrade] = useState('all');
   const [selectedUid, setSelectedUid] = useState<string | null>(null);
@@ -40,6 +43,7 @@ export function StudentRecordsManager({ students, results }: Props) {
   }, [results]);
   const selected = students.find(s => s.uid === selectedUid);
   const selectedAttempts = selected ? attemptsByStudent.get(selected.uid) || [] : [];
+  const selectedMistakes = selected ? mistakes.filter(item => item.studentUid === selected.uid).sort((a,b) => (b.createdAt || '').localeCompare(a.createdAt || '')) : [];
   const percent = (value: unknown) => typeof value === 'number' && Number.isFinite(value) ? `${Math.round(value)}%` : '—';
 
   return <section className="space-y-4" aria-label="Student records manager">
@@ -82,6 +86,14 @@ export function StudentRecordsManager({ students, results }: Props) {
     {selected && <div className="rounded-xl border bg-stone-50 p-4 space-y-3" aria-label="Selected student assessment history">
       <div className="flex items-center justify-between gap-2"><div><h4 className="font-bold">{selected.displayName || 'Student'} — Assessment history</h4><p className="text-xs text-stone-600">Student ID: {selected.uid}</p></div><button type="button" className="rounded-lg border px-3 py-1.5 text-xs" onClick={() => setSelectedUid(null)}>Close</button></div>
       {selectedAttempts.length ? <div className="max-h-80 overflow-y-auto"><table className="w-full text-left text-xs"><thead><tr><th className="p-2">Test</th><th className="p-2">Date</th><th className="p-2">Score</th></tr></thead><tbody>{selectedAttempts.map((attempt, index) => <tr className="border-t" key={attempt.id || index}><td className="p-2">{attempt.testTitle || attempt.title || 'Assessment'}</td><td className="p-2">{attempt.createdAt ? attempt.createdAt.slice(0, 10) : '—'}</td><td className="p-2">{percent(attempt.percentage)}</td></tr>)}</tbody></table></div> : <p className="text-xs text-stone-600">No recorded test attempts.</p>}
+      <div className="space-y-2">
+        <h5 className="text-sm font-bold">Mistake Book ({selectedMistakes.length})</h5>
+        {selectedMistakes.length ? <div className="max-h-80 overflow-y-auto rounded-lg border bg-white">
+          <table className="w-full text-left text-xs"><thead><tr><th className="p-2">Question / Concept</th><th className="p-2">Topic</th><th className="p-2">Reason</th></tr></thead>
+            <tbody>{selectedMistakes.map(item => <tr key={item.id} className="border-t"><td className="p-2">{item.questionText || item.question || item.concept || 'Question not recorded'}</td><td className="p-2">{item.topicTitle || '—'}</td><td className="p-2">{item.reason || '—'}</td></tr>)}</tbody>
+          </table>
+        </div> : <p className="text-xs text-stone-600">No recorded mistakes.</p>}
+      </div>
     </div>}
     <p className="text-xs text-stone-500">Data shown here is loaded from the existing user and test-result records. A backend-authoritative gradebook, consent workflow and audit history require separate implementation.</p>
   </section>;
