@@ -79,6 +79,7 @@ export const AdminPanel: React.FC = () => {
   >('settings');
 
   const [adminOperationError, setAdminOperationError] = useState('');
+  const [studentMistakes, setStudentMistakes] = useState<Array<{ id: string; studentUid?: string; questionText?: string; question?: string; topicTitle?: string; concept?: string; createdAt?: string; reason?: string }>>([]);
   const adminSubmit = (action: (e: React.FormEvent) => Promise<void>) => async (e: React.FormEvent) => {
     e.preventDefault(); setAdminOperationError('');
     try { await action(e); } catch { setAdminOperationError('Changes were not saved. Check administrator access, connectivity and the form details, then try again.'); }
@@ -87,6 +88,14 @@ export const AdminPanel: React.FC = () => {
     setAdminOperationError('');
     try { await updateContentApproval(id,approved,published); } catch { setAdminOperationError('Approval was not saved. Restore deleted items in the manager first.'); }
   };
+
+  useEffect(() => {
+    if (adminTab !== 'students' || !user || user.isAnonymous) return;
+    const unsubscribe = onSnapshot(collection(db, 'mistakes'), snapshot => {
+      setStudentMistakes(snapshot.docs.map(item => ({ id: item.id, ...item.data() })));
+    }, () => setAdminOperationError('Mistake Book could not be loaded. Check administrator permissions.'));
+    return unsubscribe;
+  }, [adminTab, user]);
 
   // New Content Form State
   const [showContentForm, setShowContentForm] = useState(false);
@@ -879,7 +888,7 @@ export const AdminPanel: React.FC = () => {
       )}
 
       {/* Admin Tab 4: Students */}
-      {adminTab === 'students' && <StudentRecordsManager students={registeredStudents} results={allStudentResults} />}
+      {adminTab === 'students' && <StudentRecordsManager students={registeredStudents} results={allStudentResults} mistakes={studentMistakes} />}
 
       {/* Admin Tab 5: Enquiries */}
       {adminTab === 'enquiries' && (
