@@ -13,7 +13,6 @@ import { ProtectedMaterial } from './components/ProtectedMaterial';
 import { YouTubeLearner } from './components/YouTubeLearner';
 import { NoticeBoardView } from './components/NoticeBoardView';
 import { EvaluationHub } from './components/EvaluationHub';
-import { AboutUsView } from './components/AboutUsView';
 import { ContactUsView } from './components/ContactUsView';
 const AdminPanel = React.lazy(() => import('./components/AdminPanel').then(module => ({ default: module.AdminPanel })));
 import { WebsiteProvider, useWebsite } from './context/WebsiteContext';
@@ -65,8 +64,6 @@ const MainAppContent: React.FC = () => {
 
           {activeTab === 'evaluation' && !!user && <EvaluationHub />}
           {activeTab === 'materials' && !!user && <MyMaterials />}
-
-          {activeTab === 'about' && <AboutUsView />}
 
           {activeTab === 'contact' && <ContactUsView />}
 
