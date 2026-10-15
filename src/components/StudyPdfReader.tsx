@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { getDocument, GlobalWorkerOptions, type PDFDocumentProxy } from 'pdfjs-dist';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { useAuth } from '../context/AuthContext';
@@ -16,6 +17,12 @@ export function StudyPdfReader({ contentId }: { contentId: string }) {
   const [retryKey, setRetryKey] = useState(0);
   const container = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
+  const pageTop = useRef<HTMLDivElement>(null);
+  const changePage = (next: number) => {
+    if (!pdf || next < 1 || next > pdf.numPages) return;
+    setPage(next);
+    pageTop.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
   useEffect(() => {
     const element = container.current;
     if (!element) return;
@@ -76,7 +83,12 @@ export function StudyPdfReader({ contentId }: { contentId: string }) {
   return <div ref={container} className="min-w-0 w-full"><ProtectedMaterial>
     {loading && !error && <div role="status" className="rounded-xl border border-orange-100 bg-orange-50 p-4 text-sm text-stone-700">Opening your PDF… This can take up to 60 seconds.</div>}
     {error && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4"><p className="text-red-700">{error}</p><button type="button" className="mt-3 rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white" onClick={() => setRetryKey(key => key + 1)}>Retry PDF</button></div>}
-    {pdf && !error && <div className="flex items-center gap-3 mb-3"><button className="border rounded-lg p-2" disabled={page <= 1} onClick={() => setPage(page - 1)}>Previous</button><span>Page {page} / {pdf.numPages}</span><button className="border rounded-lg p-2" disabled={page >= pdf.numPages} onClick={() => setPage(page + 1)}>Next</button></div>}
-    <canvas ref={canvas} aria-label={`Study PDF page ${page}`} className="max-w-full border rounded-lg" hidden={!pdf || Boolean(error)} />
+    <div ref={pageTop} className="scroll-mt-24" />
+    {pdf && !error && <div className="sticky top-20 z-20 mb-3 flex items-center justify-between gap-2 rounded-xl border border-blue-200 bg-white/95 px-3 py-2 shadow-md backdrop-blur-sm" role="navigation" aria-label="PDF page navigation">
+      <button type="button" aria-label="Previous PDF page" className="inline-flex items-center gap-1 rounded-lg border border-blue-200 px-3 py-2 text-sm font-semibold text-blue-800 disabled:opacity-40" disabled={page <= 1} onClick={() => changePage(page - 1)}><ChevronLeft className="h-4 w-4" /><span className="hidden sm:inline">Previous</span></button>
+      <span className="text-sm font-bold text-slate-800" aria-live="polite">Page {page} / {pdf.numPages}</span>
+      <button type="button" aria-label="Next PDF page" className="inline-flex items-center gap-1 rounded-lg bg-blue-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-40" disabled={page >= pdf.numPages} onClick={() => changePage(page + 1)}><span className="hidden sm:inline">Next</span><ChevronRight className="h-4 w-4" /></button>
+    </div>}
+    <canvas ref={canvas} aria-label={`Study PDF page ${page}`} className="max-w-full rounded-lg border" hidden={!pdf || Boolean(error)} />
   </ProtectedMaterial></div>;
 }
