@@ -10,6 +10,8 @@ interface StudentResult {
   percentage?: number;
   score?: number;
   totalMarks?: number;
+  subjectId?: string;
+  testType?: string;
 }
 
 interface StudentMistake { id: string; studentUid?: string; questionText?: string; question?: string; topicTitle?: string; concept?: string; createdAt?: string; reason?: string; }
@@ -43,6 +45,17 @@ export function StudentRecordsManager({ students, results, mistakes }: Props) {
   }, [results]);
   const selected = students.find(s => s.uid === selectedUid);
   const selectedAttempts = selected ? attemptsByStudent.get(selected.uid) || [] : [];
+  const subjectProgress = selected ? [...selectedAttempts.reduce((groups, attempt) => {
+    const key = attempt.subjectId || 'Unassigned subject';
+    const current = groups.get(key) || { subject: key, attempts: 0, totalScore: 0, scored: 0 };
+    current.attempts += 1;
+    if (typeof attempt.percentage === 'number' && Number.isFinite(attempt.percentage)) {
+      current.totalScore += attempt.percentage;
+      current.scored += 1;
+    }
+    groups.set(key, current);
+    return groups;
+  }, new Map<string, { subject: string; attempts: number; totalScore: number; scored: number }>()).values()] : [];
   const selectedMistakes = selected ? mistakes.filter(item => item.studentUid === selected.uid).sort((a,b) => (b.createdAt || '').localeCompare(a.createdAt || '')) : [];
   const completed = results.filter(item => typeof item.percentage === 'number' && Number.isFinite(item.percentage));
   const meanScore = completed.length ? Math.round(completed.reduce((total, item) => total + (item.percentage || 0), 0) / completed.length) : null;
@@ -98,6 +111,11 @@ export function StudentRecordsManager({ students, results, mistakes }: Props) {
     {selected && <div className="rounded-xl border bg-stone-50 p-4 space-y-3" aria-label="Selected student assessment history">
       <div className="flex items-center justify-between gap-2"><div><h4 className="font-bold">{selected.displayName || 'Student'} — Assessment history</h4><p className="text-xs text-stone-600">Student ID: {selected.uid}</p></div><button type="button" className="rounded-lg border px-3 py-1.5 text-xs" onClick={() => setSelectedUid(null)}>Close</button></div>
       {selectedAttempts.length ? <div className="max-h-80 overflow-y-auto"><table className="w-full text-left text-xs"><thead><tr><th className="p-2">Test</th><th className="p-2">Date</th><th className="p-2">Score</th></tr></thead><tbody>{selectedAttempts.map((attempt, index) => <tr className="border-t" key={attempt.id || index}><td className="p-2">{attempt.testTitle || attempt.title || 'Assessment'}</td><td className="p-2">{attempt.createdAt ? attempt.createdAt.slice(0, 10) : '—'}</td><td className="p-2">{percent(attempt.percentage)}</td></tr>)}</tbody></table></div> : <p className="text-xs text-stone-600">No recorded test attempts.</p>}
+      <div className="space-y-2">
+        <h5 className="text-sm font-bold">Subject-wise assessment progress</h5>
+        <p className="text-xs text-stone-600">Mean recorded test score by subject; not a topic mastery estimate.</p>
+        {subjectProgress.length ? <table className="w-full text-left text-xs"><thead><tr><th className="p-2">Subject ID</th><th className="p-2">Attempts</th><th className="p-2">Mean score</th></tr></thead><tbody>{subjectProgress.map(row => <tr key={row.subject} className="border-t"><td className="p-2">{row.subject}</td><td className="p-2">{row.attempts}</td><td className="p-2">{row.scored ? percent(row.totalScore / row.scored) : '—'}</td></tr>)}</tbody></table> : <p className="text-xs text-stone-600">No subject-tagged assessments.</p>}
+      </div>
       <div className="space-y-2">
         <h5 className="text-sm font-bold">Mistake Book ({selectedMistakes.length})</h5>
         {selectedMistakes.length ? <div className="max-h-80 overflow-y-auto rounded-lg border bg-white">
