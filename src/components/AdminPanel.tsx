@@ -4,6 +4,7 @@ import { subjectsForSelection } from '../services/adminValidation';
 import { WebsiteSettingsManager } from './WebsiteSettingsManager';
 import { CurriculumManager } from './CurriculumManager';
 import { ManagedRecords } from './ManagedRecords';
+import { StudentRecordsManager } from './StudentRecordsManager';
 import React, { useEffect, useMemo, useState } from 'react';
 import { uploadBrandedStudyFile } from '../services/studyFileUpload';
 import { collection, doc, onSnapshot, setDoc } from 'firebase/firestore';
@@ -878,36 +879,7 @@ export const AdminPanel: React.FC = () => {
       )}
 
       {/* Admin Tab 4: Students */}
-      {adminTab === 'students' && (
-        <div className="space-y-4">
-          <h3 className="text-sm font-bold text-stone-900 uppercase tracking-wider font-cinzel">
-            Registered Student Directory & Test History ({registeredStudents.length})
-          </h3>
-          {registeredStudents.length === 0 ? (
-            <div className="p-8 text-center text-stone-500 bg-stone-50 rounded-2xl border text-xs">No registered students found.</div>
-          ) : (
-            <div className="bg-white border border-stone-200 rounded-2xl overflow-x-auto shadow-xs">
-              <div className="min-w-[680px]">
-                <div className="p-3 bg-stone-50 border-b border-stone-200 text-xs font-bold text-stone-700 grid grid-cols-4">
-                  <span>Student / Email</span><span>Class & Board</span><span>Tests Completed</span><span>Recent Score</span>
-                </div>
-                <div className="px-3 divide-y divide-stone-100 text-xs text-stone-800">
-                  {registeredStudents.map(student => {
-                    const results = allStudentResults.filter(r => r.studentUid === student.uid)
-                      .sort((a,b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
-                    return <div key={student.uid} className="py-3 grid grid-cols-4 items-center gap-2">
-                      <div><span className="font-bold block">{student.displayName || 'Student'}</span><span className="text-[11px] text-stone-400 font-mono">{student.email}</span></div>
-                      <div>{student.classGrade || '—'} • {student.board || 'CBSE'}{student.stream && student.stream !== 'General' ? ` (${student.stream})` : ''}</div>
-                      <div className="font-bold text-orange-700">{results.length} Tests</div>
-                      <div className="font-bold text-emerald-700">{results[0] ? `${Math.round(results[0].percentage)}%` : '—'}</div>
-                    </div>;
-                  })}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
+      {adminTab === 'students' && <StudentRecordsManager students={registeredStudents} results={allStudentResults} />}
 
       {/* Admin Tab 5: Enquiries */}
       {adminTab === 'enquiries' && (
