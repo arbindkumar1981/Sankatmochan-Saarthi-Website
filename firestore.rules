@@ -127,15 +127,13 @@ service cloud.firestore {
     // Append-only website administration audit trail. Client cannot edit or remove events.
     match /admin_audit_logs/{logId} {
       allow get, list: if isAdmin();
-      allow create: if isAdmin() && isValidId(logId) &&
-        incoming().keys().hasOnly(['action', 'actorUid', 'target', 'previousRevision', 'revision', 'createdAt']) &&
-        incoming().actorUid == request.auth.uid &&
-        incoming().action == 'website_config.update' &&
-        incoming().target == 'curriculum_nodes/_website_config' &&
-        incoming().previousRevision is int &&
-        incoming().revision == incoming().previousRevision + 1 &&
-        incoming().createdAt is string && incoming().createdAt.size() <= 40;
-      allow update, delete: if false;
+      allow create, update, delete: if false;
+    }
+
+    // Provider-authenticated server events; even admin browsers cannot forge them.
+    match /admin_audit_events/{eventId} {
+      allow get, list: if isAdmin() && request.auth.token.firebase.sign_in_provider != 'anonymous';
+      allow create, update, delete: if false;
     }
 
     // Motivational Notices & Circulars
