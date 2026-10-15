@@ -129,11 +129,11 @@ export const LearningSidebar: React.FC = () => {
   ];
 
   return (
-    <div className="w-full bg-white rounded-2xl border border-orange-200 shadow-sm p-3 flex flex-col gap-3 shrink-0">
+    <div className="w-full bg-white rounded-2xl border border-blue-100 shadow-sm p-3 flex flex-col gap-3 shrink-0">
       <details open className="group">
-        <summary className="cursor-pointer text-xs font-bold text-orange-900 py-2">{websiteText(language === 'hi' ? 'पाठ्यक्रम अनुक्रम' : 'Curriculum Hierarchy')}</summary>
+        <summary className="cursor-pointer text-xs font-bold text-blue-900 py-2">{websiteText(language === 'hi' ? 'पाठ्यक्रम अनुक्रम' : 'Curriculum Hierarchy')}</summary>
         {/* Curriculum controls wrap on mobile as well as desktop. */}
-        <div className="flex w-full flex-col items-stretch gap-2 bg-amber-50/70 border border-orange-200 px-2 py-1 rounded-xl">
+        <div className="flex w-full flex-col items-stretch gap-2 bg-blue-50/70 border border-blue-100 px-2 py-1 rounded-xl">
           {/* Board Select */}
           <div className="flex items-center gap-1 text-xs">
             <span className="text-stone-500 font-medium"><WebsiteText original={"Board:"} /></span>
@@ -207,8 +207,8 @@ export const LearningSidebar: React.FC = () => {
                 }}
                 className={`w-full text-left px-2.5 py-2 rounded-xl text-xs font-semibold flex items-center justify-between transition-all ${
                   isSelected
-                    ? "bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-xs"
-                    : "bg-stone-50 hover:bg-orange-50 text-stone-800 border border-stone-200/70"
+                    ? "bg-blue-700 text-white shadow-xs"
+                    : "bg-stone-50 hover:bg-blue-50 text-stone-800 border border-stone-200/70"
                 }`}
               >
                 <div className="flex items-center gap-2 truncate">
@@ -234,7 +234,7 @@ export const LearningSidebar: React.FC = () => {
 
       {/* Chapter & Topic Cascading Selector */}
       {selectedSubject && selectedSubject.chapters.length > 0 && (
-        <div className="space-y-2 border-t border-orange-100 pt-2.5">
+        <div className="space-y-2 border-t border-blue-100 pt-2.5">
           {/* Chapter Selector */}
           <div>
             <label className="block text-[11px] font-bold text-stone-600 uppercase tracking-wider mb-1">
@@ -305,7 +305,7 @@ export const LearningSidebar: React.FC = () => {
 
       {selectedChapter && /^new chapter$/i.test(selectedChapter.title.trim()) && <p role="status" className="text-xs text-amber-800">{websiteText('This chapter is a draft. Choose a named chapter for learning.')}</p>}
       {/* Module Selector (9 Modules strictly organized) */}
-      <details open className="border-t border-orange-100 pt-2.5">
+      <details open className="border-t border-blue-100 pt-2.5">
         <summary className="cursor-pointer block text-[11px] font-bold text-stone-600 uppercase tracking-wider mb-1.5">
           {language === 'hi' ? websiteText("शिक्षण मॉड्यूल (Learning Modules)") : websiteText("Learning Modules")}
         </summary>
@@ -319,8 +319,8 @@ export const LearningSidebar: React.FC = () => {
                 onClick={() => setActiveModule(mod.id)}
                 className={`w-full text-left px-2.5 py-2 rounded-xl text-xs font-semibold flex items-center justify-between transition-all group ${
                   isModActive
-                    ? "bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow-xs font-bold"
-                    : "bg-stone-50 hover:bg-orange-50/80 text-stone-700 border border-stone-200/60"
+                    ? "bg-blue-700 text-white shadow-xs font-bold"
+                    : "bg-stone-50 hover:bg-blue-50/80 text-stone-700 border border-stone-200/60"
                 }`}
               >
                 <div className="flex items-center gap-2 truncate">
