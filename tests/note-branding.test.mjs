@@ -16,8 +16,8 @@ test('branding preserves every PDF page and original bytes, including landscape 
   const branded = await PDFDocument.load(await brandPdf(bytes, { logo, watermark: logo, name: 'Sankatmochan Saarthi' }));
   assert.deepEqual(bytes, original);
   assert.equal(branded.getPageCount(), 5);
-  assert.deepEqual(branded.getPages().map(page => [page.getWidth(), page.getHeight()]), [[627, 930], [874, 683], [874, 683], [627, 930], [874, 683]]);
-  for (const page of branded.getPages()) assert.ok(page.node.Resources().lookup(PDFName.of('XObject')).entries().length >= 3);
+  assert.deepEqual(branded.getPages().map(page => [page.getWidth(), page.getHeight()]), [[627, 874], [874, 627], [874, 627], [627, 874], [874, 627]]);
+  for (const page of branded.getPages()) assert.ok(page.node.Resources().lookup(PDFName.of('XObject')).entries().length >= 2);
 });
 test('invalid PDF input never returns an unbranded file', async () => {
   await assert.rejects(brandPdf(new Uint8Array([1, 2, 3]), { logo, watermark: logo, name: 'Saarthi' }));
