@@ -44,6 +44,8 @@ import { activeOptions } from '../services/websiteConfig';
 import { validateSubject, subjectsForSelection, mergeCurriculum, validateAdminRecord, assetMarker, assetVisibility } from '../services/adminValidation';
 
 export type MainTabType =
+  | 'home'
+  | 'courses'
   | 'learning'
   | 'materials'
   | 'youtube'
@@ -111,7 +113,7 @@ export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const { user, profile, isAdmin } = useAuth();
   const { config } = useWebsite();
 
-  const [activeTab, setActiveTab] = useState<MainTabType>('learning');
+  const [activeTab, setActiveTab] = useState<MainTabType>('home');
   const [activeModule, setActiveModule] = useState<ContentModuleType>('detailed_notes');
 
   const [selectedBoard, setSelectedBoard] = useState<BoardType>(profile?.board || 'CBSE');
