@@ -75,7 +75,7 @@ export const AdminPanel: React.FC = () => {
 
   const [adminTab, setAdminTab] = useState<
     'content' | 'videos' | 'tests' | 'notices' | 'students' | 'enquiries' | 'settings' | 'curriculum'
-  >('settings');
+  >('curriculum');
 
   const [adminOperationError, setAdminOperationError] = useState('');
   const adminSubmit = (action: (e: React.FormEvent) => Promise<void>) => async (e: React.FormEvent) => {
@@ -425,12 +425,12 @@ export const AdminPanel: React.FC = () => {
       {/* One organized control panel; only the selected manager is opened. */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3" aria-label="Admin control panel">
         {([
-          ['settings', 'Website & Navigation', 'Names, icons, pages, logo and menu order', ImageIcon],
-          ['curriculum', 'Subjects, Chapters & Topics', 'Add, edit, replace, remove and restore', BookOpen],
-          ['content', 'Learning Materials', 'Upload, publish, replace and restore', FileText],
-          ['videos', 'Videos', 'YouTube lectures and links', Youtube],
-          ['tests', 'Assessments', 'Tests, questions and evaluation', CheckSquare],
-          ['notices', 'Notices', 'Student notices and announcements', BellRing],
+          ['settings', 'Website Settings', 'Names, icons, pages, logo and menu order', ImageIcon],
+          ['curriculum', 'Curriculum Manager', 'Boards, subjects, chapters and topics', BookOpen],
+          ['content', 'Content Manager', 'Upload, approve, publish and restore', FileText],
+          ['videos', 'Video Manager', 'Curated lectures and links', Youtube],
+          ['tests', 'Question & Test Manager', 'Questions, tests and evaluation', CheckSquare],
+          ['notices', 'Notice Manager', 'Student notices and announcements', BellRing],
           ['students', 'Students', 'Student records and learning progress', Users],
           ['enquiries', 'Enquiries', 'Questions and contact requests', Inbox]
         ] as const).map(([key, label, description, Icon]) => <button key={key} aria-pressed={adminTab === key} onClick={() => setAdminTab(key)} className={`flex flex-col gap-2 border rounded-xl p-3 text-left ${adminTab === key ? 'bg-orange-50 border-orange-500 text-orange-900' : 'bg-white border-stone-200 text-stone-700 hover:bg-orange-50'}`}><Icon className="w-5 h-5" /><span className="font-bold text-sm">{label}</span><span className="text-xs text-stone-500">{description}</span></button>)}
