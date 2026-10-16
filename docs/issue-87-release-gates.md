@@ -41,6 +41,35 @@ Initial exact-head CI results (16 October 2026):
 
 ## Staging prerequisites and execution
 
+Execution follow-up on 16 October: Backend #88 now includes the un-applied
+`infra/staging` Terraform proposal, provider lockfile and seven mock-only safety
+tests. Website includes `firebase.staging.json` with an intentionally invalid
+site placeholder. Review and approval are required before applying either.
+The proposal uses a private API; securely supply its short-lived invoker ID token
+as `SAARTHI_STAGING_RUN_TOKEN`, separately from both Firebase user tokens. The
+runner sends it only to the API in `X-Serverless-Authorization`. See Google's
+[dual-header authentication documentation](https://docs.cloud.google.com/run/docs/authenticating/service-to-service).
+The private browser access gateway remains an explicit approval/integration gate.
+No IAM token belongs in the website bundle.
+
+Fresh local checks: 94 website tests PASS; TypeScript, scoped ESLint, staging
+runner syntax, JSON and production build PASS. Backend 349 PASS / 2 SKIP and
+Ruff PASS. Initial backend run had 348 PASS / 2 SKIP / 1 setup ERROR:
+`PermissionError: [WinError 5] Access is denied` on the shared Windows pytest
+temporary directory. Full rerun using a fresh workspace temporary directory
+passed. Existing FastAPI lifecycle and Vite config/chunk warnings remain.
+The added subprocess runner regression uses an entirely synthetic transport:
+all eight flows pass with separate IAM/Firebase identity, no infrastructure
+credential reaches Firestore/Hosting, and reports contain none of the test
+tokens. This is runner validation, not live staging evidence.
+
+Cloud inventory blocker was rechecked: Firebase CLI configuration has no current
+user/token session; neither authenticated cloud CLI nor a cloud-console browser
+tab is available. The existing read-only audit stopped before any cloud API
+query because its expected token session was absent. This is missing local
+authentication, not an observed IAM permission denial. GitHub deployment logs
+remain historical evidence only. No student records were queried.
+
 The supplied `https://sankatmochansaarthi.in/` is production. Do not use it as staging, point a candidate at a production database, copy student records, or create synthetic records in production.
 
 Need an explicitly approved isolated website/API pair, isolated Firebase project and academic DB, and two dedicated synthetic users with UIDs starting `issue87-`. Runtime/model access must be configured for staging. Do not grant new production roles to unblock a test. The operator needs staging user sign-in, API invocation and owner-scoped document access; privileged database credentials are not required by the runner.

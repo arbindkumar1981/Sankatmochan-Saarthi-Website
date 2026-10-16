@@ -29,19 +29,23 @@ const runId = `issue87-${randomUUID()}`;
 const report = {runId,startedAt:new Date().toISOString(),environment:'staging',backendCommit:config.backendCommit,websiteCommit:config.websiteCommit,
   revisionVerification:'REQUIRED separately: configured commits are intended revisions, not observed proof',results:[]};
 const headers = token => ({'Content-Type':'application/json',...(token?{Authorization:`Bearer ${token}`}:{})});
+// Private staging Cloud Run checks this separate IAM token; Firebase identity
+// remains in Authorization and is still independently checked by the API.
+const apiHeaders = token => ({...headers(token),...(process.env.SAARTHI_STAGING_RUN_TOKEN
+  ? {'X-Serverless-Authorization':`Bearer ${process.env.SAARTHI_STAGING_RUN_TOKEN}`} : {})});
 async function checked(url, options, allowed=[200]) {
   const res = await fetch(url,{...options,signal:AbortSignal.timeout(600000),redirect:'error'});
   if (!allowed.includes(res.status)) throw new Error(`HTTP_${res.status}`);
   return res;
 }
 // Prove rejection before generation. Do not persist or print response error bodies.
-await checked(new URL('/v1/website/teacher/generate',api),{method:'POST',headers:headers(),body:JSON.stringify({class_level:'X',subject:'Science',asset_type:'DETAILED_NOTES',topic_id:runId})},[401,403]);
+await checked(new URL('/v1/website/teacher/generate',api),{method:'POST',headers:apiHeaders(),body:JSON.stringify({class_level:'X',subject:'Science',asset_type:'DETAILED_NOTES',topic_id:runId})},[401,403]);
 await checked(website,{method:'GET'});
 for (const asset_type of TEACHER_ASSETS) {
   let step='generate'; const started=Date.now();
   try {
     const request={board:'CBSE',class_level:'X',subject:'Science',language:'ENGLISH',asset_type,topic_id:`${runId}-${asset_type}`,chapter:'Heredity and Evolution',topic:'Heredity'};
-    const generated=await checked(new URL('/v1/website/teacher/generate',api),{method:'POST',headers:headers(ownerToken),body:JSON.stringify(request)});
+    const generated=await checked(new URL('/v1/website/teacher/generate',api),{method:'POST',headers:apiHeaders(ownerToken),body:JSON.stringify(request)});
     const data=await generated.json();
     step='validate';
     const asset=validateTeacherArtifact(data,request);
