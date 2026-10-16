@@ -24,6 +24,6 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: npm ci --prefix .issue87-tools/tests/emulator --ignore-scripts --no-fund
       - name: ESLint
-        run: node .issue87-tools/tests/emulator/node_modules/eslint/bin/eslint.js --config .issue87-tools/eslint.config.js src/components/ContentArea.tsx src/components/MyMaterials.tsx src/services/teacherArtifact.ts src/services/generatedLearning.ts
+        run: node .issue87-tools/tests/emulator/node_modules/eslint/bin/eslint.js --config .issue87-tools/eslint.config.js src/components/ContentArea.tsx src/components/MyMaterials.tsx src/components/SavedMaterialView.tsx src/services/teacherArtifact.ts src/services/generatedLearning.ts
       - name: Eight owner-private save and retrieval contracts
         run: node .issue87-tools/tests/emulator/node_modules/firebase-tools/lib/bin/firebase.js emulators:exec --config firebase.eight-assets-emulators.json --project demo-saarthi-eight-assets --only firestore 'node --test tests/eight-assets-firestore.mjs'
