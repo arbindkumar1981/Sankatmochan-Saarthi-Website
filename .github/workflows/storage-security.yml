@@ -1,0 +1,26 @@
+name: Storage authorization security
+on:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  storage-rules:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: 0dd3834735c56bd1c03d84e46fb0ec99bcd437c1
+          path: .issue87-tools
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci --prefix .issue87-tools/tests/emulator --ignore-scripts --no-fund
+      - name: Security test lint
+        run: node .issue87-tools/tests/emulator/node_modules/eslint/bin/eslint.js tests/storage-security-emulator.mjs --no-config-lookup --rule 'no-unreachable:error' --rule 'no-dupe-args:error' --rule 'no-dupe-keys:error'
+      - name: Storage and cross-service authorization regressions
+        run: node .issue87-tools/tests/emulator/node_modules/firebase-tools/lib/bin/firebase.js emulators:exec --config firebase.storage-security-emulators.json --project demo-saarthi-storage-security --only firestore,storage 'node --test tests/storage-security-emulator.mjs'
