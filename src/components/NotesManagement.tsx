@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import type { SubjectMeta } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { ManagedNote, NotePage, noteFile, notesRequest } from '../services/managedNotes';
 
 const input = 'border rounded p-2 w-full min-w-0 bg-white';
 const button = 'border rounded px-3 py-2 text-sm disabled:opacity-40';
+const NotesPdfReader = lazy(() => import('./StudyPdfReader').then(module => ({ default: module.StudyPdfReader })));
 const empty = (): ManagedNote => ({ id: crypto.randomUUID(), title: '', board: '', classGrade: '', stream: 'General', subjectId: '', chapterId: '', topicId: '', body: '', version: 0, source: 'admin_uploaded', published: false, deleted: false, updatedAt: '', updatedBy: '' });
 
 export function NotesManagement({ student = false }: { student?: boolean }) {
@@ -19,8 +20,10 @@ export function NotesManagement({ student = false }: { student?: boolean }) {
   const [status, setStatus] = useState('all');
   const [scope, setScope] = useState({ grade: '', stream: '', subject: '', chapter: '', topic: '' });
   const [busy, setBusy] = useState(false);
+  const [canPublish, setCanPublish] = useState(false);
   const [message, setMessage] = useState('');
   const [preview, setPreview] = useState<ManagedNote | null>(null);
+  const [previewVersion, setPreviewVersion] = useState<number | undefined>();
   const [history, setHistory] = useState<ManagedNote[]>([]);
   const [historyPage, setHistoryPage] = useState<{ id: string; token: string } | null>(null);
   const [pending, setPending] = useState<{ id: string; at: string }[]>([]);
@@ -31,8 +34,9 @@ export function NotesManagement({ student = false }: { student?: boolean }) {
   useEffect(() => {
     let active = true;
     setPage({ rows: [], next: null }); setDraft(null); setPreview(null); setHistory([]); setHistoryPage(null); setPending([]); setBlob(null); setAttachmentText('');
-    if (user && !user.isAnonymous) Promise.all([notesRequest<SubjectMeta[]>('/curriculum'), notesRequest<NotePage>(student ? '' : '?admin=true')])
-      .then(([subjects, rows]) => { if (active) { setCatalogue(subjects); setPage(rows); } })
+    setCanPublish(false);
+    if (user && !user.isAnonymous) Promise.all([notesRequest<SubjectMeta[]>('/curriculum'), notesRequest<NotePage>(student ? '' : '?admin=true'), student ? Promise.resolve({ publish: false }) : notesRequest<{ publish: boolean }>('/access')])
+      .then(([subjects, rows, access]) => { if (active) { setCatalogue(subjects); setPage(rows); setCanPublish(access.publish); } })
       .catch(error => { if (active) setMessage(error.message); });
     return () => { active = false; };
   }, [user, student]);
@@ -66,6 +70,7 @@ export function NotesManagement({ student = false }: { student?: boolean }) {
   }
   async function show(note: ManagedNote, historical = false) {
     const viewer = user;
+    setPreviewVersion(historical ? note.version : undefined);
     setPreview(note); setBlob(null); setAttachmentText(''); setHistory([]);
     if (note.storagePath || note.hasAttachment) {
       const data = await notesRequest<Blob>(`/${note.id}/file${historical ? `?version=${note.version}` : ''}`, undefined, undefined, true);
@@ -101,7 +106,7 @@ export function NotesManagement({ student = false }: { student?: boolean }) {
       <td>{n.title}</td><td>{n.classGrade} / {n.stream}</td><td>{label(n.subjectId)} / {catalogue.find(s => s.id === n.subjectId)?.chapters.find(c => c.id === n.chapterId)?.title} / {n.topicId || 'Chapter-wide'}</td><td>{n.fileType || 'Typed text'}</td><td>{n.deleted ? 'Deleted' : n.published ? 'Published' : 'Draft'} / {n.version}</td><td>{n.updatedBy} / {n.updatedAt}</td>
       <td className="flex flex-wrap gap-2"><button disabled={busy || n.deleted} className={button} onClick={() => operation(() => show(n))}>Preview</button>{!student && <>
         <button disabled={busy || n.deleted} className={button} onClick={() => { setDraft(n); setFile(null); }}>Edit / Replace</button>
-        {!n.deleted && <button disabled={busy} className={button} onClick={() => operation(() => transition(n, n.published ? 'unpublish' : 'publish'))}>{n.published ? 'Unpublish' : 'Publish'}</button>}
+        {!n.deleted && <button disabled={busy || !canPublish} title={canPublish ? '' : 'Master Admin publication review required'} className={button} onClick={() => operation(() => transition(n, n.published ? 'unpublish' : 'publish'))}>{n.published ? 'Unpublish' : 'Publish'}</button>}
         <button disabled={busy} className={button} onClick={() => operation(() => transition(n, n.deleted ? 'restore' : 'delete'))}>{n.deleted ? 'Restore to draft' : 'Soft Delete'}</button>
         <button disabled={busy} className={button} onClick={() => operation(async () => { const data = await notesRequest<{ versions: ManagedNote[]; next: string | null }>(`/${n.id}/versions`); setHistory(data.versions); setHistoryPage(data.next ? { id: n.id, token: data.next } : null); setMessage('Version history loaded.'); })}>History</button>
       </>}</td></tr>)}</tbody></table></div>
@@ -122,7 +127,7 @@ export function NotesManagement({ student = false }: { student?: boolean }) {
       <div><button disabled={busy} className={button}>Save draft</button><button type="button" disabled={busy} className={button} onClick={() => setDraft(null)}>Cancel</button><button type="button" disabled={busy} className={button} onClick={() => operation(async () => setPending(await notesRequest(`/${draft.id}/pending`)))}>Check interrupted uploads</button></div>
       {pending.map(item => <div key={item.id}>Interrupted upload {item.at}<button type="button" className={button} disabled={busy} onClick={() => operation(async () => { await notesRequest(`/${draft.id}/recover/${item.id}`, {}); setPending([]); setDraft(null); await refresh(); setMessage('Recovered as draft; review before publishing.'); })}>Recover as draft</button></div>)}
     </form>}
-    {preview && <section aria-label="Notes preview" className="border p-3"><h3>{preview.title}</h3><pre className="whitespace-pre-wrap break-words">{preview.body}</pre>{attachmentText && <pre className="whitespace-pre-wrap break-words">{attachmentText}</pre>}{blob && <><a href={blob} download={preview.fileName || 'notes'}>Download attachment</a>{pdf && <iframe title="PDF notes preview" sandbox="" src={blob} className="w-full h-96" />}</>}<button className={button} onClick={() => { setPreview(null); setBlob(null); }}>Close preview</button></section>}
+    {preview && <section aria-label="Notes preview" className="border p-3"><h3>{preview.title}</h3><pre className="whitespace-pre-wrap break-words">{preview.body}</pre>{attachmentText && <pre className="whitespace-pre-wrap break-words">{attachmentText}</pre>}{blob && <><a href={blob} download={preview.fileName || 'notes'}>Download attachment</a>{pdf && <Suspense fallback={<p>Opening PDF…</p>}><NotesPdfReader contentId={preview.id} managedNote version={previewVersion} /></Suspense>}</>}<button className={button} onClick={() => { setPreview(null); setBlob(null); }}>Close preview</button></section>}
     {history.length > 0 && <section aria-label="Note history"><h3>Immutable version history</h3>{history.map(n => <details key={n.version}><summary>Version {n.version} — {n.updatedAt} — {n.updatedBy} — {n.fileName || 'text'}</summary><pre className="whitespace-pre-wrap">{n.body}</pre><button className={button} disabled={busy} onClick={() => operation(() => show(n, true))}>Preview this version</button></details>)}</section>}
     {historyPage && <button disabled={busy} className={button} onClick={() => operation(async () => { const data = await notesRequest<{ versions: ManagedNote[]; next: string | null }>(`/${historyPage.id}/versions?page_token=${encodeURIComponent(historyPage.token)}`); setHistory(rows => [...rows, ...data.versions]); setHistoryPage(data.next ? { id: historyPage.id, token: data.next } : null); })}>Older versions</button>}
   </section>;

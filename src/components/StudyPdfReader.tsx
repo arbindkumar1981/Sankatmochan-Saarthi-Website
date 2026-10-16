@@ -7,7 +7,7 @@ import { ProtectedMaterial } from './ProtectedMaterial';
 
 GlobalWorkerOptions.workerSrc = workerUrl;
 
-export function StudyPdfReader({ contentId }: { contentId: string }) {
+export function StudyPdfReader({ contentId, managedNote = false, version }: { contentId: string; managedNote?: boolean; version?: number }) {
   const { user } = useAuth();
   const [pdf, setPdf] = useState<PDFDocumentProxy | null>(null);
   const [page, setPage] = useState(1);
@@ -43,7 +43,8 @@ export function StudyPdfReader({ contentId }: { contentId: string }) {
       try {
         const api = import.meta.env.VITE_SAARTHI_API_URL;
         if (!api) throw new Error('PDF reading is unavailable.');
-        const response = await fetch(`${api.replace(/\/$/, '')}/v1/materials/${encodeURIComponent(contentId)}/pdf`, { headers: { Authorization: `Bearer ${await user.getIdToken()}` }, signal: controller.signal, cache: 'no-store' });
+        const path = managedNote ? `/v1/notes/${encodeURIComponent(contentId)}/file${version ? `?version=${version}` : ''}` : `/v1/materials/${encodeURIComponent(contentId)}/pdf`;
+        const response = await fetch(`${api.replace(/\/$/, '')}${path}`, { headers: { Authorization: `Bearer ${await user.getIdToken()}` }, signal: controller.signal, cache: 'no-store' });
         if (!response.ok) { const data = await response.json().catch(() => ({})); throw new Error(data.detail || 'Unable to open this PDF.'); }
         const data = new Uint8Array(await response.arrayBuffer());
         if (data.byteLength > 50 * 1024 * 1024) throw new Error('This PDF is too large to read. Ask Admin to split it.');
@@ -58,7 +59,7 @@ export function StudyPdfReader({ contentId }: { contentId: string }) {
       } finally { clearTimeout(timer); if (active) setLoading(false); }
     })();
     return () => { active = false; controller.abort(); clearTimeout(timer); void task?.destroy(); if (canvas.current) { canvas.current.width = 0; canvas.current.height = 0; } };
-  }, [contentId, user?.uid, retryKey]);
+  }, [contentId, managedNote, version, user?.uid, retryKey]);
   useEffect(() => {
     if (!pdf || !canvas.current) return;
     let cancelled = false;
