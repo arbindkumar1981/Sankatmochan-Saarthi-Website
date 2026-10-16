@@ -47,3 +47,19 @@ test('admin settings and curriculum writes remain supported; students cannot mut
   await assertSucceeds(setDoc(doc(admin,'curriculum_nodes','synthetic-subject'),{kind:'subject',subject:{id:'synthetic-subject'}}));
   await assertFails(setDoc(doc(student,'curriculum_nodes','_website_config'),{role:'admin',revision:2}));
 });
+
+test('anonymous membership cannot authorize privileged operations', async () => {
+  await assertFails(getDocs(collection(anonymous, 'users')));
+  await assertFails(getDoc(doc(anonymous, 'admin_audit_logs', 'legacy-event')));
+  await assertFails(setDoc(doc(anonymous, 'curriculum_nodes', 'anonymous-subject'), {kind:'subject'}));
+  await assertFails(setDoc(doc(anonymous, 'admins', 'forged-a'), {enabled:true}));
+});
+test('students can edit their mistakes but cannot transfer ownership or edit another student', async () => {
+  const own = doc(student, 'mistakes', 'ownership-regression');
+  await assertSucceeds(setDoc(own, {studentUid:'student-a', note:'synthetic'}));
+  await assertSucceeds(updateDoc(own, {note:'corrected'}));
+  await assertFails(updateDoc(own, {studentUid:'other-student'}));
+  const other = environment.authenticatedContext('other-student',{firebase:{sign_in_provider:'google.com'}}).firestore();
+  await assertFails(updateDoc(doc(other, 'mistakes', 'ownership-regression'), {note:'forged'}));
+  await assertSucceeds(updateDoc(doc(admin, 'mistakes', 'ownership-regression'), {note:'admin correction'}));
+});
