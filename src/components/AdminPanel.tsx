@@ -4,6 +4,7 @@ import { subjectsForSelection } from '../services/adminValidation';
 import { WebsiteSettingsManager } from './WebsiteSettingsManager';
 import { CurriculumManager } from './CurriculumManager';
 import { ManagedRecords } from './ManagedRecords';
+import { NotesManagement } from './NotesManagement';
 import { StudentRecordsManager } from './StudentRecordsManager';
 import React, { useEffect, useMemo, useState } from 'react';
 import { uploadBrandedStudyFile } from '../services/studyFileUpload';
@@ -75,7 +76,7 @@ export const AdminPanel: React.FC = () => {
   const { profile, user } = useAuth();
 
   const [adminTab, setAdminTab] = useState<
-    'content' | 'videos' | 'tests' | 'notices' | 'students' | 'enquiries' | 'settings' | 'curriculum'
+    'content' | 'notes' | 'videos' | 'tests' | 'notices' | 'students' | 'enquiries' | 'settings' | 'curriculum'
   >('settings');
 
   const [adminOperationError, setAdminOperationError] = useState('');
@@ -440,6 +441,7 @@ export const AdminPanel: React.FC = () => {
             ['settings', 'Website & Pages', ImageIcon],
             ['curriculum', 'Curriculum', BookOpen],
             ['content', 'Study Materials', FileText],
+            ['notes', 'Notes Management', FileText],
             ['videos', 'Videos', Youtube],
             ['tests', 'Questions & Tests', CheckSquare],
             ['notices', 'Notices', BellRing],
@@ -455,6 +457,7 @@ export const AdminPanel: React.FC = () => {
         </div>
       </nav>
       {adminTab === 'curriculum' && <CurriculumManager />}
+      {adminTab === 'notes' && <NotesManagement />}
       {/* Admin Tab 1: Content Manager */}
       {adminTab === 'content' && (
         <div className="space-y-4">

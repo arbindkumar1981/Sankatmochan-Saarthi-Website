@@ -18,5 +18,7 @@ service firebase.storage {
       allow create, update: if isAdmin() && request.auth.uid == adminUid && allowedStudyFile();
       allow delete: if isAdmin() && request.auth.uid == adminUid;
     }
+    // Server-owned immutable notes objects; no public tokens or direct browser access.
+    match /managed-notes/{path=**} { allow read, write: if false; }
   }
 }
