@@ -29,6 +29,16 @@ service cloud.firestore {
     }
 
     // Users Collection
+    // Versioned Notes API owns all writes and visibility checks. No client bypass.
+    match /managed_notes/{path=**} { allow read, write: if false; }
+    match /notes_uploads/{id} { allow read, write: if false; }
+    match /notes_audit/{id} { allow read, write: if false; }
+    match /notes_quotas/{id} { allow read, write: if false; }
+    match /notes_editors/{uid} {
+      allow get: if isOwner(uid) && request.auth.token.firebase.sign_in_provider != 'anonymous';
+      allow list, write: if false;
+    }
+
     match /users/{userId} {
       allow get: if isOwner(userId) || isAdmin();
       allow list: if isAdmin();

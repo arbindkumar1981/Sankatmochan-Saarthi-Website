@@ -6,6 +6,7 @@ import { BabaBanner } from './components/BabaBanner';
 import { Header } from './components/Header';
 import { VerticalNav } from './components/VerticalNav';
 import { LearningSidebar } from './components/LearningSidebar';
+import { NotesWorkspace } from './components/NotesManagement';
 import { ContentArea } from './components/ContentArea';
 import { MyMaterials } from './components/MyMaterials';
 import { PublicHome, PublicCourses } from './components/PublicPages';
@@ -66,7 +67,7 @@ const MainAppContent: React.FC = () => {
           {activeTab === 'notices' && <NoticeBoardView />}
 
           {activeTab === 'evaluation' && !!user && <EvaluationHub />}
-          {activeTab === 'materials' && !!user && <MyMaterials />}
+          {activeTab === 'materials' && !!user && <><MyMaterials /><NotesWorkspace /></>}
 
           {activeTab === 'contact' && <ContactUsView />}
 

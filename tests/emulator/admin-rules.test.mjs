@@ -19,6 +19,16 @@ before(async () => {
   anonymous=environment.authenticatedContext('anonymous-a',{firebase:{sign_in_provider:'anonymous'}}).firestore();
 });
 after(async () => {await environment?.cleanup();});
+test('notes metadata, versions, recovery, quotas and audit are server-owned for every client role', async () => {
+  for (const db of [admin, student, forged, anonymous, environment.unauthenticatedContext().firestore()]) {
+    for (const path of ['managed_notes/note-a', 'managed_notes/note-a/versions/v00000001', 'notes_uploads/upload-a', 'notes_audit/event-a', 'notes_quotas/quota-a']) {
+      await assertFails(getDoc(doc(db, path)));
+      await assertFails(setDoc(doc(db, path), { published: true, source: 'admin_uploaded' }));
+      await assertFails(deleteDoc(doc(db, path)));
+    }
+    await assertFails(setDoc(doc(db, 'notes_editors', 'student-a'), { enabled: true }));
+  }
+});
 test('only a real non-anonymous admin can read or filter trusted events',async()=>{
   await assertSucceeds(getDoc(doc(admin,'admin_audit_events','trusted-event')));
   await assertSucceeds(getDocs(query(collection(admin,'admin_audit_events'),where('category','==','users'),orderBy('occurredAt','desc'),limit(51))));
