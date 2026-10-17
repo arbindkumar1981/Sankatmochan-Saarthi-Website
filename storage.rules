@@ -5,7 +5,7 @@ service firebase.storage {
       return request.auth != null;
     }
     function isAdmin() {
-      return isSignedIn() &&
+      return isSignedIn() && request.auth.token.firebase.sign_in_provider != 'anonymous' &&
         firestore.exists(/databases/(default)/documents/admins/$(request.auth.uid));
     }
     function allowedStudyFile() {

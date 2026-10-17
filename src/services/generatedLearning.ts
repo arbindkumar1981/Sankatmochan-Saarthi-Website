@@ -28,5 +28,15 @@ export function parseGeneratedMindmap(content: string): NonNullable<LearningCont
     ids.add(node.id);
   }
   for (const node of nodes) if ((node.children || []).some((id: string) => !ids.has(id) || id === node.id)) throw new Error('Generated mind-map connections reference an invalid node.');
+  const graph = new Map<string, string[]>(nodes.map(node => [node.id, node.children || []]));
+  const visited = new Set<string>(), active = new Set<string>();
+  const visit = (id: string) => {
+    if (active.has(id)) throw new Error('Generated mind-map connections contain a cycle.');
+    if (visited.has(id)) return;
+    active.add(id);
+    for (const child of graph.get(id) || []) visit(child);
+    active.delete(id); visited.add(id);
+  };
+  for (const id of ids) visit(id);
   return nodes.map(node => ({ id: node.id, label: node.label, description: node.description, children: [...(node.children || [])] }));
 }
