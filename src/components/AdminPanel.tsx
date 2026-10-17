@@ -1,3 +1,4 @@
+import { ControlCenter } from './ControlCenter';
 import { useWebsite } from '../context/WebsiteContext';
 import { activeOptions } from '../services/websiteConfig';
 import { subjectsForSelection } from '../services/adminValidation';
@@ -953,9 +954,8 @@ export const AdminPanel: React.FC = () => {
       )}
 
       {/* Admin Tab 6: Shared Website Manager */}
-      {adminTab === 'settings' && <WebsiteSettingsManager />}
+      {adminTab === 'settings' && <><ControlCenter /><WebsiteSettingsManager /></>}
 
     </div>
   );
 };
-
