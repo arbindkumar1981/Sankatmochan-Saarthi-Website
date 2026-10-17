@@ -1,3 +1,5 @@
+import { effectiveEntries } from '../services/publishedCms';
+import { MenuIcon } from './MenuIcon';
 import { optionLabel } from '../services/websiteConfig';
 import { WebsiteText } from '../context/WebsiteContext';
 import { useWebsite } from '../context/WebsiteContext';
@@ -16,7 +18,7 @@ import {
 } from 'lucide-react';
 
 export const Header: React.FC = () => {
-  const { config, text: websiteText } = useWebsite();
+  const { config, publishedEntries, text: websiteText } = useWebsite();
   const { user, profile, isAdmin, openAuthModal, signOut } = useAuth();
   const { selectedClass, language, toggleLanguage, activeTab, setActiveTab } = useCurriculum();
 
@@ -28,13 +30,18 @@ export const Header: React.FC = () => {
             ['home', language === 'hi' ? 'होम' : 'Home'],
             ['courses', language === 'hi' ? 'कोर्स' : 'Courses'],
             ['contact', language === 'hi' ? 'संपर्क करें' : 'Contact Us']
-          ] as const).map(([tab, label]) => (
+          ] as const).filter(([tab]) => {
+            const override=publishedEntries.find(row => row.kind==='menu' && row.route===tab && row.locale===language);
+            return !override || effectiveEntries(publishedEntries).some(row => row.id===override.id);
+          }).map(([tab, label]) => (
             <button key={tab} type="button" onClick={() => setActiveTab(tab)} aria-current={activeTab === tab ? 'page' : undefined}
               className={`rounded-lg px-3 py-2 text-center text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-500 ${activeTab === tab ? 'bg-[#16439a] text-white' : 'text-slate-700 hover:bg-blue-50'}`}>
-              {label}
+              {publishedEntries.find(row => row.kind==='menu' && row.route===tab && row.locale===language) && <MenuIcon icon={publishedEntries.find(row => row.kind==='menu' && row.route===tab && row.locale===language)!.icon} className="mr-1 inline h-4 w-4" />}
+              {publishedEntries.find(row => row.kind==='menu' && row.route===tab && row.locale===language)?.title || label}
             </button>
           ))}
         </nav>
+        {import.meta.env.VITE_ADMIN_V1_ENABLED === 'true' && <button type="button" onClick={() => setActiveTab('admin')} className="rounded border px-3 py-2">Administrator access</button>}
         {/* Right Actions: Language Switcher + Student Sign In / Admin Login together */}
         <div className="ml-auto flex flex-wrap items-center gap-2 sm:gap-3">
           {/* Language Switcher */}

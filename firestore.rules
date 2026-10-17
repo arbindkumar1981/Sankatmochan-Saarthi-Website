@@ -23,8 +23,11 @@ service cloud.firestore {
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
+    function legacyAdminEnabled() {
+      return !exists(/databases/$(database)/documents/control_policy/enforcement) || get(/databases/$(database)/documents/control_policy/enforcement).data.enabled != true;
+    }
     function isAdmin() {
-      return isSignedIn() && request.auth.token.firebase.sign_in_provider != 'anonymous' &&
+      return legacyAdminEnabled() && isSignedIn() && request.auth.token.firebase.sign_in_provider != 'anonymous' &&
         exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
 
@@ -70,7 +73,7 @@ service cloud.firestore {
       // Admin membership is privileged authorization data; do not expose the full list.
       allow get: if isSignedIn() && request.auth.uid == adminUid;
       allow list: if false;
-      allow write: if isAdmin();
+      allow write: if false;
     }
 
     // Curriculum Nodes Collection
@@ -117,7 +120,7 @@ service cloud.firestore {
     match /test_results/{resultId} {
       allow get: if isSignedIn() && (resource.data.studentUid == request.auth.uid || isAdmin());
       allow list: if isSignedIn() && (resource.data.studentUid == request.auth.uid || isAdmin());
-      allow create: if isSignedIn() && isValidId(resultId) &&
+      allow create: if legacyAdminEnabled() && isSignedIn() && isValidId(resultId) &&
         incoming().studentUid == request.auth.uid &&
         incoming().score is number && incoming().totalMarks is number;
       allow update: if isAdmin();

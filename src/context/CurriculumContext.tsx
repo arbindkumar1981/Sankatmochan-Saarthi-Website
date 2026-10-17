@@ -340,6 +340,7 @@ export const CurriculumProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   // Actions
   const saveTestResult = async (resultData: Omit<TestResult, 'id'>): Promise<string> => {
+    if (import.meta.env.VITE_ADMIN_V1_ENABLED === 'true') throw new Error('Use Server-verified assessments. Browser-generated scores cannot be saved.');
     const generatedId = 'res-' + Math.random().toString(36).substring(2, 9) + '-' + Date.now();
     const newResult: TestResult = {
       ...resultData,

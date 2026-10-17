@@ -1,3 +1,5 @@
+> Historical first-draft checkpoint. Phase 2 superseding implementation/status: [master-admin-phase2.md](master-admin-phase2.md).
+
 # Master Admin V1 implementation evidence — 18 October 2026
 
 Tracks Website #87 and #86. This is an incremental draft, not completed V1 or a release certificate.
