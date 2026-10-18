@@ -27,11 +27,12 @@ export function WebsiteProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const base = import.meta.env.VITE_SAARTHI_API_URL, tenant = import.meta.env.VITE_CMS_TENANT_ID;
     if (!base || !tenant || !/^[A-Za-z0-9_-]{1,128}$/.test(tenant)) return;
+    if (base === '/api' && (!user || user.isAnonymous)) { setPublishedEntries([]); return; }
     const controller = new AbortController();
-    const refresh = async () => { try { const response=await fetch(`${base.replace(/\/$/, '')}/v1/control-center/published/${tenant}`, {signal: controller.signal, cache:'no-store'}); if (!response.ok) throw new Error('Unavailable'); const rows = parsePublished(await response.json()); if (!controller.signal.aborted) setPublishedEntries(rows); } catch { /* Keep last verified config or defaults during an outage. */ } };
+    const refresh = async () => { try { const headers: HeadersInit = base === '/api' && user ? {Authorization: `Bearer ${await user.getIdToken()}`} : {}; const response=await fetch(`${base.replace(/\/$/, '')}/v1/control-center/published/${tenant}`, {signal: controller.signal, cache:'no-store', headers}); if (!response.ok) throw new Error('Unavailable'); const rows = parsePublished(await response.json()); if (!controller.signal.aborted) setPublishedEntries(rows); } catch { /* Keep last verified config or defaults during an outage. */ } };
     void refresh(); const interval=setInterval(() => void refresh(), 30000);
     return () => {controller.abort(); clearInterval(interval);};
-  }, []);
+  }, [user]);
   useEffect(() => { document.title = config.name; }, [config.name]);
   const save = async (next: WebsiteConfig, expectedRevision: number) => {
     if (!user || user.isAnonymous || !isAdmin) throw new Error('Administrator login is required.');
