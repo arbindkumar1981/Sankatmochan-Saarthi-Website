@@ -44,3 +44,21 @@
   border: 1px solid rgba(245, 158, 11, 0.4);
 }
 
+
+/* V1 administrative controls share consistent touch targets and keyboard focus. */
+.admin-console input:not([type="checkbox"]):not([type="radio"]),
+.admin-console textarea, .admin-console select {
+  display: block; width: 100%; max-width: 100%; min-height: 44px;
+  border: 1px solid #64748b; border-radius: 0.5rem; padding: 0.5rem;
+  color: #0f172a; background: white;
+}
+.admin-console label { display: block; min-width: 0; max-width: 100%; }
+.admin-console button {
+  min-height: 44px; border: 1px solid #64748b; border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem; background: #eff6ff; color: #172554;
+  white-space: normal; overflow-wrap: anywhere;
+}
+.admin-console button:disabled { opacity: 0.6; }
+.admin-console :focus-visible { outline: 3px solid #2563eb; outline-offset: 2px; }
+.admin-console fieldset { min-width: 0; max-width: 100%; }
+.admin-console legend { font-weight: 600; padding: 0.25rem; }

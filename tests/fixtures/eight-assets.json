@@ -1,0 +1,34 @@
+[
+  {
+    "asset_type": "DETAILED_NOTES",
+    "content": "Heredity describes transmission of traits from parents to offspring. This is synthetic test content."
+  },
+  {
+    "asset_type": "REVISION_NOTES",
+    "content": "Heredity describes transmission of traits from parents to offspring. This is synthetic test content."
+  },
+  {
+    "asset_type": "DEFINITIONS_FORMULAE",
+    "content": "Heredity describes transmission of traits from parents to offspring. This is synthetic test content."
+  },
+  {
+    "asset_type": "MIND_MAP",
+    "content": "{\"nodes\": [{\"id\": \"n1\", \"label\": \"Heredity\", \"description\": \"Transmission of traits\", \"children\": [\"n2\"]}, {\"id\": \"n2\", \"label\": \"Traits\", \"description\": \"Inherited features\", \"children\": []}]}"
+  },
+  {
+    "asset_type": "FLASHCARDS",
+    "content": "{\"flashcards\": [{\"question\": \"What is Heredity?\", \"answer\": \"Transmission of traits from parents to offspring.\"}]}"
+  },
+  {
+    "asset_type": "COMPETENCY",
+    "content": "Heredity describes transmission of traits from parents to offspring. This is synthetic test content."
+  },
+  {
+    "asset_type": "CASE_BASED",
+    "content": "Heredity describes transmission of traits from parents to offspring. This is synthetic test content."
+  },
+  {
+    "asset_type": "TEST",
+    "content": "{\"questions\": [{\"questionText\": \"What does Heredity describe?\", \"options\": [\"Inherited traits\", \"Weather\"], \"correctIndex\": 0, \"explanation\": \"Heredity transmits traits from parents to offspring.\", \"marks\": 1}]}"
+  }
+]

@@ -1,0 +1,25 @@
+name: V1 admin responsive accessibility
+on:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: bun install --frozen-lockfile
+      - run: npm ci --prefix tests/browser --ignore-scripts --no-fund
+      - run: npm audit --prefix tests/browser
+      - run: npx --prefix tests/browser playwright install --with-deps chromium
+      - run: bun run build
+      - run: npx --prefix tests/browser playwright test --config tests/browser/playwright.config.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: synthetic-v1-browser-evidence
+          path: tests/browser/artifacts/

@@ -73,3 +73,29 @@ test('students can edit their mistakes but cannot transfer ownership or edit ano
   await assertFails(updateDoc(doc(other, 'mistakes', 'ownership-regression'), {note:'forged'}));
   await assertSucceeds(updateDoc(doc(admin, 'mistakes', 'ownership-regression'), {note:'admin correction'}));
 });
+
+// Enabling V1 removes the broad legacy membership bypass and all client writes.
+test('V1 cutover denies legacy admin bypass and forged server-owned records', async () => {
+  await environment.withSecurityRulesDisabled(async context => {
+    await setDoc(doc(context.firestore(),'control_policy','enforcement'),{enabled:true});
+  });
+  try {
+    for (const db of [admin,student,forged]) {
+      await assertFails(setDoc(doc(db,'admins','self-promoted'),{enabled:true}));
+      await assertFails(setDoc(doc(db,'curriculum_nodes','v1-forgery'),{kind:'subject'}));
+      await assertFails(setDoc(doc(db,'control_admin_members','self'),{role:'super_admin',tenant:'other'}));
+      await assertFails(setDoc(doc(db,'control_invitations','forged'),{role:'super_admin'}));
+      await assertFails(setDoc(doc(db,'control_cms','other'),{revision:99}));
+      await assertFails(setDoc(doc(db,'control_audit','forged'),{action:'fake'}));
+      for (const path of [['control_access_grants','forged'],['control_initializations','other'],['control_evaluation_jobs','other','jobs','forged'],['control_evaluation_drains','other']]) {
+        await assertFails(setDoc(doc(db,...path),{state:'forged',role:'super_admin'}));
+        await assertFails(getDoc(doc(db,...path)));
+      }
+      await assertFails(setDoc(doc(db,'test_results','forged-v1'),{studentUid:'student-a',score:100,totalMarks:100}));
+    }
+  } finally {
+    await environment.withSecurityRulesDisabled(async context => {
+      await setDoc(doc(context.firestore(),'control_policy','enforcement'),{enabled:false});
+    });
+  }
+});

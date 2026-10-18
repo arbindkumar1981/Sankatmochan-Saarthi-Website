@@ -35,6 +35,19 @@ jobs:
       - name: Production build
         run: bun run build
 
+      - name: Isolated gateway build with synthetic configuration
+        run: bun run build --mode staging-gateway
+        env:
+          VITE_SAARTHI_API_URL: /api
+          VITE_FIREBASE_PROJECT_ID: demo-saarthi-staging
+          VITE_FIREBASE_API_KEY: synthetic-not-a-key
+          VITE_FIREBASE_AUTH_DOMAIN: demo-saarthi-staging.firebaseapp.com
+          VITE_FIREBASE_STORAGE_BUCKET: demo-saarthi-staging.firebasestorage.app
+          VITE_FIREBASE_MESSAGING_SENDER_ID: '123'
+          VITE_FIREBASE_APP_ID: synthetic
+          VITE_FIRESTORE_DATABASE_ID: (default)
+          VITE_CMS_TENANT_ID: school-a
+
   admin-security:
     runs-on: ubuntu-latest
     steps:

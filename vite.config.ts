@@ -1,9 +1,11 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
-import {defineConfig} from 'vite';
+import {defineConfig, loadEnv} from 'vite';
+import {assertStagingGatewayConfig} from './staging-gateway-config.mjs';
 
-export default defineConfig(() => {
+export default defineConfig(({mode}) => {
+  if (mode === 'staging-gateway') assertStagingGatewayConfig(loadEnv(mode, process.cwd(), 'VITE_'));
   return {
     plugins: [react(), tailwindcss()],
     resolve: {
