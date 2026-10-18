@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { adminRead, type TopicProgressPage } from '../services/adminApi';
 
-export function TopicMasteryDashboard() {
+export function TopicMasteryDashboard({ authorized = false }: { authorized?: boolean } = {}) {
   const { user, isAdmin } = useAuth();
+  const permitted = isAdmin || authorized;
   const [filters, setFilters] = useState({ student: '', subject: '', board: '', class_level: '' });
   const [search, setSearch] = useState('');
   const [page, setPage] = useState<TopicProgressPage | null>(null);
@@ -15,15 +16,15 @@ export function TopicMasteryDashboard() {
   useEffect(() => {
     const controller = new AbortController();
     setPage(null); setError('');
-    if (!user || !isAdmin || user.isAnonymous) return () => controller.abort();
+    if (!user || !permitted || user.isAnonymous) return () => controller.abort();
     setLoading(true);
     adminRead<TopicProgressPage>(`/topic-mastery?${search}`, controller.signal)
       .then(result => { if (!controller.signal.aborted) { setPage(result); setPageKey(viewKey); } })
       .catch(() => { if (!controller.signal.aborted) setError('Topic mastery is unavailable. Please retry or contact support.'); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
-  }, [search, user, isAdmin, refresh, viewKey]);
-  if (!user || !isAdmin || user.isAnonymous) return null;
+  }, [search, user, permitted, refresh, viewKey]);
+  if (!user || !permitted || user.isAnonymous) return null;
   const score = (value: number | null) => value === null ? 'Not measured' : `${value}%`;
   return <section className="space-y-3 rounded-xl border bg-white p-4" aria-label="Topic mastery dashboard">
     <h3 className="font-bold">Topic-wise student mastery</h3>

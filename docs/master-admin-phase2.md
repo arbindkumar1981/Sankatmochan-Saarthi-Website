@@ -1,3 +1,5 @@
+> Phase 2 checkpoint. Phase 3 superseding implementation/evidence: [master-admin-phase3.md](master-admin-phase3.md).
+
 # Phase 2 — Master Admin implementation and release boundary
 
 Date: 18 October 2026. Continues Website draft #88 and Backend draft #91 on `codex/master-admin-v1`; no dependency branch was replaced or merged into main.

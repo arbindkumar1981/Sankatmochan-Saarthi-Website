@@ -87,6 +87,10 @@ test('V1 cutover denies legacy admin bypass and forged server-owned records', as
       await assertFails(setDoc(doc(db,'control_invitations','forged'),{role:'super_admin'}));
       await assertFails(setDoc(doc(db,'control_cms','other'),{revision:99}));
       await assertFails(setDoc(doc(db,'control_audit','forged'),{action:'fake'}));
+      for (const path of [['control_access_grants','forged'],['control_initializations','other'],['control_evaluation_jobs','other','jobs','forged'],['control_evaluation_drains','other']]) {
+        await assertFails(setDoc(doc(db,...path),{state:'forged',role:'super_admin'}));
+        await assertFails(getDoc(doc(db,...path)));
+      }
       await assertFails(setDoc(doc(db,'test_results','forged-v1'),{studentUid:'student-a',score:100,totalMarks:100}));
     }
   } finally {

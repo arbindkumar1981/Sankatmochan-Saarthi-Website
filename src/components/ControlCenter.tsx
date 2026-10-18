@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { auth } from '../services/firebase';
 import { controlApi as api } from '../services/controlApi';
 import { type CmsEntry, CMS_ROUTES } from '../services/publishedCms';
+import { CmsMediaLibrary } from './CmsMediaLibrary';
+import { draftDiff } from '../services/cmsDiff';
 import { MenuIcon } from './MenuIcon';
 
 type Entry = CmsEntry;
@@ -55,6 +57,8 @@ export function ControlCenter() {
     <label>Historical published revision <input type="number" min={1} value={restoreRevision} onChange={e => setRestoreRevision(e.target.value)} /></label><button disabled={busy || !capabilities.includes('cms.publish') || !restoreRevision} onClick={() => { if (window.confirm('Restore this historical published presentation?')) void change('rollback'); }}>Restore publication</button>
     <button disabled={busy} onClick={() => {setBusy(true); void api<{rows: Draft[]; next: number | null}>(`/cms/history${historyNext ? `?before=${historyNext}` : ''}`).then(result => {setHistory(old => historyNext ? [...old,...result.rows] : result.rows); setHistoryNext(result.next);}).catch(() => setError('History unavailable.')).finally(() => setBusy(false));}}>Load {historyNext ? 'older ' : ''}version history</button>
     <ul>{history.map(version => <li key={version.revision}>Revision {version.revision}: {version.state} · {version.entries.length} entries <button onClick={() => setRestoreRevision(String(version.revision))}>Select for rollback</button></li>)}</ul>
+    <details className="rounded border bg-white p-4"><summary className="cursor-pointer font-semibold">Draft changes & publication impact</summary><p>{draftDiff(draft.publishedEntries,draft.entries).length} changed entries compared with the current publication.</p><ul>{draftDiff(draft.publishedEntries,draft.entries).map(change=><li className="my-3 rounded border p-3" key={change.id}><strong>{change.after?.title||change.before?.title}: {change.kind}</strong><p>Changed fields: {change.fields.join(', ')}</p><p>Before: {change.before?.description||'No previous description'}</p><p>After: {change.after?.description||'No new description'}</p><p>Visibility: {change.before?.visible?'visible':'hidden/absent'} → {change.after?.visible?'visible':'hidden/absent'}</p></li>)}</ul></details>
+    <CmsMediaLibrary entries={draft.entries} canEdit={capabilities.includes('cms.edit')} onSelect={(entryId,mediaId)=>update(entryId,{mediaId})} />
     <p className="text-sm">Core authentication, security and legal routes are protected. This editor cannot change executable code or access permissions.</p></>}
   </section>;
 }
