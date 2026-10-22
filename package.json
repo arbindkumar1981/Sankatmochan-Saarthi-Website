@@ -7,6 +7,10 @@
     "dev": "vite --port=3000 --host=0.0.0.0",
     "build": "vite build",
     "preview": "vite preview",
+    "backend:dev": "node backend/server.mjs",
+    "backend:start": "node backend/server.mjs",
+    "backend:test": "node --test tests/backend-smoke.test.mjs",
+    "test": "node --test tests/*.test.mjs",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit"
   },
@@ -18,6 +22,7 @@
     "dotenv": "^17.2.3",
     "express": "^4.21.2",
     "firebase": "^12.19.0",
+    "firebase-admin": "^13.10.0",
     "jszip": "^3.10.2",
     "lucide-react": "^0.546.0",
     "motion": "^12.23.24",

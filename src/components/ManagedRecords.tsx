@@ -4,6 +4,7 @@ import { useCurriculum } from '../context/CurriculumContext';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../services/firebase';
 import { uploadBrandedStudyFile } from '../services/studyFileUpload';
+import { cleanupMaterialFiles } from '../services/backendMaterials';
 import { useWebsite } from '../context/WebsiteContext';
 import { validateAdminRecord, archiveRecord, restoreRecord, assetVisibility, assetMarker, type ManagedCollection } from '../services/adminValidation';
 import { catalogueMaterialScopes, EMPTY_MATERIAL_SCOPE, MATERIAL_SCOPE_KEYS, changeMaterialScope, matchesMaterialScope, materialScopeOptions, type MaterialScope } from '../services/materialScope';
@@ -59,6 +60,11 @@ export function ManagedRecords({ collection, onScopeChange }: { collection: Mana
       const clean = JSON.parse(JSON.stringify(deleted ? archiveRecord(collection, item) : item));
       if (collection === 'youtube_videos' && (!clean.thumbnail || (clean.youtubeId !== rows.find(x=>x.id===clean.id)?.youtubeId && clean.thumbnail === rows.find(x=>x.id===clean.id)?.thumbnail))) clean.thumbnail = `https://img.youtube.com/vi/${clean.youtubeId}/hqdefault.jpg`;
       clean.deleted = deleted; clean.updatedAt = new Date().toISOString();
+      const previous = rows.find(x => x.id === clean.id);
+      const replacedPaths = !deleted && collection === 'learning_contents' && previous
+        ? [previous.storagePath, previous.originalStoragePath].filter((path: unknown) =>
+          typeof path === 'string' && path.length > 0 && path !== clean.storagePath && path !== clean.originalStoragePath)
+        : [];
       // Public tombstones prevent bundled seed items from reappearing after deletion.
       const marker = await assetMarker(collection, clean.id);
       await runTransaction(db, async transaction => {
@@ -68,6 +74,9 @@ export function ManagedRecords({ collection, onScopeChange }: { collection: Mana
         transaction.set(reference, clean);
         transaction.set(doc(db, 'curriculum_nodes', marker), assetVisibility(collection, clean));
       });
+      if (replacedPaths.length && user && !user.isAnonymous) {
+        await cleanupMaterialFiles(user, replacedPaths);
+      }
       setMessage(deleted ? 'Deleted from the website. Restore is available.' : 'Saved successfully.'); setDraft(null);
     } catch (error) { setMessage(error instanceof Error ? error.message : 'Save failed.'); }
     finally { setBusy(false); }
