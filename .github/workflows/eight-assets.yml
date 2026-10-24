@@ -1,0 +1,29 @@
+name: Eight asset persistence authorization
+on:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  saved-assets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Reuse existing reviewed test tooling without copying/adopting its changes.
+      - uses: actions/checkout@v4
+        with:
+          ref: 0dd3834735c56bd1c03d84e46fb0ec99bcd437c1
+          path: .issue87-tools
+      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: bun install --frozen-lockfile
+      - run: npm ci --prefix .issue87-tools/tests/emulator --ignore-scripts --no-fund
+      - name: ESLint
+        run: node .issue87-tools/tests/emulator/node_modules/eslint/bin/eslint.js --config .issue87-tools/eslint.config.js src/components/ContentArea.tsx src/components/MyMaterials.tsx src/components/SavedMaterialView.tsx src/services/teacherArtifact.ts src/services/generatedLearning.ts
+      - name: Eight owner-private save and retrieval contracts
+        run: node .issue87-tools/tests/emulator/node_modules/firebase-tools/lib/bin/firebase.js emulators:exec --config firebase.eight-assets-emulators.json --project demo-saarthi-eight-assets --only firestore 'node --test tests/eight-assets-firestore.mjs'

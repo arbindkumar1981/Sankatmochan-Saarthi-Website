@@ -1,4 +1,5 @@
 import { RequestScope } from '../services/requestScope';
+import { validateTeacherArtifact, encodeTeacherArtifact, type TeacherArtifact } from '../services/teacherArtifact';
 import { parseGeneratedFlashcards, parseGeneratedMindmap } from '../services/generatedLearning';
 import { DEFAULT_WEBSITE_CONFIG } from '../services/websiteConfig';
 import { optionLabel } from '../services/websiteConfig';
@@ -113,6 +114,8 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
   const selectionKey = JSON.stringify([user?.uid, selectedBoard, selectedClass, selectedStream, selectedSubject?.id, selectedChapter?.id, selectedTopic?.id, activeModule, language]);
   const [generationScope] = useState(() => new RequestScope());
   const [generatedScope, setGeneratedScope] = useState('');
+  const [rawTeacherArtifact, setTeacherArtifact] = useState<TeacherArtifact>();
+  const teacherArtifact = generatedScope === selectionKey ? rawTeacherArtifact : undefined;
   const [rawGeneratedText, setStudentGeneratedText] = useState('');
   const [rawFlashcards, setGeneratedFlashcards] = useState<FlashcardItem[]>([]);
   const [rawMindmap, setGeneratedMindmap] = useState<NonNullable<LearningContent['mindmapNodes']>>([]);
@@ -183,6 +186,9 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
       const data = await res.json();
       if (!generationScope.owns(request)) return;
       if (!res.ok) throw new Error(typeof data.detail === 'string' ? data.detail : 'Sankatmochansaarthi could not generate this material.');
+      const artifact = validateTeacherArtifact(data, { asset_type: assetType, topic_id: topicId, language: language === 'hi' ? 'HINDI' : 'ENGLISH' });
+      encodeTeacherArtifact(artifact); // Reject an oversized study copy before offering Save.
+      if (!data.quality_checks || !Object.keys(data.quality_checks).length || Object.values(data.quality_checks).some(value => value !== true)) throw new Error('Teacher quality checks did not pass. Please try again.');
       if (assetType === 'TEST') {
         const questions = parseGeneratedQuestions(data.content || '');
         const totalMarks = questions.reduce((sum, q) => sum + q.marks, 0);
@@ -197,6 +203,7 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
         setStudentGeneratedText('');
       } else setStudentGeneratedText(data.content || '');
       setGeneratedScope(selectionKey);
+      setTeacherArtifact(artifact);
       setStudentDiagramPlans(Array.isArray(data.diagram_plans) ? data.diagram_plans : []);
       setStudentProvenance(Array.isArray(data.provenance) ? data.provenance : []);
     } catch (e:any) {
@@ -213,7 +220,7 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
   const downloadGeneratedNotes = async () => {
     if (!user || user.isAnonymous) { openAuthModal('student'); return; }
     const structured = matchedContent ? [matchedContent.flashcardItems, matchedContent.formulaItems, matchedContent.pyqItems, matchedContent.caseStudyItem, matchedContent.mindmapNodes].filter(Boolean).map(value => JSON.stringify(value, null, 2)).join('\n\n') : '';
-    const generatedBody = generatedFlashcards.length ? JSON.stringify({ flashcards: generatedFlashcards }, null, 2) : generatedMindmap.length ? JSON.stringify({ nodes: generatedMindmap }, null, 2) : studentGeneratedText;
+    const generatedBody = teacherArtifact ? encodeTeacherArtifact(teacherArtifact) : generatedFlashcards.length ? JSON.stringify({ flashcards: generatedFlashcards }, null, 2) : generatedMindmap.length ? JSON.stringify({ nodes: generatedMindmap }, null, 2) : studentGeneratedText;
     const body = generatedBody || (language === 'hi' ? matchedContent?.bodyHindi || matchedContent?.bodyText : matchedContent?.bodyText) || structured;
     const contentId = !generatedBody && matchedContent?.attachmentType === 'application/pdf' && matchedContent.storagePath ? matchedContent.id : undefined;
     if (!body && !contentId) { setStudentGenerationError('This material has no readable notes to save yet.'); return; }
@@ -670,6 +677,7 @@ ${selectedChapter?.hindiTitle || 'इस अध्याय'} के लिए �
       </section>}
       {matchedContent?.storagePath && matchedContent.attachmentType === 'application/pdf' ? <Suspense fallback={<p role="status">Opening PDF reader…</p>}><StudyPdfReader key={matchedContent.id} contentId={matchedContent.id} /></Suspense> : matchedContent?.attachmentUrl && <p className="border rounded-xl p-3 text-sm">{matchedContent.attachmentName || 'Study file'} — ask Admin to replace this file with a branded PDF.</p>}
       {hasPublishedModuleContent && !customModule && <button className="border rounded-xl px-3 py-2 text-sm mb-3" onClick={downloadGeneratedNotes}>Save to My Dashboard</button>}
+      {teacherArtifact && ['cbqs', 'case_studies', 'test_yourself'].includes(activeModule) && <button className="border rounded-xl px-3 py-2 text-sm mb-3" onClick={downloadGeneratedNotes}>Save to My Dashboard</button>}
 
       {/* Module 1 & 2: Detailed Notes & Revision Notes */}
       {(activeModule === 'detailed_notes' || activeModule === 'revision_notes') && (
