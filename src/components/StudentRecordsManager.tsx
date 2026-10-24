@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import type { UserProfile } from '../types';
+import { TopicMasteryDashboard } from './TopicMasteryDashboard';
 
 interface StudentResult {
   id?: string;
@@ -63,6 +64,7 @@ export function StudentRecordsManager({ students, results, mistakes }: Props) {
   const percent = (value: unknown) => typeof value === 'number' && Number.isFinite(value) ? `${Math.round(value)}%` : '—';
 
   return <section className="space-y-4" aria-label="Student records manager">
+    <TopicMasteryDashboard />
     <div className="flex flex-wrap items-center justify-between gap-2">
       <div>
         <h3 className="text-base font-bold text-stone-900">Student Records</h3>

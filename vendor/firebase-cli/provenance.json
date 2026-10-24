@@ -1,0 +1,20 @@
+{
+  "upstream": {
+    "version": "15.33.0",
+    "resolved": "https://registry.npmjs.org/firebase-tools/-/firebase-tools-15.33.0.tgz",
+    "integrity": "sha512-ln0MPfXeTn8lXwKDkbtd8d7BvRkzscDmxP1RxO2I4Auq4l8WODzl746eQWaVJAY5EFuuFzikcok0JN04qmEz9Q=="
+  },
+  "prototypeCommit": "84356cac9a727b3ed1e8e84a4196c3575b070cdd",
+  "artifactIntegrity": "sha512-hudfmK89JOdKg5LwJp8uUUDP81aAliACNQyKWVv/jzZKFvLdn35/D103a8oI/50RylBSLfKXb0/vsQWyV6VNIQ==",
+  "adapterSHA256": "3b985c79a606f54d62800f9873a0a42885916490ff2b3512d4ae5835701f98b5",
+  "scope": [
+    "emulator/databaseEmulator.js",
+    "emulator/firestoreEmulator.js",
+    "emulator/functionsEmulator.js",
+    "emulator/storage/rules/manager.js"
+  ],
+  "changesFromPrototype": [
+    "Preserve ignored callback Stats argument; regression in operational.cjs",
+    "Normalize adapter LF for cross-platform artifact reproduction"
+  ]
+}

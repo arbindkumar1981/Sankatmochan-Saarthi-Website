@@ -43,5 +43,9 @@
     "tailwindcss": "^4.3.3",
     "tsx": "^4.21.0",
     "typescript": "^7.0.2"
+  },
+  "overrides": {
+    "@grpc/grpc-js": "1.13.7",
+    "source-map-js": "1.2.2"
   }
 }
